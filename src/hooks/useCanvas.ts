@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { Canvas, Point, Circle } from "fabric";
 import { toast } from "sonner";
@@ -80,10 +79,10 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
 
   const updateCursorAndNotify = (canvas: Canvas, tool: string) => {
     if (tool === "draw") {
-      canvas.defaultCursor = 'crosshair';
-      toast("Draw mode enabled. Click and drag to draw!");
+      canvas.defaultCursor = 'default';
+      toast("Draw mode enabled. Hold Ctrl + click to draw!");
     } else if (tool === "eraser") {
-      canvas.defaultCursor = 'cell';
+      canvas.defaultCursor = 'crosshair';
       toast("Eraser mode enabled. Click and drag to erase!");
     } else {
       canvas.defaultCursor = 'default';
@@ -152,7 +151,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     } 
     // Left click
     else if (e.button === 0) {
-      if (activeTool === "draw" || activeTool === "eraser") {
+      if ((activeTool === "draw" && e.ctrlKey) || activeTool === "eraser") {
         setIsDrawing(true);
       }
     }
@@ -187,9 +186,9 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     
     // Reset cursor based on current tool
     if (activeTool === "draw") {
-      canvas.defaultCursor = 'crosshair';
+      canvas.defaultCursor = 'default';
     } else if (activeTool === "eraser") {
-      canvas.defaultCursor = 'cell';
+      canvas.defaultCursor = 'crosshair';
     } else {
       canvas.defaultCursor = 'default';
     }
