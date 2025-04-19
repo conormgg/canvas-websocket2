@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
-import { useClipboard } from "@/hooks/useClipboard";
+import { useCanvasClipboard } from "@/hooks/useCanvasClipboard";
 
 export const Whiteboard = () => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
@@ -17,7 +17,8 @@ export const Whiteboard = () => {
     onZoomChange: setZoomLevel
   });
 
-  useClipboard(fabricRef);
+  // Direct use of useCanvasClipboard to ensure clipboard listeners are set up properly
+  useCanvasClipboard(fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
