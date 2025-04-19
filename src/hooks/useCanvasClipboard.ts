@@ -1,3 +1,4 @@
+
 import { Canvas, FabricObject, Image as FabricImage, util, Point } from 'fabric';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -9,10 +10,12 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
   const handleCanvasClick = (e: MouseEvent) => {
     if (!fabricRef.current) return;
     
-    if (fabricRef.current.isDrawingMode && fabricRef.current._isCurrentlyDrawing) return;
-    
+    // Check if we're currently drawing by checking if isDrawingMode is active
+    // Avoid setting paste position while drawing
     const canvas = fabricRef.current;
-    const pointer = canvas.getPointer({ e });
+    if (canvas.isDrawingMode) return;
+    
+    const pointer = canvas.getPointer(e);
     setPastePosition(new Point(pointer.x, pointer.y));
   };
 
@@ -232,7 +235,7 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
         fabricRef.current.wrapperEl.removeEventListener('click', handleCanvasClick);
       }
     };
-  }, []);
+  }, [fabricRef.current]);
 
   return { clipboardDataRef, pastePosition, setPastePosition };
 };
