@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps } from "@/types/canvas";
@@ -50,7 +51,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     };
 
     window.addEventListener('resize', handleResize);
-    updateCursorAndNotify(canvas, activeTool);
+    updateCursorAndNotify(canvas, activeTool, inkThickness);
 
     return () => {
       canvas.dispose();
