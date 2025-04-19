@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps } from "@/types/canvas";
@@ -10,8 +9,13 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
   const fabricRef = useRef<Canvas | null>(null);
 
   const { updateCursorAndNotify } = useCanvasTools();
-  const { handleMouseWheel, handleMouseDown, handleMouseMove, handleMouseUp } = 
-    useCanvasMouseHandlers(fabricRef, activeTool, onZoomChange);
+  const { 
+    handleMouseWheel, 
+    handleMouseDown, 
+    handleMouseMove, 
+    handleMouseUp,
+    handleKeyDown 
+  } = useCanvasMouseHandlers(fabricRef, activeTool, onZoomChange);
 
   // Initialize canvas
   useEffect(() => {
@@ -23,7 +27,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       backgroundColor: "#ffffff",
       isDrawingMode: activeTool === "draw" || activeTool === "eraser",
       preserveObjectStacking: true,
-      selection: activeTool === "select", // Enable selection when select tool is active
+      selection: activeTool === "select",
     });
 
     // Initialize free drawing brush
@@ -50,11 +54,13 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     };
 
     window.addEventListener('resize', handleResize);
+    window.addEventListener('keydown', handleKeyDown);
     updateCursorAndNotify(canvas, activeTool, inkThickness);
 
     return () => {
       canvas.dispose();
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -68,7 +74,6 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     if (activeTool === "select") {
       canvas.isDrawingMode = false;
       canvas.selection = true;
-      // Remove the interactive property as it doesn't exist on Canvas type
     } else if (activeTool === "draw") {
       canvas.isDrawingMode = true;
       canvas.selection = false;
