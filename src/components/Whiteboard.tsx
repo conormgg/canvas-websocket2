@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from "react";
-import { fabric } from "fabric";
+import { Canvas, Point } from "fabric";
 import { Toolbar } from "./Toolbar";
 import { toast } from "sonner";
 
@@ -8,14 +8,14 @@ type Tool = "select" | "draw" | "eraser";
 
 export const Whiteboard = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricRef = useRef<fabric.Canvas | null>(null);
+  const fabricRef = useRef<Canvas | null>(null);
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [activeColor, setActiveColor] = useState("#D3E4FD");
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    const canvas = new fabric.Canvas(canvasRef.current, {
+    const canvas = new Canvas(canvasRef.current, {
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: "#ffffff",
@@ -34,7 +34,7 @@ export const Whiteboard = () => {
       if (zoom < 0.1) zoom = 0.1;
       
       // Create a proper fabric.Point instance for zooming
-      const pointer = new fabric.Point(e.offsetX, e.offsetY);
+      const pointer = new Point(e.offsetX, e.offsetY);
       canvas.zoomToPoint(pointer, zoom);
       
       e.preventDefault();
@@ -66,7 +66,7 @@ export const Whiteboard = () => {
         if (lastPosY === 0) lastPosY = e.clientY;
         
         // Create a proper fabric.Point for panning
-        const delta = new fabric.Point(e.clientX - lastPosX, e.clientY - lastPosY);
+        const delta = new Point(e.clientX - lastPosX, e.clientY - lastPosY);
         canvas.relativePan(delta);
         
         canvas.requestRenderAll();
