@@ -1,6 +1,5 @@
-
 import { useEffect, useRef, useState } from "react";
-import { Canvas, Point } from "fabric";
+import { Canvas, Point, Image } from "fabric";
 import { Toolbar } from "./Toolbar";
 import { toast } from "sonner";
 
@@ -99,7 +98,7 @@ export const Whiteboard = () => {
             const imgUrl = event.target?.result as string;
             if (!imgUrl) return;
             
-            fabric.Image.fromURL(imgUrl, (img) => {
+            Image.fromURL(imgUrl, (img) => {
               img.scaleToWidth(200);
               canvas.add(img);
               canvas.centerObject(img);
@@ -148,7 +147,6 @@ export const Whiteboard = () => {
     }
   }, [activeTool, activeColor]);
 
-  // Prevent context menu on right click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     return false;
