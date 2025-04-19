@@ -1,6 +1,6 @@
 
 import { useEffect, useRef } from "react";
-import { Canvas } from "fabric";
+import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps } from "@/types/canvas";
 import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
@@ -25,7 +25,12 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       preserveObjectStacking: true,
     });
 
-    // Set up initial brush properties
+    // Initialize free drawing brush first
+    if (!canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush = new PencilBrush(canvas);
+    }
+    
+    // Now it's safe to set brush properties
     canvas.freeDrawingBrush.width = inkThickness;
     canvas.freeDrawingBrush.color = activeColor;
 
@@ -59,6 +64,11 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     if (!fabricRef.current) return;
     
     const canvas = fabricRef.current;
+    
+    // Ensure freeDrawingBrush is initialized in this effect too
+    if (!canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush = new PencilBrush(canvas);
+    }
     
     // Only set drawing mode directly when eraser is active, 
     // for draw tool we'll enable it on Ctrl+click
