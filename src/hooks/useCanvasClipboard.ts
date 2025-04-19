@@ -57,6 +57,7 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
         }
       });
 
+      // Fix the type error by checking if the object has the setCoords method
       if (objects.length === 1 && objects[0] && typeof objects[0].setCoords === 'function') {
         canvas.setActiveObject(objects[0] as FabricObject);
       } else if (objects.length > 1) {
