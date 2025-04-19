@@ -2,20 +2,18 @@
 import { useState } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
-
-type StudentId = "student1" | "student2" | "student3" | "student4";
-type BoardId = "teacher" | StudentId;
+import { WhiteboardId } from "@/types/canvas";
 
 export const SplitWhiteboard = () => {
-  const [enlargedBoard, setEnlargedBoard] = useState<BoardId | null>(null);
+  const [enlargedBoard, setEnlargedBoard] = useState<WhiteboardId | null>(null);
 
-  const handleCtrlClick = (board: BoardId, e: React.MouseEvent) => {
+  const handleCtrlClick = (board: WhiteboardId, e: React.MouseEvent) => {
     if (e.ctrlKey) {
       setEnlargedBoard(enlargedBoard === board ? null : board);
     }
   };
 
-  const studentIds: StudentId[] = ["student1", "student2", "student3", "student4"];
+  const studentIds: WhiteboardId[] = ["student1", "student2", "student3", "student4"];
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-neutral-100 flex">
