@@ -18,34 +18,36 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
   const handlePaste = (e: KeyboardEvent) => {
     const canvas = fabricRef.current;
     if (!canvas || !e.ctrlKey || e.key !== 'v') return;
-    if (!(canvas as any).clipboardJSON) return;
     
-    const clipboardJSON = (canvas as any).clipboardJSON;
-    
-    util.enlivenObjects(clipboardJSON).then((objects: FabricObject[]) => {
+    const clipboardJSON: any[] = (canvas as any).clipboardJSON;
+    if (!clipboardJSON?.length) return;
+
+    // Decide which JSONs to enliven:
+    const toEnliven = clipboardJSON.length > 1
+      ? clipboardJSON                  // multiple selected → paste all
+      : [clipboardJSON[clipboardJSON.length - 1]];  // single → paste only last
+
+    util.enlivenObjects(toEnliven).then((objects: FabricObject[]) => {
+      // Add each resurrected object, offset slightly to avoid overlap
       objects.forEach(obj => {
-        // Check if object has position properties before setting them
-        if ('left' in obj && 'top' in obj && obj instanceof FabricObject) {
-          const left = (obj.get('left') || 0) + 20;
-          const top = (obj.get('top') || 0) + 20;
-          
-          obj.set({
-            left,
-            top,
-            evented: true
-          });
-          
-          canvas.add(obj);
-        }
+        const left = (obj.get('left') || 0) + 20;
+        const top = (obj.get('top') || 0) + 20;
+        obj.set({ left, top, evented: true });
+        canvas.add(obj);
+        obj.setCoords();
       });
-      
-      if (objects.length > 0 && objects[0] instanceof FabricObject) {
+
+      // If it was just one object, make it active; otherwise clear selection
+      if (objects.length === 1) {
         canvas.setActiveObject(objects[0]);
+      } else {
+        canvas.discardActiveObject();
       }
-      
+
       canvas.requestRenderAll();
     });
   };
 
   return { handleCopy, handlePaste };
 };
+
