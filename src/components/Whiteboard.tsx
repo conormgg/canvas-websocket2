@@ -11,6 +11,7 @@ export const Whiteboard = () => {
   const fabricRef = useRef<Canvas | null>(null);
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [activeColor, setActiveColor] = useState("#D3E4FD");
+  const [toolbarVisible, setToolbarVisible] = useState(true);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -47,12 +48,15 @@ export const Whiteboard = () => {
     // Enable panning with right mouse button
     canvas.on('mouse:down', (opt) => {
       const e = opt.e as MouseEvent;
+      // Only handle right mouse button events here
       if (e.button === 2) {
         canvas.defaultCursor = 'grabbing';
         canvas.selection = false;
         canvas.discardActiveObject();
         canvas.renderAll();
       }
+      // Make sure left clicks don't affect toolbar visibility
+      // We don't need to do anything for left clicks here
     });
 
     let isDragging = false;
@@ -85,6 +89,8 @@ export const Whiteboard = () => {
       canvas.selection = true;
       lastPosX = 0;
       lastPosY = 0;
+      // Ensure toolbar stays visible after mouse up
+      setToolbarVisible(true);
     });
 
     // Handle image paste
@@ -162,14 +168,30 @@ export const Whiteboard = () => {
     return false;
   };
 
+  // Add a click handler for the whiteboard container
+  const handleWhiteboardClick = (e: React.MouseEvent) => {
+    // Only process left clicks (button === 0)
+    if (e.button === 0) {
+      // If the click is on the canvas but not on the toolbar, we don't want to hide the toolbar
+      // We're not doing anything special here, just preventing default behavior
+      e.stopPropagation();
+    }
+  };
+
   return (
-    <div className="relative w-full h-full" onContextMenu={handleContextMenu}>
-      <Toolbar 
-        activeTool={activeTool}
-        activeColor={activeColor}
-        onToolChange={setActiveTool}
-        onColorChange={setActiveColor}
-      />
+    <div 
+      className="relative w-full h-full" 
+      onContextMenu={handleContextMenu} 
+      onClick={handleWhiteboardClick}
+    >
+      {toolbarVisible && (
+        <Toolbar 
+          activeTool={activeTool}
+          activeColor={activeColor}
+          onToolChange={setActiveTool}
+          onColorChange={setActiveColor}
+        />
+      )}
       <canvas ref={canvasRef} className="w-full h-full" />
     </div>
   );
