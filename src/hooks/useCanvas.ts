@@ -68,7 +68,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     if (activeTool === "select") {
       canvas.isDrawingMode = false;
       canvas.selection = true;
-      canvas.interactive = true;
+      // Remove the interactive property as it doesn't exist on Canvas type
     } else if (activeTool === "draw") {
       canvas.isDrawingMode = true;
       canvas.selection = false;
