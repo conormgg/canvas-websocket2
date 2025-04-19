@@ -12,8 +12,8 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
       const activeObjects = canvas.getActiveObjects();
       if (!activeObjects.length) return;
       
-      const objectsJSON = activeObjects.map(obj => obj.toObject());
-      (canvas as any).clipboardJSON = objectsJSON;
+      // Always overwrite the clipboard, never append
+      (canvas as any).clipboardJSON = activeObjects.map(obj => obj.toObject());
     }
   };
 
@@ -25,8 +25,9 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
     const clipboardJSON: any[] = (canvas as any).clipboardJSON;
     if (!clipboardJSON?.length) return;
 
+    // If multi-select copy, use all; if single, use the last one only
     const toEnliven = clipboardJSON.length > 1
-      ? clipboardJSON
+      ? [...clipboardJSON] // Create a copy to prevent modifying original
       : [clipboardJSON[clipboardJSON.length - 1]];
 
     util.enlivenObjects(toEnliven).then((objects: FabricObject[]) => {
@@ -60,4 +61,3 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
 
   return { handleCopy, handlePaste };
 };
-
