@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { Canvas, Point, Image } from "fabric";
 import { Toolbar } from "./Toolbar";
@@ -20,8 +21,11 @@ export const Whiteboard = () => {
       backgroundColor: "#ffffff",
     });
 
-    canvas.freeDrawingBrush.width = 2;
-    canvas.freeDrawingBrush.color = activeColor;
+    // Only set freeDrawingBrush properties after canvas is initialized
+    if (canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.width = 2;
+      canvas.freeDrawingBrush.color = activeColor;
+    }
 
     // Enable zoom with mouse wheel
     canvas.on('mouse:wheel', (opt) => {
@@ -136,9 +140,13 @@ export const Whiteboard = () => {
 
     const canvas = fabricRef.current;
     
+    // Check if freeDrawingBrush exists before setting properties
+    if (!canvas.freeDrawingBrush) return;
+    
     if (activeTool === "draw") {
       canvas.isDrawingMode = true;
       canvas.freeDrawingBrush.color = activeColor;
+      canvas.freeDrawingBrush.width = 2;
     } else if (activeTool === "eraser") {
       canvas.isDrawingMode = true;
       canvas.freeDrawingBrush.color = "#ffffff";
