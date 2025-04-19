@@ -1,13 +1,11 @@
-
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const COLORS = [
-  { value: "#D3E4FD", label: "Soft Blue" },
-  { value: "#E5DEFF", label: "Soft Purple" },
-  { value: "#FFDEE2", label: "Soft Pink" },
-  { value: "#F2FCE2", label: "Soft Green" },
-  { value: "#FEC6A1", label: "Soft Orange" },
+  { value: "#000000e6", label: "Black" },
+  { value: "#ea384c", label: "Red" },
+  { value: "#1EAEDB", label: "Blue" },
+  { value: "#333333", label: "Dark Gray" },
 ];
 
 interface ColorPickerProps {

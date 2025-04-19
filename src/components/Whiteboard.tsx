@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas, Point, Image } from "fabric";
+import { Canvas, Point } from "fabric";
 import { Toolbar } from "./Toolbar";
 import { toast } from "sonner";
-
-type Tool = "select" | "draw" | "eraser";
 
 export const Whiteboard = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
-  const [activeTool, setActiveTool] = useState<Tool>("draw");
-  const [activeColor, setActiveColor] = useState("#D3E4FD");
-  const [toolbarVisible, setToolbarVisible] = useState(true);
+  const [activeTool, setActiveTool] = useState<"draw" | "eraser">("draw");
+  const [activeColor, setActiveColor] = useState("#000000e6");
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -23,7 +21,7 @@ export const Whiteboard = () => {
     });
 
     if (canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush.width = 2;
+      canvas.freeDrawingBrush.width = 3;
       canvas.freeDrawingBrush.color = activeColor;
     }
 
@@ -32,11 +30,22 @@ export const Whiteboard = () => {
       const delta = e.deltaY;
       let zoom = canvas.getZoom();
       zoom *= 0.999 ** delta;
-      if (zoom > 20) zoom = 20;
-      if (zoom < 0.1) zoom = 0.1;
+      zoom = Math.min(Math.max(0.1, zoom), 20);
       
       const pointer = new Point(e.offsetX, e.offsetY);
       canvas.zoomToPoint(pointer, zoom);
+      setZoomLevel(Math.round(zoom * 100) / 100);
+      
+      const dot = new fabric.Circle({
+        left: e.offsetX,
+        top: e.offsetY,
+        radius: 2,
+        fill: '#ff0000',
+        opacity: 0.5,
+        selectable: false,
+      });
+      canvas.add(dot);
+      setTimeout(() => canvas.remove(dot), 300);
       
       e.preventDefault();
       e.stopPropagation();
@@ -49,6 +58,17 @@ export const Whiteboard = () => {
         canvas.selection = false;
         canvas.discardActiveObject();
         canvas.renderAll();
+
+        const dot = new fabric.Circle({
+          left: e.offsetX,
+          top: e.offsetY,
+          radius: 3,
+          fill: '#00ff00',
+          opacity: 0.5,
+          selectable: false,
+        });
+        canvas.add(dot);
+        setTimeout(() => canvas.remove(dot), 300);
       }
     });
 
@@ -132,23 +152,11 @@ export const Whiteboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!fabricRef.current) return;
-
-    const canvas = fabricRef.current;
+    if (!fabricRef.current?.freeDrawingBrush) return;
     
-    if (!canvas.freeDrawingBrush) return;
-    
-    if (activeTool === "draw") {
-      canvas.isDrawingMode = true;
-      canvas.freeDrawingBrush.color = activeColor;
-      canvas.freeDrawingBrush.width = 2;
-    } else if (activeTool === "eraser") {
-      canvas.isDrawingMode = true;
-      canvas.freeDrawingBrush.color = "#ffffff";
-      canvas.freeDrawingBrush.width = 20;
-    } else {
-      canvas.isDrawingMode = false;
-    }
+    fabricRef.current.isDrawingMode = activeTool === "draw";
+    fabricRef.current.freeDrawingBrush.color = activeTool === "draw" ? activeColor : "#ffffff";
+    fabricRef.current.freeDrawingBrush.width = activeTool === "draw" ? 3 : 20;
   }, [activeTool, activeColor]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -161,14 +169,17 @@ export const Whiteboard = () => {
       className="relative w-full h-full" 
       onContextMenu={handleContextMenu}
     >
-      <div className="absolute top-0 left-0 w-full pointer-events-none z-10">
-        <div className="pointer-events-auto">
+      <div className="absolute top-0 left-0 w-full z-10">
+        <div className="flex justify-between items-center p-4">
           <Toolbar 
             activeTool={activeTool}
             activeColor={activeColor}
             onToolChange={setActiveTool}
             onColorChange={setActiveColor}
           />
+          <div className="bg-[#221F26] text-white px-3 py-1 rounded-lg">
+            {Math.round(zoomLevel * 100)}%
+          </div>
         </div>
       </div>
       <canvas ref={canvasRef} className="w-full h-full" />
