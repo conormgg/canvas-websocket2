@@ -1,9 +1,7 @@
-
 import { useRef, useState } from 'react';
-import { Canvas, Point, ActiveSelection, util } from 'fabric';
+import { Canvas, Point, ActiveSelection, util, Image as FabricImage, Object as FabricObject } from 'fabric';
 import { Rect } from 'fabric';
 import { CanvasPosition } from '@/types/canvas';
-import { fabric } from 'fabric';
 
 export const useCanvasMouseHandlers = (
   fabricRef: React.MutableRefObject<Canvas | null>,
@@ -33,7 +31,7 @@ export const useCanvasMouseHandlers = (
       if (!activeObject) return;
       
       // Serialize the active object to JSON
-      const objectJSON = activeObject.toJSON();
+      const objectJSON = activeObject.toObject();
       // Store the JSON representation in a custom property on the canvas
       (canvas as any).clipboardJSON = objectJSON;
     }
@@ -45,46 +43,22 @@ export const useCanvasMouseHandlers = (
       // Get the JSON data from the clipboard
       const clipboardJSON = (canvas as any).clipboardJSON;
       
-      // Deserialize the JSON to create new fabric objects
-      if (clipboardJSON.objects) { 
-        // It's a group or ActiveSelection
-        // Use fabric.util.enlivenObjects to recreate the objects
-        fabric.util.enlivenObjects(clipboardJSON.objects, (objects) => {
-          // Create a new ActiveSelection with these objects
-          const selection = new ActiveSelection(objects, { canvas });
-          
-          // Position the new selection with an offset
-          selection.set({
-            left: (clipboardJSON.left || 0) + 20,
-            top: (clipboardJSON.top || 0) + 20
-          });
-          
-          // Add each object to the canvas
-          objects.forEach(obj => {
-            canvas.add(obj);
-          });
-          
-          // Select the new objects
-          canvas.setActiveObject(selection);
-          canvas.requestRenderAll();
-        });
-      } else {
-        // It's a single object
-        fabric.util.enlivenObjects([clipboardJSON], (objects) => {
-          const newObj = objects[0];
-          
-          // Position the new object with an offset
-          newObj.set({
-            left: (clipboardJSON.left || 0) + 20,
-            top: (clipboardJSON.top || 0) + 20,
+      // Use util.enlivenObjects to recreate objects
+      util.enlivenObjects([clipboardJSON], (objects) => {
+        objects.forEach(obj => {
+          // Offset the pasted object slightly
+          obj.set({
+            left: obj.left + 20,
+            top: obj.top + 20,
             evented: true
           });
           
-          canvas.add(newObj);
-          canvas.setActiveObject(newObj);
-          canvas.requestRenderAll();
+          canvas.add(obj);
+          canvas.setActiveObject(obj);
         });
-      }
+        
+        canvas.requestRenderAll();
+      });
     }
   };
 
