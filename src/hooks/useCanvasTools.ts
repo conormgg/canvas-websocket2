@@ -9,17 +9,24 @@ export const useCanvasTools = () => {
       toast("Draw mode enabled. Click and drag to draw!");
     } else if (tool === "eraser") {
       const eraserSize = thickness * 2; // Double the ink thickness for eraser
+      
+      // Create an SVG circle for the eraser cursor
       const circle = `
         <svg width="${eraserSize}" height="${eraserSize}" xmlns="http://www.w3.org/2000/svg">
           <circle cx="${eraserSize/2}" cy="${eraserSize/2}" r="${eraserSize/2 - 1}" 
                   stroke="black" stroke-width="1" fill="transparent"/>
         </svg>`;
       
+      // Convert SVG to data URL for cursor
       const svgBlob = new Blob([circle], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(svgBlob);
+      
+      // Set the hotspot to the center of the circle
       const cursorHotspot = Math.floor(eraserSize / 2);
       
+      // Apply the custom cursor to the canvas
       canvas.defaultCursor = `url(${url}) ${cursorHotspot} ${cursorHotspot}, auto`;
+      
       toast("Eraser mode enabled. Click and drag to erase!");
     } else if (tool === "select") {
       canvas.defaultCursor = 'default';
