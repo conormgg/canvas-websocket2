@@ -1,6 +1,7 @@
 
 import { useRef, useState } from 'react';
 import { Canvas, Point, Circle } from 'fabric';
+import { CanvasPosition } from '@/types/canvas';
 
 export const useCanvasMouseHandlers = (
   fabricRef: React.MutableRefObject<Canvas | null>,
@@ -8,7 +9,7 @@ export const useCanvasMouseHandlers = (
   onZoomChange: (zoom: number) => void
 ) => {
   const [isDrawing, setIsDrawing] = useState(false);
-  const lastPosRef = useRef({ x: 0, y: 0 });
+  const lastPosRef = useRef<CanvasPosition>({ x: 0, y: 0 });
 
   const handleMouseWheel = (opt: any) => {
     const e = opt.e as WheelEvent;
@@ -24,19 +25,6 @@ export const useCanvasMouseHandlers = (
     canvas.zoomToPoint(pointer, zoom);
     onZoomChange(Math.round(zoom * 100) / 100);
     
-    if (!isDrawing) {
-      const dot = new Circle({
-        left: e.offsetX,
-        top: e.offsetY,
-        radius: 2,
-        fill: '#ff0000',
-        opacity: 0.5,
-        selectable: false,
-      });
-      canvas.add(dot);
-      setTimeout(() => canvas.remove(dot), 300);
-    }
-    
     e.preventDefault();
     e.stopPropagation();
   };
@@ -47,24 +35,19 @@ export const useCanvasMouseHandlers = (
     if (!canvas) return;
 
     if (e.button === 2) {
+      // Right-click handling for panning
       canvas.defaultCursor = 'grabbing';
       canvas.selection = false;
       canvas.discardActiveObject();
       canvas.renderAll();
-
-      const dot = new Circle({
-        left: e.offsetX,
-        top: e.offsetY,
-        radius: 3,
-        fill: '#00ff00',
-        opacity: 0.5,
-        selectable: false,
-      });
-      canvas.add(dot);
-      setTimeout(() => canvas.remove(dot), 300);
     } 
     else if (e.button === 0) {
-      if ((activeTool === "draw" && e.ctrlKey) || activeTool === "eraser") {
+      // Left-click handling
+      if (activeTool === "draw" && e.ctrlKey) {
+        setIsDrawing(true);
+        canvas.isDrawingMode = true;
+        canvas.renderAll();
+      } else if (activeTool === "eraser") {
         setIsDrawing(true);
       }
     }
@@ -76,6 +59,7 @@ export const useCanvasMouseHandlers = (
     if (!canvas) return;
 
     if (e.buttons === 2) {
+      // Right-click drag for panning
       canvas.setCursor('grabbing');
       
       if (lastPosRef.current.x === 0) lastPosRef.current.x = e.clientX;

@@ -13,6 +13,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
   const { handleMouseWheel, handleMouseDown, handleMouseMove, handleMouseUp } = 
     useCanvasMouseHandlers(fabricRef, activeTool, onZoomChange);
 
+  // Initialize canvas
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -20,14 +21,15 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: "#ffffff",
-      isDrawingMode: activeTool === "draw",
+      isDrawingMode: false,
+      preserveObjectStacking: true,
     });
 
-    if (canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush.width = inkThickness;
-      canvas.freeDrawingBrush.color = activeColor;
-    }
+    // Set up initial brush properties
+    canvas.freeDrawingBrush.width = inkThickness;
+    canvas.freeDrawingBrush.color = activeColor;
 
+    // Event listeners
     canvas.on('mouse:wheel', handleMouseWheel);
     canvas.on('mouse:down', handleMouseDown);
     canvas.on('mouse:move', handleMouseMove);
@@ -40,6 +42,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
         width: window.innerWidth,
         height: window.innerHeight,
       });
+      canvas.renderAll();
     };
 
     window.addEventListener('resize', handleResize);
@@ -51,22 +54,28 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     };
   }, []);
 
+  // Update canvas based on tool, color, and thickness changes
   useEffect(() => {
     if (!fabricRef.current) return;
     
-    fabricRef.current.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
+    const canvas = fabricRef.current;
     
-    if (fabricRef.current.freeDrawingBrush) {
+    // Only set drawing mode directly when eraser is active, 
+    // for draw tool we'll enable it on Ctrl+click
+    canvas.isDrawingMode = activeTool === "eraser";
+    
+    if (canvas.freeDrawingBrush) {
       if (activeTool === "draw") {
-        fabricRef.current.freeDrawingBrush.color = activeColor;
-        fabricRef.current.freeDrawingBrush.width = inkThickness;
+        canvas.freeDrawingBrush.color = activeColor;
+        canvas.freeDrawingBrush.width = inkThickness;
       } else if (activeTool === "eraser") {
-        fabricRef.current.freeDrawingBrush.color = "#ffffff";
-        fabricRef.current.freeDrawingBrush.width = inkThickness * 2;
+        canvas.freeDrawingBrush.color = "#ffffff";
+        canvas.freeDrawingBrush.width = inkThickness * 2;
       }
     }
     
-    updateCursorAndNotify(fabricRef.current, activeTool);
+    updateCursorAndNotify(canvas, activeTool);
+    canvas.renderAll();
   }, [activeTool, activeColor, inkThickness]);
 
   return { canvasRef, fabricRef };

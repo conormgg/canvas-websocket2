@@ -6,7 +6,7 @@ export const useCanvasTools = () => {
   const updateCursorAndNotify = (canvas: Canvas, tool: string) => {
     if (tool === "draw") {
       canvas.defaultCursor = 'default';
-      toast("Draw mode enabled. Hold Ctrl + click to draw!");
+      toast("Draw mode enabled. Hold Ctrl + click to draw persistently!");
     } else if (tool === "eraser") {
       canvas.defaultCursor = 'crosshair';
       toast("Eraser mode enabled. Click and drag to erase!");
