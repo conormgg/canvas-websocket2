@@ -1,18 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import { Canvas, Point, Circle } from "fabric";
-import { toast } from "sonner";
 
-interface UseCanvasProps {
-  activeTool: "select" | "draw" | "eraser";
-  activeColor: string;
-  inkThickness: number;
-  onZoomChange: (zoom: number) => void;
-}
+import { useEffect, useRef } from "react";
+import { Canvas } from "fabric";
+import { UseCanvasProps } from "@/types/canvas";
+import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
+import { useCanvasTools } from "./useCanvasTools";
 
 export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange }: UseCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+
+  const { updateCursorAndNotify } = useCanvasTools();
+  const { handleMouseWheel, handleMouseDown, handleMouseMove, handleMouseUp } = 
+    useCanvasMouseHandlers(fabricRef, activeTool, onZoomChange);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -24,7 +23,6 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       isDrawingMode: activeTool === "draw",
     });
 
-    // Initialize the brush settings
     if (canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush.width = inkThickness;
       canvas.freeDrawingBrush.color = activeColor;
@@ -45,8 +43,6 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     };
 
     window.addEventListener('resize', handleResize);
-    
-    // Set appropriate cursor and show toast
     updateCursorAndNotify(canvas, activeTool);
 
     return () => {
@@ -55,149 +51,23 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     };
   }, []);
 
-  // Update canvas when tools or settings change
   useEffect(() => {
     if (!fabricRef.current) return;
     
-    // Set drawing mode based on active tool
     fabricRef.current.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
     
     if (fabricRef.current.freeDrawingBrush) {
-      // Set brush color and width based on tool
       if (activeTool === "draw") {
         fabricRef.current.freeDrawingBrush.color = activeColor;
         fabricRef.current.freeDrawingBrush.width = inkThickness;
       } else if (activeTool === "eraser") {
-        fabricRef.current.freeDrawingBrush.color = "#ffffff"; // White for eraser
-        fabricRef.current.freeDrawingBrush.width = inkThickness * 2; // Make eraser slightly bigger
+        fabricRef.current.freeDrawingBrush.color = "#ffffff";
+        fabricRef.current.freeDrawingBrush.width = inkThickness * 2;
       }
     }
     
-    // Update cursor and show notification
     updateCursorAndNotify(fabricRef.current, activeTool);
   }, [activeTool, activeColor, inkThickness]);
-
-  const updateCursorAndNotify = (canvas: Canvas, tool: string) => {
-    if (tool === "draw") {
-      canvas.defaultCursor = 'default';
-      toast("Draw mode enabled. Hold Ctrl + click to draw!");
-    } else if (tool === "eraser") {
-      canvas.defaultCursor = 'crosshair';
-      toast("Eraser mode enabled. Click and drag to erase!");
-    } else {
-      canvas.defaultCursor = 'default';
-      toast("Select mode enabled. Click objects to select them!");
-    }
-  };
-
-  const handleMouseWheel = (opt: any) => {
-    const e = opt.e as WheelEvent;
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    const delta = e.deltaY;
-    let zoom = canvas.getZoom();
-    zoom *= 0.999 ** delta;
-    zoom = Math.min(Math.max(0.1, zoom), 20);
-    
-    const pointer = new Point(e.offsetX, e.offsetY);
-    canvas.zoomToPoint(pointer, zoom);
-    onZoomChange(Math.round(zoom * 100) / 100);
-    
-    // Only show zoom indicator dot when not drawing
-    if (!isDrawing) {
-      const dot = new Circle({
-        left: e.offsetX,
-        top: e.offsetY,
-        radius: 2,
-        fill: '#ff0000',
-        opacity: 0.5,
-        selectable: false,
-      });
-      canvas.add(dot);
-      setTimeout(() => canvas.remove(dot), 300);
-    }
-    
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  let lastPosX = 0;
-  let lastPosY = 0;
-
-  const handleMouseDown = (opt: any) => {
-    const e = opt.e as MouseEvent;
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    // Right click for panning
-    if (e.button === 2) {
-      canvas.defaultCursor = 'grabbing';
-      canvas.selection = false;
-      canvas.discardActiveObject();
-      canvas.renderAll();
-
-      // Show indicator dot for right-click
-      const dot = new Circle({
-        left: e.offsetX,
-        top: e.offsetY,
-        radius: 3,
-        fill: '#00ff00',
-        opacity: 0.5,
-        selectable: false,
-      });
-      canvas.add(dot);
-      setTimeout(() => canvas.remove(dot), 300);
-    } 
-    // Left click
-    else if (e.button === 0) {
-      if ((activeTool === "draw" && e.ctrlKey) || activeTool === "eraser") {
-        setIsDrawing(true);
-      }
-    }
-  };
-
-  const handleMouseMove = (opt: any) => {
-    const e = opt.e as MouseEvent;
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    // Handle panning with right mouse button
-    if (e.buttons === 2) {
-      canvas.setCursor('grabbing');
-      
-      if (lastPosX === 0) lastPosX = e.clientX;
-      if (lastPosY === 0) lastPosY = e.clientY;
-      
-      const delta = new Point(e.clientX - lastPosX, e.clientY - lastPosY);
-      canvas.relativePan(delta);
-      
-      canvas.requestRenderAll();
-      lastPosX = e.clientX;
-      lastPosY = e.clientY;
-    }
-  };
-
-  const handleMouseUp = () => {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    canvas.setViewportTransform(canvas.viewportTransform!);
-    
-    // Reset cursor based on current tool
-    if (activeTool === "draw") {
-      canvas.defaultCursor = 'default';
-    } else if (activeTool === "eraser") {
-      canvas.defaultCursor = 'crosshair';
-    } else {
-      canvas.defaultCursor = 'default';
-    }
-    
-    canvas.selection = true;
-    lastPosX = 0;
-    lastPosY = 0;
-    setIsDrawing(false);
-  };
 
   return { canvasRef, fabricRef };
 };
