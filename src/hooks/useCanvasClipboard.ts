@@ -1,5 +1,5 @@
 
-import { Canvas, util, Point } from 'fabric';
+import { Canvas, util, Point, FabricObject } from 'fabric';
 import { useEffect } from 'react';
 import { useInternalClipboard } from './clipboard/useInternalClipboard';
 import { useExternalClipboard } from './clipboard/useExternalClipboard';
@@ -35,23 +35,30 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
     const toEnliven = [...clipboardData];
 
     util.enlivenObjects(toEnliven).then((objects) => {
-      objects.forEach(obj => {
-        const originalLeft = obj.get('left') || 0;
-        const originalTop = obj.get('top') || 0;
+      objects.forEach((obj: any) => {
+        // Use type assertion and proper property access
+        const originalLeft = typeof obj.left === 'number' ? obj.left : 0;
+        const originalTop = typeof obj.top === 'number' ? obj.top : 0;
         const position = calculatePastePosition(originalLeft, originalTop);
         
-        obj.set({ 
-          left: position.left, 
-          top: position.top,
-          evented: true 
-        });
-        
-        canvas.add(obj);
-        obj.setCoords();
+        // Set the new position
+        if (obj && typeof obj.set === 'function') {
+          obj.set({ 
+            left: position.left, 
+            top: position.top,
+            evented: true 
+          });
+          
+          canvas.add(obj as FabricObject);
+          
+          if (typeof obj.setCoords === 'function') {
+            obj.setCoords();
+          }
+        }
       });
 
-      if (objects.length === 1) {
-        canvas.setActiveObject(objects[0]);
+      if (objects.length === 1 && objects[0] && typeof objects[0].setCoords === 'function') {
+        canvas.setActiveObject(objects[0] as FabricObject);
       } else if (objects.length > 1) {
         const selection = canvas.getActiveObjects();
         if (selection.length) {
