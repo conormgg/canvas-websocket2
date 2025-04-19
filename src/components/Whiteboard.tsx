@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { Canvas, Point, Image } from "fabric";
 import { Toolbar } from "./Toolbar";
@@ -98,7 +99,13 @@ export const Whiteboard = () => {
             const imgUrl = event.target?.result as string;
             if (!imgUrl) return;
             
-            Image.fromURL(imgUrl, (img) => {
+            // Update the Image.fromURL usage to match Fabric.js v6 API
+            Image.fromURL(imgUrl, {
+              scaleX: 0.5,
+              scaleY: 0.5,
+              crossOrigin: 'anonymous',
+              objectCaching: false,
+            }).then((img) => {
               img.scaleToWidth(200);
               canvas.add(img);
               canvas.centerObject(img);
