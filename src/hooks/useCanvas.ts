@@ -21,16 +21,15 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: "#ffffff",
-      isDrawingMode: false,
+      isDrawingMode: activeTool === "draw" || activeTool === "eraser",
       preserveObjectStacking: true,
+      selection: activeTool === "select", // Enable selection when select tool is active
     });
 
-    // Initialize free drawing brush first
-    if (!canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush = new PencilBrush(canvas);
-    }
+    // Initialize free drawing brush
+    canvas.freeDrawingBrush = new PencilBrush(canvas);
     
-    // Now it's safe to set brush properties
+    // Set brush properties
     canvas.freeDrawingBrush.width = inkThickness;
     canvas.freeDrawingBrush.color = activeColor;
 
@@ -65,21 +64,26 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     
     const canvas = fabricRef.current;
     
-    // Ensure freeDrawingBrush is initialized in this effect too
-    if (!canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush = new PencilBrush(canvas);
-    }
-    
-    // Set drawing mode based on active tool
-    canvas.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
-    
-    if (canvas.freeDrawingBrush) {
-      if (activeTool === "draw") {
+    // Update drawing mode based on active tool
+    if (activeTool === "select") {
+      canvas.isDrawingMode = false;
+      canvas.selection = true;
+      canvas.interactive = true;
+    } else if (activeTool === "draw") {
+      canvas.isDrawingMode = true;
+      canvas.selection = false;
+      
+      if (canvas.freeDrawingBrush) {
         canvas.freeDrawingBrush.color = activeColor;
         canvas.freeDrawingBrush.width = inkThickness;
-      } else if (activeTool === "eraser") {
-        canvas.freeDrawingBrush.color = "#ffffff";
-        canvas.freeDrawingBrush.width = inkThickness * 2;
+      }
+    } else if (activeTool === "eraser") {
+      canvas.isDrawingMode = true;
+      canvas.selection = false;
+      
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.color = "#ffffff"; // White for eraser
+        canvas.freeDrawingBrush.width = inkThickness * 2; // Double thickness for eraser
       }
     }
     

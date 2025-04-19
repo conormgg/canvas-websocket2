@@ -8,16 +8,22 @@ export const useCanvasTools = () => {
       canvas.defaultCursor = 'crosshair';
       toast("Draw mode enabled. Click and drag to draw!");
     } else if (tool === "eraser") {
-      // Create a circular cursor for the eraser
-      const cursorSize = thickness * 2;
+      // Create a circular cursor for the eraser with dynamic size
+      const eraserSize = thickness * 2; // Double the ink thickness for eraser
       const circle = `
-        <svg height="${cursorSize}" width="${cursorSize}" style="position: absolute; top: ${-cursorSize/2}px; left: ${-cursorSize/2}px;">
-          <circle cx="${cursorSize/2}" cy="${cursorSize/2}" r="${cursorSize/2}" stroke="black" stroke-width="1" fill="rgba(255,255,255,0.5)"/>
+        <svg width="${eraserSize}" height="${eraserSize}" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="${eraserSize/2}" cy="${eraserSize/2}" r="${eraserSize/2}" 
+                  stroke="black" stroke-width="1" fill="rgba(255,255,255,0.5)"/>
         </svg>`;
-      const cursor = `url('data:image/svg+xml;utf8,${encodeURIComponent(circle)}') ${cursorSize/2} ${cursorSize/2}, auto`;
-      canvas.defaultCursor = cursor;
+      
+      // Use a data URL to create a custom cursor
+      const svgBlob = new Blob([circle], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(svgBlob);
+      const cursorHotspot = Math.floor(eraserSize / 2);
+      
+      canvas.defaultCursor = `url(${url}) ${cursorHotspot} ${cursorHotspot}, auto`;
       toast("Eraser mode enabled. Click and drag to erase!");
-    } else {
+    } else if (tool === "select") {
       canvas.defaultCursor = 'default';
       toast("Select mode enabled. Click objects to select them!");
     }

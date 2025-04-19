@@ -1,5 +1,6 @@
+
 import { useRef, useState } from 'react';
-import { Canvas, Point, Circle } from 'fabric';
+import { Canvas, Point } from 'fabric';
 import { CanvasPosition } from '@/types/canvas';
 
 export const useCanvasMouseHandlers = (
@@ -41,13 +42,18 @@ export const useCanvasMouseHandlers = (
       canvas.renderAll();
     } 
     else if (e.button === 0) {
-      // Left-click handling - now draws immediately when in draw mode
+      // Left-click handling for different tools
       if (activeTool === "draw") {
         setIsDrawing(true);
         canvas.isDrawingMode = true;
-        canvas.renderAll();
       } else if (activeTool === "eraser") {
         setIsDrawing(true);
+        canvas.isDrawingMode = true;
+      } else if (activeTool === "select") {
+        // For select tool, ensure drawing mode is off
+        canvas.isDrawingMode = false;
+        // Do not set isDrawing to true for select tool
+        // This allows the built-in selection behavior to work
       }
     }
   };
@@ -78,11 +84,7 @@ export const useCanvasMouseHandlers = (
 
     canvas.setViewportTransform(canvas.viewportTransform!);
     
-    if (activeTool === "draw") {
-      canvas.defaultCursor = 'default';
-    } else if (activeTool === "eraser") {
-      canvas.defaultCursor = 'crosshair';
-    } else {
+    if (activeTool === "select") {
       canvas.defaultCursor = 'default';
     }
     
