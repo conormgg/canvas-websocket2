@@ -27,34 +27,62 @@ export const useCanvasMouseHandlers = (
 
     // Handle copy (Ctrl + C)
     if (e.ctrlKey && e.key === 'c') {
-      if (!canvas.getActiveObject()) return;
-      canvas.getActiveObject()?.clone((cloned: any) => {
-        canvas.clipboard = cloned;
-      });
+      const activeObject = canvas.getActiveObject();
+      if (!activeObject) return;
+      
+      // Serialize the active object to JSON
+      const objectJSON = activeObject.toJSON();
+      // Store the JSON representation in a custom property on the canvas
+      (canvas as any).clipboardJSON = objectJSON;
     }
 
     // Handle paste (Ctrl + V)
     if (e.ctrlKey && e.key === 'v') {
-      if (!canvas.clipboard) return;
-      canvas.clipboard.clone((clonedObj: any) => {
-        canvas.discardActiveObject();
-        clonedObj.set({
-          left: clonedObj.left + 10,
-          top: clonedObj.top + 10,
-          evented: true,
-        });
-        if (clonedObj.type === 'activeSelection') {
-          clonedObj.canvas = canvas;
-          clonedObj.forEachObject((obj: any) => {
+      if (!(canvas as any).clipboardJSON) return;
+      
+      // Get the JSON data from the clipboard
+      const clipboardJSON = (canvas as any).clipboardJSON;
+      
+      // Deserialize the JSON to create new fabric objects
+      if (clipboardJSON.objects) { 
+        // It's a group or ActiveSelection
+        // Use fabric.util.enlivenObjects to recreate the objects
+        fabric.util.enlivenObjects(clipboardJSON.objects, (objects) => {
+          // Create a new ActiveSelection with these objects
+          const selection = new ActiveSelection(objects, { canvas });
+          
+          // Position the new selection with an offset
+          selection.set({
+            left: (clipboardJSON.left || 0) + 20,
+            top: (clipboardJSON.top || 0) + 20
+          });
+          
+          // Add each object to the canvas
+          objects.forEach(obj => {
             canvas.add(obj);
           });
-          clonedObj.setCoords();
-        } else {
-          canvas.add(clonedObj);
-        }
-        canvas.setActiveObject(clonedObj);
-        canvas.requestRenderAll();
-      });
+          
+          // Select the new objects
+          canvas.setActiveObject(selection);
+          canvas.requestRenderAll();
+        });
+      } else {
+        // It's a single object
+        fabric.util.enlivenObjects([clipboardJSON], (objects) => {
+          const newObj = objects[0];
+          
+          // Position the new object with an offset
+          newObj.set({
+            left: (clipboardJSON.left || 0) + 20,
+            top: (clipboardJSON.top || 0) + 20,
+            evented: true
+          });
+          
+          canvas.add(newObj);
+          canvas.setActiveObject(newObj);
+          canvas.requestRenderAll();
+        });
+      }
     }
   };
 
