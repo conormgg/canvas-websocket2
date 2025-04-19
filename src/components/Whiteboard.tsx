@@ -1,12 +1,13 @@
+
 import { useEffect, useRef, useState } from "react";
-import { Canvas, Point } from "fabric";
+import { Canvas, Point, Circle, Image as FabricImage } from "fabric";
 import { Toolbar } from "./Toolbar";
 import { toast } from "sonner";
 
 export const Whiteboard = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
-  const [activeTool, setActiveTool] = useState<"draw" | "eraser">("draw");
+  const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
   const [activeColor, setActiveColor] = useState("#000000e6");
   const [zoomLevel, setZoomLevel] = useState(1);
 
@@ -36,7 +37,7 @@ export const Whiteboard = () => {
       canvas.zoomToPoint(pointer, zoom);
       setZoomLevel(Math.round(zoom * 100) / 100);
       
-      const dot = new fabric.Circle({
+      const dot = new Circle({
         left: e.offsetX,
         top: e.offsetY,
         radius: 2,
@@ -59,7 +60,7 @@ export const Whiteboard = () => {
         canvas.discardActiveObject();
         canvas.renderAll();
 
-        const dot = new fabric.Circle({
+        const dot = new Circle({
           left: e.offsetX,
           top: e.offsetY,
           radius: 3,
@@ -117,7 +118,7 @@ export const Whiteboard = () => {
             const imgUrl = event.target?.result as string;
             if (!imgUrl) return;
             
-            Image.fromURL(imgUrl).then((img) => {
+            FabricImage.fromURL(imgUrl).then((img) => {
               img.scale(0.5);
               img.scaleToWidth(200);
               canvas.add(img);
