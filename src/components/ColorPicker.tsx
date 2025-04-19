@@ -7,7 +7,6 @@ const COLORS = [
   { value: "#ea384c", label: "Red" },
   { value: "#1EAEDB", label: "Blue" },
   { value: "#2E7D32", label: "Green" },
-  { value: "#333333", label: "Dark Gray" },
 ];
 
 interface ColorPickerProps {
