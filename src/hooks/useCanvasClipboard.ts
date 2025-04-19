@@ -1,4 +1,3 @@
-
 import { Canvas, util, Point, FabricObject } from 'fabric';
 import { useEffect } from 'react';
 import { useInternalClipboard } from './clipboard/useInternalClipboard';
@@ -11,7 +10,10 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
     setPastePosition,
     handleCanvasClick,
     handleCopy,
-    calculatePastePosition
+    calculatePastePosition,
+    awaitingPlacementRef,
+    placementPointRef,
+    pasteAtPosition
   } = useInternalClipboard(fabricRef);
 
   const {
@@ -32,16 +34,31 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
       return;
     }
 
+    // If we're awaiting placement, we'll paste when the user clicks
+    if (awaitingPlacementRef.current) {
+      return;
+    }
+
+    // If we have a placement point from a previous click, use it
+    if (placementPointRef.current) {
+      pasteAtPosition(placementPointRef.current);
+      return;
+    }
+
+    // Otherwise use the default behavior
     const toEnliven = [...clipboardData];
 
-    util.enlivenObjects(toEnliven).then((objects) => {
+    util.enlivenObjects(toEnliven).then((objects: any[]) => {
       objects.forEach((obj: any) => {
-        // Use type assertion and proper property access
+        // Check if the object has the needed properties before accessing them
+        if (typeof obj !== 'object') return;
+        
+        // Get original position (with type safety)
         const originalLeft = typeof obj.left === 'number' ? obj.left : 0;
         const originalTop = typeof obj.top === 'number' ? obj.top : 0;
         const position = calculatePastePosition(originalLeft, originalTop);
         
-        // Set the new position
+        // Set the new position (with type safety)
         if (obj && typeof obj.set === 'function') {
           obj.set({ 
             left: position.left, 
@@ -49,7 +66,7 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
             evented: true 
           });
           
-          canvas.add(obj as FabricObject);
+          canvas.add(obj);
           
           if (typeof obj.setCoords === 'function') {
             obj.setCoords();
@@ -97,6 +114,21 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
       }
     };
   }, [fabricRef.current]);
+
+  // Add keyboard escape handler to cancel awaiting placement
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && awaitingPlacementRef.current) {
+        awaitingPlacementRef.current = false;
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
 
   return { clipboardDataRef, pastePosition, setPastePosition };
 };
