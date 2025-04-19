@@ -1,7 +1,9 @@
+
 import { useRef, useState } from 'react';
-import { Canvas, Point, ActiveSelection } from 'fabric';
+import { Canvas, Point, ActiveSelection, util } from 'fabric';
 import { Rect } from 'fabric';
 import { CanvasPosition } from '@/types/canvas';
+import { fabric } from 'fabric';
 
 export const useCanvasMouseHandlers = (
   fabricRef: React.MutableRefObject<Canvas | null>,
