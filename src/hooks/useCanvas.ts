@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps } from "@/types/canvas";
@@ -70,9 +69,8 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       canvas.freeDrawingBrush = new PencilBrush(canvas);
     }
     
-    // Only set drawing mode directly when eraser is active, 
-    // for draw tool we'll enable it on Ctrl+click
-    canvas.isDrawingMode = activeTool === "eraser";
+    // Set drawing mode based on active tool
+    canvas.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
     
     if (canvas.freeDrawingBrush) {
       if (activeTool === "draw") {
@@ -84,7 +82,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       }
     }
     
-    updateCursorAndNotify(canvas, activeTool);
+    updateCursorAndNotify(canvas, activeTool, inkThickness);
     canvas.renderAll();
   }, [activeTool, activeColor, inkThickness]);
 

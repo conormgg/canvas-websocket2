@@ -1,4 +1,3 @@
-
 import { useRef, useState } from 'react';
 import { Canvas, Point, Circle } from 'fabric';
 import { CanvasPosition } from '@/types/canvas';
@@ -42,8 +41,8 @@ export const useCanvasMouseHandlers = (
       canvas.renderAll();
     } 
     else if (e.button === 0) {
-      // Left-click handling
-      if (activeTool === "draw" && e.ctrlKey) {
+      // Left-click handling - now draws immediately when in draw mode
+      if (activeTool === "draw") {
         setIsDrawing(true);
         canvas.isDrawingMode = true;
         canvas.renderAll();
