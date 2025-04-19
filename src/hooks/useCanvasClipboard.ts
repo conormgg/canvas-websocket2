@@ -1,4 +1,3 @@
-
 import { Canvas, FabricObject, util } from 'fabric';
 
 export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
@@ -22,7 +21,7 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
     
     const clipboardJSON = (canvas as any).clipboardJSON;
     
-    util.enlivenObjects(clipboardJSON, {}, (objects: FabricObject[]) => {
+    util.enlivenObjects(clipboardJSON, (objects: FabricObject[]) => {
       objects.forEach(obj => {
         // Check if object has position properties before setting them
         if ('left' in obj && 'top' in obj && obj instanceof FabricObject) {
