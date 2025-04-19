@@ -6,8 +6,8 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
   const { handleDelete } = useCanvasDeletion(fabricRef);
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    // Only handle deletion, copy and paste are managed in useCanvasClipboard
     handleDelete(e);
-    // Copy and Paste are now handled directly in useCanvasClipboard
   };
 
   return { handleKeyDown };

@@ -17,7 +17,7 @@ export const Whiteboard = () => {
     onZoomChange: setZoomLevel
   });
 
-  // Direct use of useCanvasClipboard to ensure clipboard listeners are set up properly
+  // Use new clipboard functionality
   useCanvasClipboard(fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
