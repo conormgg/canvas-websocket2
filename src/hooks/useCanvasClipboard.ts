@@ -1,8 +1,10 @@
 
 import { Canvas, FabricObject, util } from 'fabric';
+import { useEffect } from 'react';
 
 export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
   const handleCopy = (e: KeyboardEvent) => {
+    if (e.repeat) return;
     const canvas = fabricRef.current;
     if (!canvas) return;
 
@@ -16,19 +18,18 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
   };
 
   const handlePaste = (e: KeyboardEvent) => {
+    if (e.repeat) return;
     const canvas = fabricRef.current;
     if (!canvas || !e.ctrlKey || e.key !== 'v') return;
     
     const clipboardJSON: any[] = (canvas as any).clipboardJSON;
     if (!clipboardJSON?.length) return;
 
-    // Decide which JSONs to enliven:
     const toEnliven = clipboardJSON.length > 1
-      ? clipboardJSON                  // multiple selected → paste all
-      : [clipboardJSON[clipboardJSON.length - 1]];  // single → paste only last
+      ? clipboardJSON
+      : [clipboardJSON[clipboardJSON.length - 1]];
 
     util.enlivenObjects(toEnliven).then((objects: FabricObject[]) => {
-      // Add each resurrected object, offset slightly to avoid overlap
       objects.forEach(obj => {
         const left = (obj.get('left') || 0) + 20;
         const top = (obj.get('top') || 0) + 20;
@@ -37,7 +38,6 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
         obj.setCoords();
       });
 
-      // If it was just one object, make it active; otherwise clear selection
       if (objects.length === 1) {
         canvas.setActiveObject(objects[0]);
       } else {
@@ -47,6 +47,16 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
       canvas.requestRenderAll();
     });
   };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleCopy);
+    window.addEventListener('keydown', handlePaste);
+    
+    return () => {
+      window.removeEventListener('keydown', handleCopy);
+      window.removeEventListener('keydown', handlePaste);
+    };
+  }, []);
 
   return { handleCopy, handlePaste };
 };
