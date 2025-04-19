@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps } from "@/types/canvas";
@@ -27,7 +28,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       backgroundColor: "#ffffff",
       isDrawingMode: activeTool === "draw" || activeTool === "eraser",
       preserveObjectStacking: true,
-      selection: activeTool === "select",
+      selection: false, // Disable built-in selection to use our custom implementation
     });
 
     // Initialize free drawing brush
@@ -73,7 +74,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     // Update drawing mode based on active tool
     if (activeTool === "select") {
       canvas.isDrawingMode = false;
-      canvas.selection = true;
+      canvas.selection = false; // Disable default selection behavior
     } else if (activeTool === "draw") {
       canvas.isDrawingMode = true;
       canvas.selection = false;

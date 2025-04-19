@@ -10,7 +10,8 @@ export const useCanvasMouseHandlers = (
 ) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const lastPosRef = useRef<CanvasPosition>({ x: 0, y: 0 });
-  const isSelecting = useRef(false);
+  const selectionRectRef = useRef<Rect | null>(null);
+  const startPointRef = useRef<CanvasPosition>({ x: 0, y: 0 });
 
   const handleKeyDown = (e: KeyboardEvent) => {
     const canvas = fabricRef.current;
@@ -57,13 +58,11 @@ export const useCanvasMouseHandlers = (
     } 
     else if (e.button === 0) {
       if (activeTool === "select") {
-        isSelecting.current = true;
-        canvas.selection = true;
-        canvas.isDrawingMode = false;
-        
-        // Start selection from the point where mouse was pressed
         const pointer = canvas.getPointer(e);
-        canvas.setActiveObject(new Rect({
+        startPointRef.current = { x: pointer.x, y: pointer.y };
+        
+        // Create a new selection rectangle
+        selectionRectRef.current = new Rect({
           left: pointer.x,
           top: pointer.y,
           width: 0,
@@ -74,8 +73,12 @@ export const useCanvasMouseHandlers = (
           selectable: false,
           evented: false,
           excludeFromExport: true,
-          selectionBackgroundColor: 'rgba(0,0,0,0.1)',
-        }));
+          originX: 'left',
+          originY: 'top'
+        });
+        
+        canvas.add(selectionRectRef.current);
+        canvas.renderAll();
       } else if (activeTool === "draw" || activeTool === "eraser") {
         setIsDrawing(true);
         canvas.isDrawingMode = true;
@@ -100,57 +103,55 @@ export const useCanvasMouseHandlers = (
       
       canvas.requestRenderAll();
       lastPosRef.current = { x: e.clientX, y: e.clientY };
-    } else if (isSelecting.current && activeTool === "select") {
+    } 
+    else if (selectionRectRef.current && activeTool === "select" && e.buttons === 1) {
       const pointer = canvas.getPointer(e);
-      const activeObj = canvas.getActiveObject();
       
-      if (activeObj && activeObj.type === 'rect') {
-        const startX = activeObj.left!;
-        const startY = activeObj.top!;
-        
-        const width = Math.abs(pointer.x - startX);
-        const height = Math.abs(pointer.y - startY);
-        
-        activeObj.set({
-          width: width,
-          height: height,
-          left: pointer.x > startX ? startX : pointer.x,
-          top: pointer.y > startY ? startY : pointer.y
-        });
-        
-        activeObj.setCoords();
-        canvas.renderAll();
-      }
+      // Calculate width and height based on start point and current pointer
+      const startX = startPointRef.current.x;
+      const startY = startPointRef.current.y;
+      const width = Math.abs(pointer.x - startX);
+      const height = Math.abs(pointer.y - startY);
+      
+      // Update the selection rectangle
+      selectionRectRef.current.set({
+        left: Math.min(startX, pointer.x),
+        top: Math.min(startY, pointer.y),
+        width: width,
+        height: height
+      });
+      
+      canvas.renderAll();
     }
   };
 
   const handleMouseUp = (opt: any) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-
-    if (isSelecting.current && activeTool === "select") {
-      const selectionRect = canvas.getActiveObject();
-      if (selectionRect && selectionRect.type === 'rect') {
-        // Get all objects that intersect with the selection rectangle
-        const objects = canvas.getObjects().filter(obj => {
-          if (obj === selectionRect) return false;
-          return selectionRect.intersectsWithObject(obj);
-        });
-
-        if (objects.length > 0) {
-          if (objects.length === 1) {
-            canvas.setActiveObject(objects[0]);
-          } else {
-            const selection = new ActiveSelection(objects, { canvas });
-            canvas.setActiveObject(selection);
-          }
+    
+    if (selectionRectRef.current && activeTool === "select") {
+      // Find objects that intersect with the selection rectangle
+      const selectionRect = selectionRectRef.current;
+      
+      const objects = canvas.getObjects().filter(obj => {
+        if (obj === selectionRect) return false;
+        return selectionRect.intersectsWithObject(obj);
+      });
+      
+      // Select the objects
+      if (objects.length > 0) {
+        if (objects.length === 1) {
+          canvas.setActiveObject(objects[0]);
+        } else {
+          const selection = new ActiveSelection(objects, { canvas });
+          canvas.setActiveObject(selection);
         }
-
-        // Remove the selection rectangle
-        canvas.remove(selectionRect);
-        canvas.renderAll();
       }
-      isSelecting.current = false;
+      
+      // Remove the selection rectangle
+      canvas.remove(selectionRect);
+      selectionRectRef.current = null;
+      canvas.renderAll();
     }
 
     canvas.setViewportTransform(canvas.viewportTransform!);
