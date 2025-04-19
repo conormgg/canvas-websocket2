@@ -1,12 +1,12 @@
-
 import { useState } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useCanvasClipboard } from "@/hooks/useCanvasClipboard";
+import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
 
 interface WhiteboardProps {
-  id: "left" | "right";
+  id: WhiteboardId;
 }
 
 export const Whiteboard = ({ id }: WhiteboardProps) => {
