@@ -1,6 +1,7 @@
 
 import { useRef, useState } from 'react';
-import { Canvas, Point, ActiveSelection, Rect } from 'fabric';
+import { Canvas, Point } from 'fabric';
+import { Rect, ActiveSelection } from 'fabric';
 import { CanvasPosition } from '@/types/canvas';
 
 export const useCanvasMouseHandlers = (
@@ -57,11 +58,12 @@ export const useCanvasMouseHandlers = (
       canvas.renderAll();
     } 
     else if (e.button === 0) {
+      // Only allow drawing if the drawing tool is active
       if (activeTool === "select") {
         const pointer = canvas.getPointer(e);
         startPointRef.current = { x: pointer.x, y: pointer.y };
         
-        // Create a new selection rectangle
+        // Only create selection rectangle if we're in select mode
         selectionRectRef.current = new Rect({
           left: pointer.x,
           top: pointer.y,
@@ -79,9 +81,8 @@ export const useCanvasMouseHandlers = (
         
         canvas.add(selectionRectRef.current);
         canvas.renderAll();
-      } else if (activeTool === "draw" || activeTool === "eraser") {
+      } else if ((activeTool === "draw" || activeTool === "eraser") && canvas.isDrawingMode) {
         setIsDrawing(true);
-        canvas.isDrawingMode = true;
       }
     }
   };
