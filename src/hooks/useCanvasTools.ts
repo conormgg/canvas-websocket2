@@ -15,32 +15,34 @@ export const useCanvasTools = () => {
       const svgBlob = new Blob([dot], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(svgBlob);
       
-      // Set the hotspot to the center of the dot
       const cursorHotspot = Math.floor(dotSize / 2);
-      canvas.defaultCursor = `url(${url}) ${cursorHotspot} ${cursorHotspot}, auto`;
+      canvas.freeDrawingCursor = `url(${url}) ${cursorHotspot} ${cursorHotspot}, auto`;
+      canvas.defaultCursor = canvas.freeDrawingCursor;
+      canvas.wrapperEl.style.cursor = canvas.freeDrawingCursor;
       
       toast("Draw mode enabled. Click and drag to draw!");
     } else if (tool === "eraser") {
-      const eraserSize = thickness * 2; // Double the ink thickness for eraser
+      const eraserSize = thickness * 2;
       
-      // Create an SVG circle for the eraser cursor
       const circle = `
         <svg width="${eraserSize}" height="${eraserSize}" xmlns="http://www.w3.org/2000/svg">
           <circle cx="${eraserSize/2}" cy="${eraserSize/2}" r="${eraserSize/2 - 1}" 
                   stroke="black" stroke-width="1" fill="transparent"/>
         </svg>`;
       
-      // Convert SVG to data URL for cursor
       const svgBlob = new Blob([circle], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(svgBlob);
       
-      // Set the hotspot to the center of the circle
       const cursorHotspot = Math.floor(eraserSize / 2);
-      canvas.defaultCursor = `url(${url}) ${cursorHotspot} ${cursorHotspot}, auto`;
+      canvas.freeDrawingCursor = `url(${url}) ${cursorHotspot} ${cursorHotspot}, auto`;
+      canvas.defaultCursor = canvas.freeDrawingCursor;
+      canvas.wrapperEl.style.cursor = canvas.freeDrawingCursor;
       
       toast("Eraser mode enabled. Click and drag to erase!");
     } else if (tool === "select") {
       canvas.defaultCursor = 'default';
+      canvas.hoverCursor = 'move';
+      canvas.wrapperEl.style.cursor = 'default';
       toast("Select mode enabled. Click objects to select them!");
     }
   };

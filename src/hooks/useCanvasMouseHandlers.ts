@@ -1,7 +1,6 @@
-
 import { useRef, useState } from 'react';
-import { Canvas, Point } from 'fabric';
-import { Rect, ActiveSelection } from 'fabric';
+import { Canvas, Point, ActiveSelection } from 'fabric';
+import { Rect } from 'fabric';
 import { CanvasPosition } from '@/types/canvas';
 
 export const useCanvasMouseHandlers = (
@@ -24,6 +23,38 @@ export const useCanvasMouseHandlers = (
       activeObjects.forEach(obj => canvas.remove(obj));
       canvas.discardActiveObject();
       canvas.requestRenderAll();
+    }
+
+    // Handle copy (Ctrl + C)
+    if (e.ctrlKey && e.key === 'c') {
+      if (!canvas.getActiveObject()) return;
+      canvas.getActiveObject()?.clone((cloned: any) => {
+        canvas.clipboard = cloned;
+      });
+    }
+
+    // Handle paste (Ctrl + V)
+    if (e.ctrlKey && e.key === 'v') {
+      if (!canvas.clipboard) return;
+      canvas.clipboard.clone((clonedObj: any) => {
+        canvas.discardActiveObject();
+        clonedObj.set({
+          left: clonedObj.left + 10,
+          top: clonedObj.top + 10,
+          evented: true,
+        });
+        if (clonedObj.type === 'activeSelection') {
+          clonedObj.canvas = canvas;
+          clonedObj.forEachObject((obj: any) => {
+            canvas.add(obj);
+          });
+          clonedObj.setCoords();
+        } else {
+          canvas.add(clonedObj);
+        }
+        canvas.setActiveObject(clonedObj);
+        canvas.requestRenderAll();
+      });
     }
   };
 
