@@ -1,5 +1,6 @@
+
 import { useRef, useState } from 'react';
-import { Canvas, Point } from 'fabric';
+import { Canvas, Point, ActiveSelection, Rect } from 'fabric';
 import { CanvasPosition } from '@/types/canvas';
 
 export const useCanvasMouseHandlers = (
@@ -62,7 +63,7 @@ export const useCanvasMouseHandlers = (
         
         // Start selection from the point where mouse was pressed
         const pointer = canvas.getPointer(e);
-        canvas.setActiveObject(new fabric.Rect({
+        canvas.setActiveObject(new Rect({
           left: pointer.x,
           top: pointer.y,
           width: 0,
@@ -140,7 +141,7 @@ export const useCanvasMouseHandlers = (
           if (objects.length === 1) {
             canvas.setActiveObject(objects[0]);
           } else {
-            const selection = new fabric.ActiveSelection(objects, { canvas });
+            const selection = new ActiveSelection(objects, { canvas });
             canvas.setActiveObject(selection);
           }
         }
