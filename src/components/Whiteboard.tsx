@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from "react";
-import { Canvas as FabricCanvas } from "fabric";
+import { fabric } from "fabric";
 import { Toolbar } from "./Toolbar";
 import { toast } from "sonner";
 
@@ -8,14 +8,14 @@ type Tool = "select" | "draw" | "eraser";
 
 export const Whiteboard = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricRef = useRef<FabricCanvas | null>(null);
+  const fabricRef = useRef<fabric.Canvas | null>(null);
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [activeColor, setActiveColor] = useState("#D3E4FD");
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    const canvas = new FabricCanvas(canvasRef.current, {
+    const canvas = new fabric.Canvas(canvasRef.current, {
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: "#ffffff",
@@ -26,19 +26,25 @@ export const Whiteboard = () => {
 
     // Enable zoom with mouse wheel
     canvas.on('mouse:wheel', (opt) => {
-      const delta = opt.e.deltaY;
+      const e = opt.e as WheelEvent;
+      const delta = e.deltaY;
       let zoom = canvas.getZoom();
       zoom *= 0.999 ** delta;
       if (zoom > 20) zoom = 20;
       if (zoom < 0.1) zoom = 0.1;
-      canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
-      opt.e.preventDefault();
-      opt.e.stopPropagation();
+      
+      // Create a proper fabric.Point instance for zooming
+      const pointer = new fabric.Point(e.offsetX, e.offsetY);
+      canvas.zoomToPoint(pointer, zoom);
+      
+      e.preventDefault();
+      e.stopPropagation();
     });
 
     // Enable panning with right mouse button
     canvas.on('mouse:down', (opt) => {
-      if (opt.e.button === 2) {
+      const e = opt.e as MouseEvent;
+      if (e.button === 2) {
         canvas.defaultCursor = 'grabbing';
         canvas.selection = false;
         canvas.discardActiveObject();
@@ -47,19 +53,22 @@ export const Whiteboard = () => {
     });
 
     let isDragging = false;
-    let lastPosX: number;
-    let lastPosY: number;
+    let lastPosX = 0;
+    let lastPosY = 0;
 
     canvas.on('mouse:move', (opt) => {
-      if (opt.e.buttons === 2) {
+      const e = opt.e as MouseEvent;
+      if (e.buttons === 2) {
         isDragging = true;
         canvas.setCursor('grabbing');
-        const e = opt.e;
-        const vpt = canvas.viewportTransform!;
-        if (lastPosX === undefined) lastPosX = e.clientX;
-        if (lastPosY === undefined) lastPosY = e.clientY;
-        vpt[4] += e.clientX - lastPosX;
-        vpt[5] += e.clientY - lastPosY;
+        
+        if (lastPosX === 0) lastPosX = e.clientX;
+        if (lastPosY === 0) lastPosY = e.clientY;
+        
+        // Create a proper fabric.Point for panning
+        const delta = new fabric.Point(e.clientX - lastPosX, e.clientY - lastPosY);
+        canvas.relativePan(delta);
+        
         canvas.requestRenderAll();
         lastPosX = e.clientX;
         lastPosY = e.clientY;
@@ -71,8 +80,8 @@ export const Whiteboard = () => {
       isDragging = false;
       canvas.defaultCursor = 'default';
       canvas.selection = true;
-      lastPosX = undefined;
-      lastPosY = undefined;
+      lastPosX = 0;
+      lastPosY = 0;
     });
 
     // Handle image paste
