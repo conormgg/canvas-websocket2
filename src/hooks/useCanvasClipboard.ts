@@ -1,8 +1,10 @@
 
-import { Canvas, FabricObject, util } from 'fabric';
+import { Canvas, FabricObject, Image as FabricImage, util } from 'fabric';
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
+  // Handle internal copy via Ctrl+C
   const handleCopy = (e: KeyboardEvent) => {
     if (e.repeat) return;
     const canvas = fabricRef.current;
@@ -17,6 +19,7 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
     }
   };
 
+  // Handle internal paste via Ctrl+V
   const handlePaste = (e: KeyboardEvent) => {
     if (e.repeat) return;
     const canvas = fabricRef.current;
@@ -49,13 +52,57 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
     });
   };
 
+  // Handle external clipboard content (images, etc.)
+  const handleExternalPaste = (e: ClipboardEvent) => {
+    if (!e.clipboardData || !fabricRef.current) return;
+    
+    const items = e.clipboardData.items;
+    
+    // Check if we have image data in the clipboard
+    let hasImageData = false;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        hasImageData = true;
+        const blob = items[i].getAsFile();
+        if (!blob) continue;
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const imgUrl = event.target?.result as string;
+          if (!imgUrl) return;
+          
+          FabricImage.fromURL(imgUrl).then((img) => {
+            img.scale(0.5);
+            img.scaleToWidth(200);
+            fabricRef.current?.add(img);
+            fabricRef.current?.centerObject(img);
+            fabricRef.current?.setActiveObject(img);
+            fabricRef.current?.renderAll();
+            toast("Image added to whiteboard");
+          });
+        };
+        reader.readAsDataURL(blob);
+      }
+    }
+
+    // If we processed image data, prevent default to avoid double paste
+    if (hasImageData) {
+      e.preventDefault();
+    }
+  };
+
   useEffect(() => {
+    // Set up keyboard event listeners for internal copy/paste
     window.addEventListener('keydown', handleCopy);
     window.addEventListener('keydown', handlePaste);
+    
+    // Set up clipboard event listener for external content
+    document.addEventListener('paste', handleExternalPaste);
     
     return () => {
       window.removeEventListener('keydown', handleCopy);
       window.removeEventListener('keydown', handlePaste);
+      document.removeEventListener('paste', handleExternalPaste);
     };
   }, []);
 
