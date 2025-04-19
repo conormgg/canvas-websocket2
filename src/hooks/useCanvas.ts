@@ -5,7 +5,7 @@ import { UseCanvasProps } from "@/types/canvas";
 import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 
-export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange }: UseCanvasProps) => {
+export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange, onObjectAdded }: UseCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
 
@@ -18,7 +18,6 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     handleKeyDown 
   } = useCanvasMouseHandlers(fabricRef, activeTool, onZoomChange);
 
-  // Initialize canvas
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -28,17 +27,21 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       backgroundColor: "#ffffff",
       isDrawingMode: activeTool === "draw" || activeTool === "eraser",
       preserveObjectStacking: true,
-      selection: false, // Disable built-in selection to use our custom implementation
+      selection: false,
     });
 
-    // Initialize free drawing brush
     canvas.freeDrawingBrush = new PencilBrush(canvas);
-    
-    // Set brush properties
     canvas.freeDrawingBrush.width = inkThickness;
     canvas.freeDrawingBrush.color = activeColor;
 
-    // Event listeners
+    if (onObjectAdded) {
+      canvas.on('object:added', (e) => {
+        if (e.target) {
+          onObjectAdded(e.target);
+        }
+      });
+    }
+
     canvas.on('mouse:wheel', handleMouseWheel);
     canvas.on('mouse:down', handleMouseDown);
     canvas.on('mouse:move', handleMouseMove);
@@ -65,16 +68,14 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     };
   }, []);
 
-  // Update canvas based on tool, color, and thickness changes
   useEffect(() => {
     if (!fabricRef.current) return;
     
     const canvas = fabricRef.current;
     
-    // Update drawing mode based on active tool
     if (activeTool === "select") {
       canvas.isDrawingMode = false;
-      canvas.selection = false; // Disable default selection behavior
+      canvas.selection = false;
     } else if (activeTool === "draw") {
       canvas.isDrawingMode = true;
       canvas.selection = false;
@@ -88,8 +89,8 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       canvas.selection = false;
       
       if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.color = "#ffffff"; // White for eraser
-        canvas.freeDrawingBrush.width = inkThickness * 2; // Double thickness for eraser
+        canvas.freeDrawingBrush.color = "#ffffff";
+        canvas.freeDrawingBrush.width = inkThickness * 2;
       }
     }
     

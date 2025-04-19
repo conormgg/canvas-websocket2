@@ -3,8 +3,13 @@ import { useState } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useCanvasClipboard } from "@/hooks/useCanvasClipboard";
+import { toast } from "sonner";
 
-export const Whiteboard = () => {
+interface WhiteboardProps {
+  id: "left" | "right";
+}
+
+export const Whiteboard = ({ id }: WhiteboardProps) => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
   const [activeColor, setActiveColor] = useState("#000000e6");
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -14,16 +19,38 @@ export const Whiteboard = () => {
     activeTool,
     activeColor,
     inkThickness,
-    onZoomChange: setZoomLevel
+    onZoomChange: setZoomLevel,
+    onObjectAdded: (object) => {
+      // Broadcast to other whiteboard
+      const event = new CustomEvent('whiteboard-update', {
+        detail: { sourceId: id, object: object.toJSON() }
+      });
+      window.dispatchEvent(event);
+    }
   });
 
-  // Use new clipboard functionality
   useCanvasClipboard(fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     return false;
   };
+
+  // Listen for updates from the other whiteboard
+  useState(() => {
+    const handleWhiteboardUpdate = (e: CustomEvent) => {
+      if (e.detail.sourceId !== id && fabricRef.current) {
+        fabricRef.current.loadFromJSON(e.detail.object, () => {
+          fabricRef.current?.renderAll();
+        });
+      }
+    };
+
+    window.addEventListener('whiteboard-update', handleWhiteboardUpdate as EventListener);
+    return () => {
+      window.removeEventListener('whiteboard-update', handleWhiteboardUpdate as EventListener);
+    };
+  });
 
   return (
     <div 
