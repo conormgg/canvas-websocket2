@@ -22,9 +22,10 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: "#ffffff",
-      isDrawingMode: true,
+      isDrawingMode: activeTool === "draw",
     });
 
+    // Initialize the brush settings
     if (canvas.freeDrawingBrush) {
       canvas.freeDrawingBrush.width = inkThickness;
       canvas.freeDrawingBrush.color = activeColor;
@@ -45,7 +46,9 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     };
 
     window.addEventListener('resize', handleResize);
-    toast("Draw mode enabled. Click and drag to draw!");
+    
+    // Set appropriate cursor and show toast
+    updateCursorAndNotify(canvas, activeTool);
 
     return () => {
       canvas.dispose();
@@ -53,27 +56,40 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     };
   }, []);
 
+  // Update canvas when tools or settings change
   useEffect(() => {
     if (!fabricRef.current) return;
     
-    fabricRef.current.isDrawingMode = activeTool === "draw";
+    // Set drawing mode based on active tool
+    fabricRef.current.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
     
     if (fabricRef.current.freeDrawingBrush) {
-      fabricRef.current.freeDrawingBrush.color = activeTool === "draw" ? activeColor : "#ffffff";
-      fabricRef.current.freeDrawingBrush.width = activeTool === "draw" ? inkThickness : 20;
+      // Set brush color and width based on tool
+      if (activeTool === "draw") {
+        fabricRef.current.freeDrawingBrush.color = activeColor;
+        fabricRef.current.freeDrawingBrush.width = inkThickness;
+      } else if (activeTool === "eraser") {
+        fabricRef.current.freeDrawingBrush.color = "#ffffff"; // White for eraser
+        fabricRef.current.freeDrawingBrush.width = inkThickness * 2; // Make eraser slightly bigger
+      }
     }
     
-    if (activeTool === "draw") {
-      fabricRef.current.defaultCursor = 'crosshair';
+    // Update cursor and show notification
+    updateCursorAndNotify(fabricRef.current, activeTool);
+  }, [activeTool, activeColor, inkThickness]);
+
+  const updateCursorAndNotify = (canvas: Canvas, tool: string) => {
+    if (tool === "draw") {
+      canvas.defaultCursor = 'crosshair';
       toast("Draw mode enabled. Click and drag to draw!");
-    } else if (activeTool === "eraser") {
-      fabricRef.current.defaultCursor = 'cell';
+    } else if (tool === "eraser") {
+      canvas.defaultCursor = 'cell';
       toast("Eraser mode enabled. Click and drag to erase!");
     } else {
-      fabricRef.current.defaultCursor = 'default';
+      canvas.defaultCursor = 'default';
       toast("Select mode enabled. Click objects to select them!");
     }
-  }, [activeTool, activeColor, inkThickness]);
+  };
 
   const handleMouseWheel = (opt: any) => {
     const e = opt.e as WheelEvent;
@@ -89,6 +105,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     canvas.zoomToPoint(pointer, zoom);
     onZoomChange(Math.round(zoom * 100) / 100);
     
+    // Only show zoom indicator dot when not drawing
     if (!isDrawing) {
       const dot = new Circle({
         left: e.offsetX,
@@ -114,12 +131,14 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     const canvas = fabricRef.current;
     if (!canvas) return;
 
+    // Right click for panning
     if (e.button === 2) {
       canvas.defaultCursor = 'grabbing';
       canvas.selection = false;
       canvas.discardActiveObject();
       canvas.renderAll();
 
+      // Show indicator dot for right-click
       const dot = new Circle({
         left: e.offsetX,
         top: e.offsetY,
@@ -130,8 +149,12 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
       });
       canvas.add(dot);
       setTimeout(() => canvas.remove(dot), 300);
-    } else if (e.button === 0 && activeTool === "draw") {
-      setIsDrawing(true);
+    } 
+    // Left click
+    else if (e.button === 0) {
+      if (activeTool === "draw" || activeTool === "eraser") {
+        setIsDrawing(true);
+      }
     }
   };
 
@@ -140,6 +163,7 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     const canvas = fabricRef.current;
     if (!canvas) return;
 
+    // Handle panning with right mouse button
     if (e.buttons === 2) {
       canvas.setCursor('grabbing');
       
@@ -160,7 +184,16 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange 
     if (!canvas) return;
 
     canvas.setViewportTransform(canvas.viewportTransform!);
-    canvas.defaultCursor = 'default';
+    
+    // Reset cursor based on current tool
+    if (activeTool === "draw") {
+      canvas.defaultCursor = 'crosshair';
+    } else if (activeTool === "eraser") {
+      canvas.defaultCursor = 'cell';
+    } else {
+      canvas.defaultCursor = 'default';
+    }
+    
     canvas.selection = true;
     lastPosX = 0;
     lastPosY = 0;
