@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { Canvas, Point, Circle, Image as FabricImage } from "fabric";
 import { Toolbar } from "./Toolbar";
@@ -11,6 +10,7 @@ export const Whiteboard = () => {
   const [activeColor, setActiveColor] = useState("#000000e6");
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [inkThickness, setInkThickness] = useState(3);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -23,7 +23,7 @@ export const Whiteboard = () => {
     });
 
     if (canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush.width = 3;
+      canvas.freeDrawingBrush.width = inkThickness;
       canvas.freeDrawingBrush.color = activeColor;
     }
 
@@ -38,7 +38,6 @@ export const Whiteboard = () => {
       canvas.zoomToPoint(pointer, zoom);
       setZoomLevel(Math.round(zoom * 100) / 100);
       
-      // Only show zoom indicator dot, not drawing dots
       if (!isDrawing) {
         const dot = new Circle({
           left: e.offsetX,
@@ -64,7 +63,6 @@ export const Whiteboard = () => {
         canvas.discardActiveObject();
         canvas.renderAll();
 
-        // Only show panning indicator dot, not drawing dots
         const dot = new Circle({
           left: e.offsetX,
           top: e.offsetY,
@@ -167,10 +165,9 @@ export const Whiteboard = () => {
     
     if (fabricRef.current.freeDrawingBrush) {
       fabricRef.current.freeDrawingBrush.color = activeTool === "draw" ? activeColor : "#ffffff";
-      fabricRef.current.freeDrawingBrush.width = activeTool === "draw" ? 3 : 20;
+      fabricRef.current.freeDrawingBrush.width = activeTool === "draw" ? inkThickness : 20;
     }
     
-    // Update the cursor based on the active tool
     if (activeTool === "draw") {
       fabricRef.current.defaultCursor = 'crosshair';
       toast("Draw mode enabled. Click and drag to draw!");
@@ -181,7 +178,7 @@ export const Whiteboard = () => {
       fabricRef.current.defaultCursor = 'default';
       toast("Select mode enabled. Click objects to select them!");
     }
-  }, [activeTool, activeColor]);
+  }, [activeTool, activeColor, inkThickness]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -200,6 +197,8 @@ export const Whiteboard = () => {
             activeColor={activeColor}
             onToolChange={setActiveTool}
             onColorChange={setActiveColor}
+            inkThickness={inkThickness}
+            onInkThicknessChange={setInkThickness}
           />
           <div className="bg-[#221F26] text-white px-3 py-1 rounded-lg">
             {Math.round(zoomLevel * 100)}%

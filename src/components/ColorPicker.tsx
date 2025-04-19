@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -5,6 +6,7 @@ const COLORS = [
   { value: "#000000e6", label: "Black" },
   { value: "#ea384c", label: "Red" },
   { value: "#1EAEDB", label: "Blue" },
+  { value: "#2E7D32", label: "Green" },
   { value: "#333333", label: "Dark Gray" },
 ];
 

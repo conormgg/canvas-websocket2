@@ -2,15 +2,25 @@
 import { MousePointer, Pencil, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "./ColorPicker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ToolbarProps {
   activeTool: "select" | "draw" | "eraser";
   activeColor: string;
   onToolChange: (tool: "select" | "draw" | "eraser") => void;
   onColorChange: (color: string) => void;
+  inkThickness: number;
+  onInkThicknessChange: (thickness: number) => void;
 }
 
-export const Toolbar = ({ activeTool, activeColor, onToolChange, onColorChange }: ToolbarProps) => {
+export const Toolbar = ({ 
+  activeTool, 
+  activeColor, 
+  onToolChange, 
+  onColorChange,
+  inkThickness,
+  onInkThicknessChange 
+}: ToolbarProps) => {
   return (
     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-[#221F26] rounded-lg shadow-lg p-2 flex items-center gap-2">
       <Button
@@ -39,6 +49,18 @@ export const Toolbar = ({ activeTool, activeColor, onToolChange, onColorChange }
       </Button>
       <div className="w-px h-8 bg-gray-600 mx-2" />
       <ColorPicker activeColor={activeColor} onColorChange={onColorChange} />
+      <div className="w-px h-8 bg-gray-600 mx-2" />
+      <Select value={inkThickness.toString()} onValueChange={(value) => onInkThicknessChange(Number(value))}>
+        <SelectTrigger className="w-24 bg-transparent text-white border-gray-600">
+          <SelectValue placeholder="Thickness" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="1">Thin (1px)</SelectItem>
+          <SelectItem value="3">Medium (3px)</SelectItem>
+          <SelectItem value="5">Thick (5px)</SelectItem>
+          <SelectItem value="8">Extra Thick (8px)</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 };
