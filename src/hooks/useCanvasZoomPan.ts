@@ -1,5 +1,5 @@
 
-import { Canvas, Point } from 'fabric';
+import { Canvas, Point, TPointerEventInfo, TPointerEvent } from 'fabric';
 import { useRef } from 'react';
 import { CanvasPosition } from '@/types/canvas';
 
@@ -9,7 +9,7 @@ export const useCanvasZoomPan = (
 ) => {
   const lastPosRef = useRef<CanvasPosition>({ x: 0, y: 0 });
 
-  const handleMouseWheel = (opt: { e: WheelEvent }) => {
+  const handleMouseWheel = (opt: TPointerEventInfo<WheelEvent>) => {
     const e = opt.e;
     const canvas = fabricRef.current;
     if (!canvas) return;

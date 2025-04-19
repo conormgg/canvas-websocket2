@@ -1,5 +1,5 @@
 
-import { Canvas, ActiveSelection, Rect } from 'fabric';
+import { Canvas, ActiveSelection, Rect, TPointerEvent } from 'fabric';
 import { useRef } from 'react';
 import { CanvasPosition } from '@/types/canvas';
 
@@ -10,7 +10,7 @@ export const useCanvasSelection = (
   const selectionRectRef = useRef<Rect | null>(null);
   const startPointRef = useRef<CanvasPosition>({ x: 0, y: 0 });
 
-  const handleSelectionStart = (e: MouseEvent) => {
+  const handleSelectionStart = (e: TPointerEvent) => {
     const canvas = fabricRef.current;
     if (!canvas || activeTool !== "select") return;
 
@@ -36,7 +36,7 @@ export const useCanvasSelection = (
     canvas.renderAll();
   };
 
-  const handleSelectionMoving = (e: MouseEvent) => {
+  const handleSelectionMoving = (e: TPointerEvent) => {
     const canvas = fabricRef.current;
     if (!canvas || !selectionRectRef.current || activeTool !== "select") return;
 

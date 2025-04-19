@@ -1,5 +1,5 @@
 
-import { Canvas, util, FabricObject } from 'fabric';
+import { Canvas, FabricObject, util } from 'fabric';
 
 export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
   const handleCopy = (e: KeyboardEvent) => {
@@ -22,21 +22,26 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
     
     const clipboardJSON = (canvas as any).clipboardJSON;
     
-    util.enlivenObjects(clipboardJSON, {
-      crossOrigin: 'anonymous'
-    }, (objects: FabricObject[]) => {
+    util.enlivenObjects(clipboardJSON, (objects: FabricObject[]) => {
       objects.forEach(obj => {
-        if ('left' in obj && 'top' in obj) {
+        // Check if object has position properties before setting them
+        if ('left' in obj && 'top' in obj && obj instanceof FabricObject) {
+          const left = (obj.get('left') || 0) + 20;
+          const top = (obj.get('top') || 0) + 20;
+          
           obj.set({
-            left: (obj.left || 0) + 20,
-            top: (obj.top || 0) + 20,
+            left,
+            top,
             evented: true
           });
           
           canvas.add(obj);
-          canvas.setActiveObject(obj);
         }
       });
+      
+      if (objects.length > 0 && objects[0] instanceof FabricObject) {
+        canvas.setActiveObject(objects[0]);
+      }
       
       canvas.requestRenderAll();
     });
