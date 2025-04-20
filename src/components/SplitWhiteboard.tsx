@@ -29,7 +29,7 @@ export const SplitWhiteboard = () => {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#E8EDF5] p-4 flex gap-4">
+    <div className="h-screen w-screen overflow-hidden bg-[#D3E4FD] p-4 flex gap-4">
       <div 
         className={cn(
           "transition-all duration-300 ease-in-out h-full relative",
@@ -37,7 +37,7 @@ export const SplitWhiteboard = () => {
         )}
         onClick={(e) => toggle("teacher", e)}
       >
-        <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="h-full bg-white rounded-xl shadow-lg overflow-visible">
           <Whiteboard id="teacher" />
         </div>
       </div>
@@ -52,7 +52,7 @@ export const SplitWhiteboard = () => {
           <div
             key={studentId}
             className={cn(
-              "transition-all duration-300 ease-in-out bg-white rounded-xl shadow-lg overflow-hidden",
+              "transition-all duration-300 ease-in-out bg-white rounded-xl shadow-lg overflow-visible",
               studentCls(studentId)
             )}
             onClick={(e) => toggle(studentId, e)}
