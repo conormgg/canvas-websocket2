@@ -22,7 +22,7 @@ export const SplitWhiteboard = () => {
         className={cn(
           "transition-all duration-300 ease-in-out h-full relative",
           enlargedBoard === "teacher" ? "fixed inset-4 z-50" : 
-          enlargedBoard !== "teacher" ? "w-1/5" : "w-full"
+          enlargedBoard !== null && enlargedBoard !== "teacher" ? "w-1/5" : "w-full"
         )}
         onClick={(e) => handleCtrlClick("teacher", e)}
       >
@@ -36,7 +36,7 @@ export const SplitWhiteboard = () => {
         className={cn(
           "transition-all duration-300 ease-in-out h-full grid grid-cols-2 gap-4",
           enlargedBoard === "teacher" ? "w-0 opacity-0" : 
-          enlargedBoard ? "w-full" : "w-4/5"
+          enlargedBoard !== null ? "w-full" : "w-4/5"
         )}
       >
         {whiteboardIds.filter(id => id !== "teacher").map((studentId) => (
@@ -45,7 +45,7 @@ export const SplitWhiteboard = () => {
             className={cn(
               "transition-all duration-300 ease-in-out bg-white rounded-xl shadow-lg overflow-hidden",
               enlargedBoard === studentId ? "fixed inset-4 z-50" : 
-              enlargedBoard !== "teacher" ? "" : "w-0 opacity-0"
+              enlargedBoard !== null && enlargedBoard !== "teacher" ? "" : "w-0 opacity-0"
             )}
             onClick={(e) => handleCtrlClick(studentId, e)}
           >
