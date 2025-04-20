@@ -2,59 +2,50 @@
 import { useState } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
-import { WhiteboardId } from "@/types/canvas";
+import { WhiteboardId, StudentId } from "@/types/canvas";
 
 export const SplitWhiteboard = () => {
-  const [enlargedBoard, setEnlargedBoard] = useState<WhiteboardId | null>(null);
+  const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
+  const studentIds: StudentId[] = ["student1", "student2", "student3", "student4"];
 
-  const handleCtrlClick = (board: WhiteboardId, e: React.MouseEvent) => {
+  const toggle = (id: WhiteboardId, e: React.MouseEvent) => {
     if (e.ctrlKey) {
-      setEnlargedBoard(enlargedBoard === board ? null : board);
+      setEnlarged(enlarged === id ? null : id);
     }
   };
 
-  const whiteboardIds: WhiteboardId[] = ["teacher", "student1", "student2", "student3", "student4"];
-  const studentIds = whiteboardIds.filter((id): id is Exclude<WhiteboardId, "teacher"> => id !== "teacher");
+  const teacherCls = enlarged === "teacher"
+    ? "fixed inset-4 z-50"
+    : enlarged ? "w-1/5" : "w-1/2";
 
-  const getTeacherBoardClassName = () => {
-    if (enlargedBoard === "teacher") return "fixed inset-4 z-50";
-    if (enlargedBoard !== null) return "w-1/5";
-    return "w-1/2";
-  };
+  const studentGridCls = enlarged === "teacher"
+    ? "w-0 opacity-0"
+    : enlarged ? "w-full" : "w-1/2";
 
-  const getStudentGridClassName = () => {
-    if (enlargedBoard === "teacher") return "w-0 opacity-0";
-    if (enlargedBoard !== null) return "w-full";
-    return "w-1/2";
-  };
-
-  const getStudentBoardClassName = (studentId: WhiteboardId) => {
-    if (enlargedBoard === studentId) return "fixed inset-4 z-50";
-    if (enlargedBoard === "teacher") return "w-0 opacity-0";
+  const studentCls = (id: StudentId) => {
+    if (enlarged === id) return "fixed inset-4 z-50";
+    if (enlarged === "teacher") return "w-0 opacity-0";
     return "";
   };
 
   return (
-    // Changed background to a soft blue-gray
     <div className="h-screen w-screen overflow-hidden bg-[#E8EDF5] p-4 flex gap-4">
-      {/* Teacher's whiteboard */}
       <div 
         className={cn(
           "transition-all duration-300 ease-in-out h-full relative",
-          getTeacherBoardClassName()
+          teacherCls
         )}
-        onClick={(e) => handleCtrlClick("teacher", e)}
+        onClick={(e) => toggle("teacher", e)}
       >
         <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden">
           <Whiteboard id="teacher" />
         </div>
       </div>
 
-      {/* Students' whiteboards grid */}
       <div 
         className={cn(
           "transition-all duration-300 ease-in-out h-full grid grid-cols-2 gap-4",
-          getStudentGridClassName()
+          studentGridCls
         )}
       >
         {studentIds.map((studentId) => (
@@ -62,9 +53,9 @@ export const SplitWhiteboard = () => {
             key={studentId}
             className={cn(
               "transition-all duration-300 ease-in-out bg-white rounded-xl shadow-lg overflow-hidden",
-              getStudentBoardClassName(studentId)
+              studentCls(studentId)
             )}
-            onClick={(e) => handleCtrlClick(studentId, e)}
+            onClick={(e) => toggle(studentId, e)}
           >
             <Whiteboard id={studentId} />
           </div>

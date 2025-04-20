@@ -15,3 +15,4 @@ export interface CanvasPosition {
 }
 
 export type WhiteboardId = "teacher" | "student1" | "student2" | "student3" | "student4";
+export type StudentId = Exclude<WhiteboardId, "teacher">;
