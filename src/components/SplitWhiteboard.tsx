@@ -35,7 +35,8 @@ export const SplitWhiteboard = () => {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#F1F0FB] p-4 flex gap-4">
+    // Changed background to a soft blue-gray
+    <div className="h-screen w-screen overflow-hidden bg-[#E8EDF5] p-4 flex gap-4">
       {/* Teacher's whiteboard */}
       <div 
         className={cn(

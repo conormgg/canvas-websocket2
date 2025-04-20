@@ -21,7 +21,6 @@ export const Whiteboard = ({ id }: WhiteboardProps) => {
     inkThickness,
     onZoomChange: setZoomLevel,
     onObjectAdded: (object) => {
-      // Broadcast to other whiteboard
       const event = new CustomEvent('whiteboard-update', {
         detail: { sourceId: id, object: object.toJSON() }
       });
@@ -36,7 +35,6 @@ export const Whiteboard = ({ id }: WhiteboardProps) => {
     return false;
   };
 
-  // Listen for updates from the other whiteboard
   useState(() => {
     const handleWhiteboardUpdate = (e: CustomEvent) => {
       if (e.detail.sourceId !== id && fabricRef.current) {
@@ -58,21 +56,23 @@ export const Whiteboard = ({ id }: WhiteboardProps) => {
       onContextMenu={handleContextMenu}
     >
       <div className="absolute top-0 left-0 w-full z-10">
-        <div className="flex justify-between items-center p-4">
-          <Toolbar 
-            activeTool={activeTool}
-            activeColor={activeColor}
-            onToolChange={setActiveTool}
-            onColorChange={setActiveColor}
-            inkThickness={inkThickness}
-            onInkThicknessChange={setInkThickness}
-          />
-          <div className="bg-[#221F26] text-white px-3 py-1 rounded-lg">
+        <div className="flex justify-between items-center p-2 px-3">
+          <div className="scale-90 origin-left">
+            <Toolbar 
+              activeTool={activeTool}
+              activeColor={activeColor}
+              onToolChange={setActiveTool}
+              onColorChange={setActiveColor}
+              inkThickness={inkThickness}
+              onInkThicknessChange={setInkThickness}
+            />
+          </div>
+          <div className="bg-[#221F26] text-white px-2 py-1 rounded-lg text-sm">
             {Math.round(zoomLevel * 100)}%
           </div>
         </div>
       </div>
-      <canvas ref={canvasRef} className="w-full h-full" />
+      <canvas ref={canvasRef} className="w-full h-full touch-none" />
     </div>
   );
 };
