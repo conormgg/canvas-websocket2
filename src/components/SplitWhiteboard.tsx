@@ -14,6 +14,25 @@ export const SplitWhiteboard = () => {
   };
 
   const whiteboardIds: WhiteboardId[] = ["teacher", "student1", "student2", "student3", "student4"];
+  const studentIds = whiteboardIds.filter((id): id is Exclude<WhiteboardId, "teacher"> => id !== "teacher");
+
+  const getTeacherBoardClassName = () => {
+    if (enlargedBoard === "teacher") return "fixed inset-4 z-50";
+    if (enlargedBoard !== null) return "w-1/5";
+    return "w-1/2";
+  };
+
+  const getStudentGridClassName = () => {
+    if (enlargedBoard === "teacher") return "w-0 opacity-0";
+    if (enlargedBoard !== null) return "w-full";
+    return "w-1/2";
+  };
+
+  const getStudentBoardClassName = (studentId: WhiteboardId) => {
+    if (enlargedBoard === studentId) return "fixed inset-4 z-50";
+    if (enlargedBoard === "teacher") return "w-0 opacity-0";
+    return "";
+  };
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#F1F0FB] p-4 flex gap-4">
@@ -21,8 +40,7 @@ export const SplitWhiteboard = () => {
       <div 
         className={cn(
           "transition-all duration-300 ease-in-out h-full relative",
-          enlargedBoard === "teacher" ? "fixed inset-4 z-50" : 
-          enlargedBoard !== null && enlargedBoard !== "teacher" ? "w-1/5" : "w-full"
+          getTeacherBoardClassName()
         )}
         onClick={(e) => handleCtrlClick("teacher", e)}
       >
@@ -35,17 +53,15 @@ export const SplitWhiteboard = () => {
       <div 
         className={cn(
           "transition-all duration-300 ease-in-out h-full grid grid-cols-2 gap-4",
-          enlargedBoard === "teacher" ? "w-0 opacity-0" : 
-          enlargedBoard !== null ? "w-full" : "w-4/5"
+          getStudentGridClassName()
         )}
       >
-        {whiteboardIds.filter(id => id !== "teacher").map((studentId) => (
+        {studentIds.map((studentId) => (
           <div
             key={studentId}
             className={cn(
               "transition-all duration-300 ease-in-out bg-white rounded-xl shadow-lg overflow-hidden",
-              enlargedBoard === studentId ? "fixed inset-4 z-50" : 
-              enlargedBoard !== null && enlargedBoard !== "teacher" ? "" : "w-0 opacity-0"
+              getStudentBoardClassName(studentId)
             )}
             onClick={(e) => handleCtrlClick(studentId, e)}
           >
