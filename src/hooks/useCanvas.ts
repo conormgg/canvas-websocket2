@@ -20,14 +20,10 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange,
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    
-    const canvasEl = canvasRef.current;
-    const parent = canvasEl.parentElement!;
-    const { width, height } = parent.getBoundingClientRect();
 
-    const canvas = new Canvas(canvasEl, {
-      width,
-      height,
+    const canvas = new Canvas(canvasRef.current, {
+      width: window.innerWidth,
+      height: window.innerHeight,
       backgroundColor: "#ffffff",
       isDrawingMode: activeTool === "draw" || activeTool === "eraser",
       preserveObjectStacking: true,
@@ -53,20 +49,21 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange,
 
     fabricRef.current = canvas;
 
-    // Use ResizeObserver instead of window resize event
-    const ro = new ResizeObserver(entries => {
-      const { width, height } = entries[0].contentRect;
-      canvas.setDimensions({ width, height });
-      canvas.requestRenderAll();
-    });
-    ro.observe(parent);
+    const handleResize = () => {
+      canvas.setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+      canvas.renderAll();
+    };
 
+    window.addEventListener('resize', handleResize);
     window.addEventListener('keydown', handleKeyDown);
     updateCursorAndNotify(canvas, activeTool, inkThickness);
 
     return () => {
-      ro.disconnect();
       canvas.dispose();
+      window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
