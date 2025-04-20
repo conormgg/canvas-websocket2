@@ -24,6 +24,7 @@ export const SplitWhiteboard = () => {
           enlargedBoard === "teacher" ? "fixed inset-4 z-50" : 
           enlargedBoard ? "w-0 opacity-0" : "w-1/2"
         )}
+        onClick={(e) => handleCtrlClick("teacher", e)}
       >
         <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden">
           <Whiteboard id="teacher" />
