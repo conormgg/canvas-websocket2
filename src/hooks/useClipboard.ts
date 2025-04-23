@@ -1,25 +1,26 @@
-
 import { useEffect } from "react";
 import { Canvas, Image as FabricImage } from "fabric";
 import { toast } from "sonner";
 
-export const useClipboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
+export const useClipboard = (
+  fabricRef: React.MutableRefObject<Canvas | null>
+) => {
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       if (!e.clipboardData || !fabricRef.current) return;
-      
+
       const items = e.clipboardData.items;
-      
+
       for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
+        if (items[i].type.indexOf("image") !== -1) {
           const blob = items[i].getAsFile();
           if (!blob) continue;
-          
+
           const reader = new FileReader();
           reader.onload = (event) => {
             const imgUrl = event.target?.result as string;
             if (!imgUrl) return;
-            
+
             FabricImage.fromURL(imgUrl).then((img) => {
               img.scale(0.5);
               img.scaleToWidth(200);
@@ -35,7 +36,7 @@ export const useClipboard = (fabricRef: React.MutableRefObject<Canvas | null>) =
       }
     };
 
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
   }, [fabricRef]);
 };

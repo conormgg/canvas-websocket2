@@ -1,28 +1,26 @@
-
-import { useState } from 'react';
+import { useCallback } from 'react';
 import { Canvas, TPointerEvent, TPointerEventInfo } from 'fabric';
 import { useCanvasKeyboard } from './useCanvasKeyboard';
 import { useCanvasZoomPan } from './useCanvasZoomPan';
 import { useCanvasSelection } from './useCanvasSelection';
+import { useCanvasToolState } from './useCanvasToolState';
 
 export const useCanvasMouseHandlers = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   activeTool: string,
   onZoomChange: (zoom: number) => void
 ) => {
-  const [isDrawing, setIsDrawing] = useState(false);
-  
+  const { isDrawing, setIsDrawing, updateToolState } = useCanvasToolState(fabricRef);
   const { handleKeyDown } = useCanvasKeyboard(fabricRef);
   const { handleMouseWheel, handlePanning, resetPanPoint } = useCanvasZoomPan(fabricRef, onZoomChange);
   const { handleSelectionStart, handleSelectionMoving, handleSelectionEnd } = useCanvasSelection(fabricRef, activeTool);
 
-  const handleMouseDown = (opt: TPointerEventInfo<TPointerEvent>) => {
+  const handleMouseDown = useCallback((opt: TPointerEventInfo<TPointerEvent>) => {
     const e = opt.e;
     const canvas = fabricRef.current;
     if (!canvas) return;
 
     if (e instanceof MouseEvent && e.button === 2) {
-      // Right-click handling for panning
       canvas.defaultCursor = 'grabbing';
       canvas.selection = false;
       canvas.discardActiveObject();
@@ -35,10 +33,12 @@ export const useCanvasMouseHandlers = (
         setIsDrawing(true);
       }
     }
-  };
+  }, [activeTool, fabricRef, handleSelectionStart, setIsDrawing]);
 
-  const handleMouseMove = (opt: TPointerEventInfo<TPointerEvent>) => {
+  const handleMouseMove = useCallback((opt: TPointerEventInfo<TPointerEvent>) => {
     const e = opt.e;
+    const canvas = fabricRef.current;
+    if (!canvas) return;
     
     if (e instanceof MouseEvent && e.buttons === 2) {
       handlePanning(e);
@@ -46,26 +46,28 @@ export const useCanvasMouseHandlers = (
     else if (activeTool === "select" && e instanceof MouseEvent && e.buttons === 1) {
       handleSelectionMoving(e);
     }
-  };
+  }, [activeTool, fabricRef, handlePanning, handleSelectionMoving]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    if (activeTool === "select") {
-      handleSelectionEnd();
-    }
-
-    canvas.setViewportTransform(canvas.viewportTransform!);
+    updateToolState(activeTool);
     
     if (activeTool === "select") {
+      handleSelectionEnd();
       canvas.defaultCursor = 'default';
     }
     
-    canvas.selection = true;
+    // Ensure the viewport transform is committed
+    if (canvas.viewportTransform) {
+      canvas.setViewportTransform(canvas.viewportTransform);
+    }
+    
     resetPanPoint();
     setIsDrawing(false);
-  };
+    canvas.renderAll();
+  }, [activeTool, fabricRef, handleSelectionEnd, resetPanPoint, setIsDrawing, updateToolState]);
 
   return {
     isDrawing,
