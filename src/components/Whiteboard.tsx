@@ -47,13 +47,12 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      // Use the correct format with an options object containing onComplete
-      util.enlivenObjects([e.detail.object], {
-        onComplete: function(objects: FabricObject[]) {
+      // Fix the TypeScript error by using the correct approach for fabric.js v6
+      util.enlivenObjects([e.detail.object])
+        .then((objects: FabricObject[]) => {
           objects.forEach((obj) => canvas.add(obj));
           canvas.renderAll();
-        }
-      });
+        });
     };
 
     window.addEventListener("whiteboard-update", handleUpdate as EventListener);
