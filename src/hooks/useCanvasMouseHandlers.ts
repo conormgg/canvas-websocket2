@@ -53,7 +53,7 @@ export const useCanvasMouseHandlers = (
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    // Don't update tool state if we're already in drawing mode and just finished a drawing action
+    // Only update tool state if we're not already in drawing mode or if we're in select mode
     if (!isDrawing || activeTool === "select") {
       updateToolState(activeTool);
     }
@@ -63,9 +63,9 @@ export const useCanvasMouseHandlers = (
       canvas.defaultCursor = 'default';
     }
     
-    // Ensure the viewport transform is committed
+    // Ensure the viewport transform is committed without using eval
     if (canvas.viewportTransform) {
-      canvas.setViewportTransform(canvas.viewportTransform);
+      canvas.setViewportTransform([...canvas.viewportTransform]);
     }
     
     resetPanPoint();

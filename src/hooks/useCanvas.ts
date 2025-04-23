@@ -37,6 +37,7 @@ export const useCanvas = ({
       selection: activeTool === "select",
     });
 
+    // Use PencilBrush to avoid potential SVG/evaluation issues
     canvas.freeDrawingBrush = new PencilBrush(canvas);
     canvas.freeDrawingBrush.width = inkThickness;
     canvas.freeDrawingBrush.color = activeColor;
@@ -102,11 +103,15 @@ export const useCanvas = ({
       canvas.freeDrawingBrush.color = activeTool === "draw" ? activeColor : "#ffffff";
     }
     
-    // Update cursor
+    // Update cursor without using any data URLs or eval
     updateCursorAndNotify(canvas, activeTool, inkThickness);
     
+    // Set the drawing mode
+    canvas.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
+    canvas.selection = activeTool === "select";
+    
     canvas.renderAll();
-  }, [activeTool, activeColor, inkThickness]);
+  }, [activeTool, activeColor, inkThickness, updateCursorAndNotify]);
 
   return { canvasRef, fabricRef };
 };
