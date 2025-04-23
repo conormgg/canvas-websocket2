@@ -47,10 +47,12 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      // Fix TypeScript error by using the function callback approach instead of object with onComplete
-      util.enlivenObjects([e.detail.object], (objects: FabricObject[]) => {
-        objects.forEach((obj) => canvas.add(obj));
-        canvas.renderAll();
+      // Update to use the EnlivenObjectOptions format for Fabric.js v6
+      util.enlivenObjects([e.detail.object], {
+        onComplete: (objects: FabricObject[]) => {
+          objects.forEach((obj) => canvas.add(obj));
+          canvas.renderAll();
+        }
       });
     };
 

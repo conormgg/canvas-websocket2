@@ -58,33 +58,35 @@ export const useCanvasClipboard = (
     // otherwise do a normal "click-free" paste at last click or offset
     const toEnliven = [...internalData];
     
-    // Fix TypeScript error by using the direct callback approach
-    util.enlivenObjects(toEnliven, (objects: FabricObject[]) => {
-      objects.forEach((obj: any) => {
-        if (typeof obj !== "object") return;
-        const originalLeft = typeof obj.left === "number" ? obj.left : 0;
-        const originalTop = typeof obj.top === "number" ? obj.top : 0;
-        const { left, top } = calculatePastePosition(originalLeft, originalTop);
+    // Update to use the EnlivenObjectOptions format for Fabric.js v6
+    util.enlivenObjects(toEnliven, {
+      onComplete: (objects: FabricObject[]) => {
+        objects.forEach((obj: any) => {
+          if (typeof obj !== "object") return;
+          const originalLeft = typeof obj.left === "number" ? obj.left : 0;
+          const originalTop = typeof obj.top === "number" ? obj.top : 0;
+          const { left, top } = calculatePastePosition(originalLeft, originalTop);
 
-        if (typeof obj.set === "function") {
-          obj.set({ left, top, evented: true });
-          canvas?.add(obj);
-          if (typeof obj.setCoords === "function") obj.setCoords();
-        }
-      });
+          if (typeof obj.set === "function") {
+            obj.set({ left, top, evented: true });
+            canvas?.add(obj);
+            if (typeof obj.setCoords === "function") obj.setCoords();
+          }
+        });
 
-      // select the pasted object(s)
-      if (objects.length === 1) {
-        const first = objects[0];
-        if (first && typeof first.setCoords === "function") {
-          canvas?.setActiveObject(first as FabricObject);
+        // select the pasted object(s)
+        if (objects.length === 1) {
+          const first = objects[0];
+          if (first && typeof first.setCoords === "function") {
+            canvas?.setActiveObject(first as FabricObject);
+          }
+        } else if (objects.length > 1) {
+          canvas?.discardActiveObject();
         }
-      } else if (objects.length > 1) {
-        canvas?.discardActiveObject();
+
+        setPastePosition(null);
+        canvas?.requestRenderAll();
       }
-
-      setPastePosition(null);
-      canvas?.requestRenderAll();
     });
   };
 
