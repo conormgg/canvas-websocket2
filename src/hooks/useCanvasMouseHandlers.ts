@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Canvas, TPointerEvent, TPointerEventInfo } from 'fabric';
 import { useCanvasKeyboard } from './useCanvasKeyboard';
 import { useCanvasZoomPan } from './useCanvasZoomPan';
@@ -16,7 +16,7 @@ export const useCanvasMouseHandlers = (
   const { handleMouseWheel, handlePanning, resetPanPoint } = useCanvasZoomPan(fabricRef, onZoomChange);
   const { handleSelectionStart, handleSelectionMoving, handleSelectionEnd } = useCanvasSelection(fabricRef, activeTool);
 
-  const handleMouseDown = (opt: TPointerEventInfo<TPointerEvent>) => {
+  const handleMouseDown = useCallback((opt: TPointerEventInfo<TPointerEvent>) => {
     const e = opt.e;
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -35,10 +35,12 @@ export const useCanvasMouseHandlers = (
         setIsDrawing(true);
       }
     }
-  };
+  }, [activeTool, fabricRef, handleSelectionStart]);
 
-  const handleMouseMove = (opt: TPointerEventInfo<TPointerEvent>) => {
+  const handleMouseMove = useCallback((opt: TPointerEventInfo<TPointerEvent>) => {
     const e = opt.e;
+    const canvas = fabricRef.current;
+    if (!canvas) return;
     
     if (e instanceof MouseEvent && e.buttons === 2) {
       handlePanning(e);
@@ -46,26 +48,36 @@ export const useCanvasMouseHandlers = (
     else if (activeTool === "select" && e instanceof MouseEvent && e.buttons === 1) {
       handleSelectionMoving(e);
     }
-  };
+  }, [activeTool, fabricRef, handlePanning, handleSelectionMoving]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     
+    // Always ensure drawing mode is properly handled
+    if (activeTool === "draw" || activeTool === "eraser") {
+      canvas.isDrawingMode = true;
+    } else {
+      canvas.isDrawingMode = false;
+    }
+    
     if (activeTool === "select") {
       handleSelectionEnd();
-    }
-
-    canvas.setViewportTransform(canvas.viewportTransform!);
-    
-    if (activeTool === "select") {
       canvas.defaultCursor = 'default';
+      canvas.selection = true;
     }
     
-    canvas.selection = true;
+    // Ensure the viewport transform is committed
+    if (canvas.viewportTransform) {
+      canvas.setViewportTransform(canvas.viewportTransform);
+    }
+    
     resetPanPoint();
     setIsDrawing(false);
-  };
+    
+    // Force render to ensure changes are visible
+    canvas.renderAll();
+  }, [activeTool, fabricRef, handleSelectionEnd, resetPanPoint]);
 
   return {
     isDrawing,

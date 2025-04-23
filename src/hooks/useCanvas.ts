@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps } from "@/types/canvas";
@@ -23,6 +24,7 @@ export const useCanvas = ({
     handleKeyDown,
   } = useCanvasMouseHandlers(fabricRef, activeTool, onZoomChange);
 
+  // Create the canvas only once
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -32,7 +34,7 @@ export const useCanvas = ({
       backgroundColor: "#ffffff",
       isDrawingMode: activeTool === "draw" || activeTool === "eraser",
       preserveObjectStacking: true,
-      selection: false,
+      selection: activeTool === "select",
     });
 
     canvas.freeDrawingBrush = new PencilBrush(canvas);
@@ -47,6 +49,7 @@ export const useCanvas = ({
       });
     }
 
+    // Add event listeners
     canvas.on("mouse:wheel", handleMouseWheel);
     canvas.on("mouse:down", handleMouseDown);
     canvas.on("mouse:move", handleMouseMove);
@@ -70,15 +73,26 @@ export const useCanvas = ({
       canvas.renderAll();
     };
 
+    // Set initial size
+    handleResize();
+
+    // Add window event listeners
     window.addEventListener("resize", handleResize);
     window.addEventListener("keydown", handleKeyDown);
 
     updateCursorAndNotify(canvas, activeTool, inkThickness);
 
     return () => {
-      canvas.dispose();
+      // Properly clean up event listeners
+      canvas.off("mouse:wheel");
+      canvas.off("mouse:down");
+      canvas.off("mouse:move");
+      canvas.off("mouse:up");
+      
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("keydown", handleKeyDown);
+      
+      canvas.dispose();
     };
   }, []);
 
@@ -86,17 +100,24 @@ export const useCanvas = ({
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    if (activeTool === "draw" || activeTool === "eraser") {
-      canvas.isDrawingMode = true;
-      if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.width = inkThickness;
-        canvas.freeDrawingBrush.color =
-          activeTool === "draw" ? activeColor : "#ffffff";
-      }
-    } else {
-      canvas.isDrawingMode = false;
+    
+    // Update drawing mode
+    canvas.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
+    
+    // Update selection mode
+    canvas.selection = activeTool === "select";
+    
+    // Update brush settings
+    if (canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.width = inkThickness;
+      canvas.freeDrawingBrush.color = activeTool === "draw" ? activeColor : "#ffffff";
     }
+    
+    // Update cursor
     updateCursorAndNotify(canvas, activeTool, inkThickness);
+    
+    // Re-render canvas with updates
+    canvas.renderAll();
   }, [activeTool, activeColor, inkThickness]);
 
   return { canvasRef, fabricRef };
