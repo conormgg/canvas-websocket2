@@ -47,12 +47,10 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      // Update to use the correct options format for enlivenObjects
-      util.enlivenObjects([e.detail.object], {
-        onComplete: (objects: FabricObject[]) => {
-          objects.forEach((obj) => canvas.add(obj));
-          canvas.renderAll();
-        }
+      // Fix TypeScript error by using the function callback approach instead of object with onComplete
+      util.enlivenObjects([e.detail.object], (objects: FabricObject[]) => {
+        objects.forEach((obj) => canvas.add(obj));
+        canvas.renderAll();
       });
     };
 

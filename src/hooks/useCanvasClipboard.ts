@@ -1,3 +1,4 @@
+
 // src/hooks/useCanvasClipboard.ts
 import { Canvas, util, Point, FabricObject } from "fabric";
 import { useEffect } from "react";
@@ -56,34 +57,34 @@ export const useCanvasClipboard = (
 
     // otherwise do a normal "click-free" paste at last click or offset
     const toEnliven = [...internalData];
-    util.enlivenObjects(toEnliven, {
-      onComplete: (objects: FabricObject[]) => {
-        objects.forEach((obj: any) => {
-          if (typeof obj !== "object") return;
-          const originalLeft = typeof obj.left === "number" ? obj.left : 0;
-          const originalTop = typeof obj.top === "number" ? obj.top : 0;
-          const { left, top } = calculatePastePosition(originalLeft, originalTop);
+    
+    // Fix TypeScript error by using the direct callback approach
+    util.enlivenObjects(toEnliven, (objects: FabricObject[]) => {
+      objects.forEach((obj: any) => {
+        if (typeof obj !== "object") return;
+        const originalLeft = typeof obj.left === "number" ? obj.left : 0;
+        const originalTop = typeof obj.top === "number" ? obj.top : 0;
+        const { left, top } = calculatePastePosition(originalLeft, originalTop);
 
-          if (typeof obj.set === "function") {
-            obj.set({ left, top, evented: true });
-            canvas?.add(obj);
-            if (typeof obj.setCoords === "function") obj.setCoords();
-          }
-        });
-
-        // select the pasted object(s)
-        if (objects.length === 1) {
-          const first = objects[0];
-          if (first && typeof first.setCoords === "function") {
-            canvas?.setActiveObject(first as FabricObject);
-          }
-        } else if (objects.length > 1) {
-          canvas?.discardActiveObject();
+        if (typeof obj.set === "function") {
+          obj.set({ left, top, evented: true });
+          canvas?.add(obj);
+          if (typeof obj.setCoords === "function") obj.setCoords();
         }
+      });
 
-        setPastePosition(null);
-        canvas?.requestRenderAll();
+      // select the pasted object(s)
+      if (objects.length === 1) {
+        const first = objects[0];
+        if (first && typeof first.setCoords === "function") {
+          canvas?.setActiveObject(first as FabricObject);
+        }
+      } else if (objects.length > 1) {
+        canvas?.discardActiveObject();
       }
+
+      setPastePosition(null);
+      canvas?.requestRenderAll();
     });
   };
 
