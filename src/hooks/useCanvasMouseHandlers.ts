@@ -22,18 +22,25 @@ export const useCanvasMouseHandlers = (
     if (!canvas) return;
 
     if (e instanceof MouseEvent && e.button === 2) {
-      // Right-click handling for panning
-      canvas.defaultCursor = 'grabbing';
-      canvas.selection = false;
-      canvas.discardActiveObject();
-      canvas.renderAll();
+      enablePanningMode(canvas);
     } 
     else if ((e instanceof MouseEvent && e.button === 0) || e instanceof TouchEvent) {
-      if (activeTool === "select") {
-        handleSelectionStart(e);
-      } else if ((activeTool === "draw" || activeTool === "eraser") && canvas.isDrawingMode) {
-        setIsDrawing(true);
-      }
+      handlePrimaryClick(canvas, e);
+    }
+  };
+
+  const enablePanningMode = (canvas: Canvas) => {
+    canvas.defaultCursor = 'grabbing';
+    canvas.selection = false;
+    canvas.discardActiveObject();
+    canvas.renderAll();
+  };
+
+  const handlePrimaryClick = (canvas: Canvas, e: MouseEvent | TouchEvent) => {
+    if (activeTool === "select") {
+      handleSelectionStart(e);
+    } else if ((activeTool === "draw" || activeTool === "eraser") && canvas.isDrawingMode) {
+      setIsDrawing(true);
     }
   };
 
@@ -54,14 +61,10 @@ export const useCanvasMouseHandlers = (
     
     if (activeTool === "select") {
       handleSelectionEnd();
+      canvas.defaultCursor = 'default';
     }
 
     canvas.setViewportTransform(canvas.viewportTransform!);
-    
-    if (activeTool === "select") {
-      canvas.defaultCursor = 'default';
-    }
-    
     canvas.selection = true;
     resetPanPoint();
     setIsDrawing(false);
@@ -76,3 +79,4 @@ export const useCanvasMouseHandlers = (
     handleKeyDown
   };
 };
+
