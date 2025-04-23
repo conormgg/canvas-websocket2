@@ -1,6 +1,6 @@
 // src/hooks/useCanvasClipboard.ts
 import { Canvas, util, Point, FabricObject } from "fabric";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useInternalClipboard } from "./clipboard/useInternalClipboard";
 import { useExternalClipboard } from "./clipboard/useExternalClipboard";
 
@@ -19,9 +19,11 @@ export const useCanvasClipboard = (
     pasteAtPosition,
   } = useInternalClipboard(fabricRef);
 
-  const { tryExternalPaste, handleExternalPaste } = useExternalClipboard(
+  // Pass the internal clipboard reference to useExternalClipboard
+  const { handleExternalPaste } = useExternalClipboard(
     fabricRef,
-    pastePosition
+    pastePosition,
+    clipboardDataRef  // Pass the clipboard reference as the third argument
   );
 
   const handlePaste = (e: KeyboardEvent) => {
@@ -36,9 +38,9 @@ export const useCanvasClipboard = (
     const canvas = fabricRef.current;
     const internalData = clipboardDataRef.current;
 
-    // if nothing in our internal clipboard, fall back to external
+    // if nothing in our internal clipboard, fall back to external paste event
     if (!internalData?.length) {
-      tryExternalPaste();
+      // We'll rely on the paste event to trigger handleExternalPaste
       return;
     }
 
@@ -53,7 +55,7 @@ export const useCanvasClipboard = (
       return;
     }
 
-    // otherwise do a normal “click-free” paste at last click or offset
+    // otherwise do a normal "click-free" paste at last click or offset
     const toEnliven = [...internalData];
     util.enlivenObjects(toEnliven).then((objects: any[]) => {
       objects.forEach((obj: any) => {
