@@ -1,17 +1,16 @@
-
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Canvas, TPointerEvent, TPointerEventInfo } from 'fabric';
 import { useCanvasKeyboard } from './useCanvasKeyboard';
 import { useCanvasZoomPan } from './useCanvasZoomPan';
 import { useCanvasSelection } from './useCanvasSelection';
+import { useCanvasToolState } from './useCanvasToolState';
 
 export const useCanvasMouseHandlers = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   activeTool: string,
   onZoomChange: (zoom: number) => void
 ) => {
-  const [isDrawing, setIsDrawing] = useState(false);
-  
+  const { isDrawing, setIsDrawing, updateToolState } = useCanvasToolState(fabricRef);
   const { handleKeyDown } = useCanvasKeyboard(fabricRef);
   const { handleMouseWheel, handlePanning, resetPanPoint } = useCanvasZoomPan(fabricRef, onZoomChange);
   const { handleSelectionStart, handleSelectionMoving, handleSelectionEnd } = useCanvasSelection(fabricRef, activeTool);
@@ -22,7 +21,6 @@ export const useCanvasMouseHandlers = (
     if (!canvas) return;
 
     if (e instanceof MouseEvent && e.button === 2) {
-      // Right-click handling for panning
       canvas.defaultCursor = 'grabbing';
       canvas.selection = false;
       canvas.discardActiveObject();
@@ -35,7 +33,7 @@ export const useCanvasMouseHandlers = (
         setIsDrawing(true);
       }
     }
-  }, [activeTool, fabricRef, handleSelectionStart]);
+  }, [activeTool, fabricRef, handleSelectionStart, setIsDrawing]);
 
   const handleMouseMove = useCallback((opt: TPointerEventInfo<TPointerEvent>) => {
     const e = opt.e;
@@ -54,17 +52,11 @@ export const useCanvasMouseHandlers = (
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    // Always ensure drawing mode is properly handled
-    if (activeTool === "draw" || activeTool === "eraser") {
-      canvas.isDrawingMode = true;
-    } else {
-      canvas.isDrawingMode = false;
-    }
+    updateToolState(activeTool);
     
     if (activeTool === "select") {
       handleSelectionEnd();
       canvas.defaultCursor = 'default';
-      canvas.selection = true;
     }
     
     // Ensure the viewport transform is committed
@@ -74,10 +66,8 @@ export const useCanvasMouseHandlers = (
     
     resetPanPoint();
     setIsDrawing(false);
-    
-    // Force render to ensure changes are visible
     canvas.renderAll();
-  }, [activeTool, fabricRef, handleSelectionEnd, resetPanPoint]);
+  }, [activeTool, fabricRef, handleSelectionEnd, resetPanPoint, setIsDrawing, updateToolState]);
 
   return {
     isDrawing,

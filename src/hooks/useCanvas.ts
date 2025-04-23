@@ -41,6 +41,12 @@ export const useCanvas = ({
     canvas.freeDrawingBrush.width = inkThickness;
     canvas.freeDrawingBrush.color = activeColor;
 
+    // Add event listeners
+    canvas.on("mouse:wheel", handleMouseWheel);
+    canvas.on("mouse:down", handleMouseDown);
+    canvas.on("mouse:move", handleMouseMove);
+    canvas.on("mouse:up", handleMouseUp);
+
     if (onObjectAdded) {
       canvas.on("object:added", (e) => {
         if (e.target) {
@@ -48,12 +54,6 @@ export const useCanvas = ({
         }
       });
     }
-
-    // Add event listeners
-    canvas.on("mouse:wheel", handleMouseWheel);
-    canvas.on("mouse:down", handleMouseDown);
-    canvas.on("mouse:move", handleMouseMove);
-    canvas.on("mouse:up", handleMouseUp);
 
     fabricRef.current = canvas;
 
@@ -80,32 +80,21 @@ export const useCanvas = ({
     window.addEventListener("resize", handleResize);
     window.addEventListener("keydown", handleKeyDown);
 
-    updateCursorAndNotify(canvas, activeTool, inkThickness);
-
     return () => {
-      // Properly clean up event listeners
       canvas.off("mouse:wheel");
       canvas.off("mouse:down");
       canvas.off("mouse:move");
       canvas.off("mouse:up");
-      
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("keydown", handleKeyDown);
-      
       canvas.dispose();
     };
   }, []);
 
-  // Update drawing mode, brush settings and cursor on tool/color changes
+  // Update drawing mode and brush settings when tool/color changes
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    
-    // Update drawing mode
-    canvas.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
-    
-    // Update selection mode
-    canvas.selection = activeTool === "select";
     
     // Update brush settings
     if (canvas.freeDrawingBrush) {
@@ -116,7 +105,6 @@ export const useCanvas = ({
     // Update cursor
     updateCursorAndNotify(canvas, activeTool, inkThickness);
     
-    // Re-render canvas with updates
     canvas.renderAll();
   }, [activeTool, activeColor, inkThickness]);
 
