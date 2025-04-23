@@ -1,5 +1,3 @@
-
-// src/hooks/useCanvasClipboard.ts
 import { Canvas, util, Point, FabricObject } from "fabric";
 import { useEffect } from "react";
 import { useInternalClipboard } from "./clipboard/useInternalClipboard";
@@ -60,7 +58,7 @@ export const useCanvasClipboard = (
     
     // Update to use the EnlivenObjectOptions format for Fabric.js v6
     util.enlivenObjects(toEnliven, {
-      onComplete: (objects: FabricObject[]) => {
+      callback: (objects: FabricObject[]) => {
         objects.forEach((obj: any) => {
           if (typeof obj !== "object") return;
           const originalLeft = typeof obj.left === "number" ? obj.left : 0;

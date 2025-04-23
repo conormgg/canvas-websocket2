@@ -1,4 +1,3 @@
-
 import { Canvas, util, Point, FabricObject } from "fabric";
 import { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -91,9 +90,8 @@ export const useInternalClipboard = (
     const canvas = fabricRef.current;
     const toEnliven = [...clipboardDataRef.current];
 
-    // Update to use the EnlivenObjectOptions format for Fabric.js v6
     util.enlivenObjects(toEnliven, {
-      onComplete: (objects: FabricObject[]) => {
+      callback: (objects: FabricObject[]) => {
         if (!objects.length) return;
 
         let minL = Infinity,

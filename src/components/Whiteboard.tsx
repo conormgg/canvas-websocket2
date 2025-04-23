@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useCanvasClipboard } from "@/hooks/useCanvasClipboard";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
-import { util, FabricObject } from "fabric";
+import { util, FabricObject, Object as FabricObj } from "fabric";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -40,16 +39,14 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     return false;
   };
 
-  // Listen for remote whiteboard updates and add objects incrementally
   useEffect(() => {
     const handleUpdate = (e: CustomEvent) => {
       if (e.detail.sourceId === id) return;
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      // Update to use the EnlivenObjectOptions format for Fabric.js v6
       util.enlivenObjects([e.detail.object], {
-        onComplete: (objects: FabricObject[]) => {
+        callback: (objects: FabricObject[]) => {
           objects.forEach((obj) => canvas.add(obj));
           canvas.renderAll();
         }
