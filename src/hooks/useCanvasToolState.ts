@@ -16,15 +16,17 @@ export const useCanvasToolState = (
     canvas.isDrawingMode = tool === "draw" || tool === "eraser";
     canvas.selection = tool === "select";
 
-    // Show single notification for tool change
-    if (tool === "draw") {
-      toast("Draw mode enabled. Click and drag to draw!");
-    } else if (tool === "select") {
-      toast("Select mode enabled. Click objects to select them!");
-    } else if (tool === "eraser") {
-      toast("Eraser mode enabled. Click and drag to erase!");
+    // Only show notifications when tool changes, not during drawing operations
+    if (!isDrawing) {
+      if (tool === "draw") {
+        toast("Draw mode enabled. Click and drag to draw!");
+      } else if (tool === "select") {
+        toast("Select mode enabled. Click objects to select them!");
+      } else if (tool === "eraser") {
+        toast("Eraser mode enabled. Click and drag to erase!");
+      }
     }
-  }, [fabricRef]);
+  }, [fabricRef, isDrawing]);
 
   return {
     isDrawing,

@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { Canvas, TPointerEvent, TPointerEventInfo } from 'fabric';
 import { useCanvasKeyboard } from './useCanvasKeyboard';
@@ -52,7 +53,10 @@ export const useCanvasMouseHandlers = (
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    updateToolState(activeTool);
+    // Don't update tool state if we're already in drawing mode and just finished a drawing action
+    if (!isDrawing || activeTool === "select") {
+      updateToolState(activeTool);
+    }
     
     if (activeTool === "select") {
       handleSelectionEnd();
@@ -67,7 +71,7 @@ export const useCanvasMouseHandlers = (
     resetPanPoint();
     setIsDrawing(false);
     canvas.renderAll();
-  }, [activeTool, fabricRef, handleSelectionEnd, resetPanPoint, setIsDrawing, updateToolState]);
+  }, [activeTool, fabricRef, handleSelectionEnd, resetPanPoint, setIsDrawing, updateToolState, isDrawing]);
 
   return {
     isDrawing,
