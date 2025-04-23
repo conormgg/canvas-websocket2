@@ -47,12 +47,13 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      util.enlivenObjects([e.detail.object], {
-        onComplete: (objects: FabricObject[]) => {
+      util.enlivenObjects(
+        [e.detail.object],
+        function(objects: FabricObject[]) {
           objects.forEach((obj) => canvas.add(obj));
           canvas.renderAll();
         }
-      });
+      );
     };
 
     window.addEventListener("whiteboard-update", handleUpdate as EventListener);
