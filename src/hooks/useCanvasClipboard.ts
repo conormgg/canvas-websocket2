@@ -1,9 +1,12 @@
-import { Canvas, util, Point, FabricObject } from 'fabric';
-import { useEffect } from 'react';
-import { useInternalClipboard } from './clipboard/useInternalClipboard';
-import { useExternalClipboard } from './clipboard/useExternalClipboard';
+// src/hooks/useCanvasClipboard.ts
+import { Canvas, util, Point, FabricObject } from "fabric";
+import { useEffect } from "react";
+import { useInternalClipboard } from "./clipboard/useInternalClipboard";
+import { useExternalClipboard } from "./clipboard/useExternalClipboard";
 
-export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
+export const useCanvasClipboard = (
+  fabricRef: React.MutableRefObject<Canvas | null>
+) => {
   const {
     clipboardDataRef,
     pastePosition,
@@ -13,121 +16,104 @@ export const useCanvasClipboard = (fabricRef: React.MutableRefObject<Canvas | nu
     calculatePastePosition,
     awaitingPlacementRef,
     placementPointRef,
-    pasteAtPosition
+    pasteAtPosition,
   } = useInternalClipboard(fabricRef);
 
-  const {
-    tryExternalPaste,
-    handleExternalPaste
-  } = useExternalClipboard(fabricRef, pastePosition);
+  const { tryExternalPaste, handleExternalPaste } = useExternalClipboard(
+    fabricRef,
+    pastePosition
+  );
 
   const handlePaste = (e: KeyboardEvent) => {
+    // only handle Ctrl+V when this canvas wrapper is focused
+    const wrapper = fabricRef.current?.wrapperEl;
+    if (!wrapper || !wrapper.contains(document.activeElement)) return;
     if (e.repeat) return;
-    const canvas = fabricRef.current;
-    if (!canvas || !e.ctrlKey || e.key !== 'v') return;
-    
+    if (!e.ctrlKey || e.key.toLowerCase() !== "v") return;
+
     e.preventDefault();
-    
-    const clipboardData = clipboardDataRef.current;
-    if (!clipboardData?.length) {
+
+    const canvas = fabricRef.current;
+    const internalData = clipboardDataRef.current;
+
+    // if nothing in our internal clipboard, fall back to external
+    if (!internalData?.length) {
       tryExternalPaste();
       return;
     }
 
-    // If we're awaiting placement, we'll paste when the user clicks
+    // if waiting for placement click, defer to that
     if (awaitingPlacementRef.current) {
       return;
     }
 
-    // If we have a placement point from a previous click, use it
+    // if user already clicked to set placement, use that
     if (placementPointRef.current) {
       pasteAtPosition(placementPointRef.current);
       return;
     }
 
-    // Otherwise use the default behavior
-    const toEnliven = [...clipboardData];
-
+    // otherwise do a normal “click-free” paste at last click or offset
+    const toEnliven = [...internalData];
     util.enlivenObjects(toEnliven).then((objects: any[]) => {
       objects.forEach((obj: any) => {
-        // Check if the object has the needed properties before accessing them
-        if (typeof obj !== 'object') return;
-        
-        // Get original position (with type safety)
-        const originalLeft = typeof obj.left === 'number' ? obj.left : 0;
-        const originalTop = typeof obj.top === 'number' ? obj.top : 0;
-        const position = calculatePastePosition(originalLeft, originalTop);
-        
-        // Set the new position (with type safety)
-        if (obj && typeof obj.set === 'function') {
-          obj.set({ 
-            left: position.left, 
-            top: position.top,
-            evented: true 
-          });
-          
-          canvas.add(obj);
-          
-          if (typeof obj.setCoords === 'function') {
-            obj.setCoords();
-          }
+        if (typeof obj !== "object") return;
+        const originalLeft = typeof obj.left === "number" ? obj.left : 0;
+        const originalTop = typeof obj.top === "number" ? obj.top : 0;
+        const { left, top } = calculatePastePosition(originalLeft, originalTop);
+
+        if (typeof obj.set === "function") {
+          obj.set({ left, top, evented: true });
+          canvas?.add(obj);
+          if (typeof obj.setCoords === "function") obj.setCoords();
         }
       });
 
-      // Fix the type error by checking if the object has the setCoords method
-      // and ensure it's a valid FabricObject before setting as active
-      if (objects.length === 1 && objects[0]) {
-        const firstObject = objects[0];
-        if ('setCoords' in firstObject && typeof firstObject.setCoords === 'function') {
-          // Only set as active object if it's a valid FabricObject
-          canvas.setActiveObject(firstObject as FabricObject);
+      // select the pasted object(s)
+      if (objects.length === 1) {
+        const first = objects[0];
+        if (first && typeof first.setCoords === "function") {
+          canvas?.setActiveObject(first as FabricObject);
         }
       } else if (objects.length > 1) {
-        const selection = canvas.getActiveObjects();
-        if (selection.length) {
-          canvas.discardActiveObject();
-          canvas.requestRenderAll();
-        }
+        canvas?.discardActiveObject();
       }
 
       setPastePosition(null);
-      canvas.requestRenderAll();
+      canvas?.requestRenderAll();
     });
   };
 
   useEffect(() => {
-    window.addEventListener('keydown', handleCopy);
-    window.addEventListener('keydown', handlePaste);
-    document.addEventListener('paste', handleExternalPaste);
-    
-    if (fabricRef.current?.wrapperEl) {
-      fabricRef.current.wrapperEl.addEventListener('click', handleCanvasClick);
-    }
-    
+    const canvas = fabricRef.current;
+    const wrapper = canvas?.wrapperEl;
+    if (!wrapper) return;
+
+    // ensure wrapper can receive keyboard + paste events
+    if (wrapper.tabIndex < 0) wrapper.tabIndex = 0;
+
+    wrapper.addEventListener("click", handleCanvasClick);
+    wrapper.addEventListener("keydown", handleCopy);
+    wrapper.addEventListener("keydown", handlePaste);
+    wrapper.addEventListener("paste", handleExternalPaste);
+
     return () => {
-      window.removeEventListener('keydown', handleCopy);
-      window.removeEventListener('keydown', handlePaste);
-      document.removeEventListener('paste', handleExternalPaste);
-      
-      if (fabricRef.current?.wrapperEl) {
-        fabricRef.current.wrapperEl.removeEventListener('click', handleCanvasClick);
-      }
+      wrapper.removeEventListener("click", handleCanvasClick);
+      wrapper.removeEventListener("keydown", handleCopy);
+      wrapper.removeEventListener("keydown", handlePaste);
+      wrapper.removeEventListener("paste", handleExternalPaste);
     };
   }, [fabricRef.current]);
 
-  // Add keyboard escape handler to cancel awaiting placement
+  // allow Esc to cancel a pending placement
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && awaitingPlacementRef.current) {
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && awaitingPlacementRef.current) {
         awaitingPlacementRef.current = false;
       }
     };
-    
-    window.addEventListener('keydown', handleEscape);
-    
-    return () => {
-      window.removeEventListener('keydown', handleEscape);
-    };
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
   }, []);
 
   return { clipboardDataRef, pastePosition, setPastePosition };

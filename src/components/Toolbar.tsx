@@ -1,8 +1,13 @@
-
 import { MousePointer, Pencil, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "./ColorPicker";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ToolbarProps {
   activeTool: "select" | "draw" | "eraser";
@@ -11,18 +16,24 @@ interface ToolbarProps {
   onColorChange: (color: string) => void;
   inkThickness: number;
   onInkThicknessChange: (thickness: number) => void;
+  isSplitScreen?: boolean;
 }
 
-export const Toolbar = ({ 
-  activeTool, 
-  activeColor, 
-  onToolChange, 
+export const Toolbar = ({
+  activeTool,
+  activeColor,
+  onToolChange,
   onColorChange,
   inkThickness,
-  onInkThicknessChange 
+  onInkThicknessChange,
+  isSplitScreen = false,
 }: ToolbarProps) => {
+  const containerClass = isSplitScreen
+    ? "bg-[#221F26] rounded-md shadow-md p-1 flex items-center justify-center gap-1 scale-90 max-w-xs"
+    : "bg-[#221F26] rounded-lg shadow-lg p-2 flex items-center gap-2";
+
   return (
-    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-[#221F26] rounded-lg shadow-lg p-2 flex items-center gap-2">
+    <div className={containerClass}>
       <Button
         variant={activeTool === "select" ? "secondary" : "ghost"}
         size="icon"
@@ -47,20 +58,58 @@ export const Toolbar = ({
       >
         <Eraser className="h-5 w-5" />
       </Button>
-      <div className="w-px h-8 bg-gray-600 mx-2" />
-      <ColorPicker activeColor={activeColor} onColorChange={onColorChange} />
-      <div className="w-px h-8 bg-gray-600 mx-2" />
-      <Select value={inkThickness.toString()} onValueChange={(value) => onInkThicknessChange(Number(value))}>
-        <SelectTrigger className="w-24 bg-transparent text-white border-gray-600">
-          <SelectValue placeholder="Thickness" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="1">Thin (1px)</SelectItem>
-          <SelectItem value="3">Medium (3px)</SelectItem>
-          <SelectItem value="5">Thick (5px)</SelectItem>
-          <SelectItem value="8">Extra Thick (8px)</SelectItem>
-        </SelectContent>
-      </Select>
+
+      {isSplitScreen ? (
+        <>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onColorChange("red")}
+            className="bg-red-600 w-6 h-6 rounded-full"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onColorChange("blue")}
+            className="bg-blue-600 w-6 h-6 rounded-full"
+          />
+          <Select
+            onValueChange={(value) => onInkThicknessChange(Number(value))}
+            defaultValue={inkThickness.toString()}
+          >
+            <SelectTrigger className="w-[60px] h-[28px] text-xs text-white border border-gray-600 bg-transparent">
+              <SelectValue placeholder="Size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">Thin</SelectItem>
+              <SelectItem value="4">Medium</SelectItem>
+              <SelectItem value="6">Thick</SelectItem>
+            </SelectContent>
+          </Select>
+        </>
+      ) : (
+        <>
+          <div className="w-px h-8 bg-gray-600 mx-2" />
+          <ColorPicker
+            activeColor={activeColor}
+            onColorChange={onColorChange}
+          />
+          <div className="w-px h-8 bg-gray-600 mx-2" />
+          <Select
+            value={inkThickness.toString()}
+            onValueChange={(value) => onInkThicknessChange(Number(value))}
+          >
+            <SelectTrigger className="w-24 bg-transparent text-white border-gray-600">
+              <SelectValue placeholder="Size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">Thin</SelectItem>
+              <SelectItem value="4">Medium</SelectItem>
+              <SelectItem value="6">Thick</SelectItem>
+            </SelectContent>
+          </Select>
+        </>
+      )}
     </div>
   );
 };

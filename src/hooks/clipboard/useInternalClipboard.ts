@@ -1,151 +1,132 @@
+import { Canvas, FabricObject, util, Point } from "fabric";
+import { useRef, useState, useEffect } from "react";
+import { toast } from "sonner";
 
-import { Canvas, FabricObject, util, Point } from 'fabric';
-import { useRef, useState } from 'react';
-import { toast } from 'sonner';
-
-export const useInternalClipboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
+export const useInternalClipboard = (
+  fabricRef: React.MutableRefObject<Canvas | null>
+) => {
+  /* ------------------------------------------------------------- */
+  /*  Local state                                                  */
+  /* ------------------------------------------------------------- */
   const clipboardDataRef = useRef<any[] | null>(null);
   const [pastePosition, setPastePosition] = useState<Point | null>(null);
   const awaitingPlacementRef = useRef<boolean>(false);
-  const placementPointRef = useRef<{x: number, y: number} | null>(null);
+  const placementPointRef = useRef<{ x: number; y: number } | null>(null);
 
+  /* ------------------------------------------------------------- */
+  /*  Sync with GLOBAL clipboard (so every board sees the copy)    */
+  /* ------------------------------------------------------------- */
+  useEffect(() => {
+    const handleGlobalCopy = (e: Event) => {
+      const data = (e as CustomEvent).detail?.data;
+      if (data) clipboardDataRef.current = data;
+    };
+    window.addEventListener("whiteboard-global-clipboard", handleGlobalCopy);
+    return () =>
+      window.removeEventListener(
+        "whiteboard-global-clipboard",
+        handleGlobalCopy
+      );
+  }, []);
+
+  /* ------------------------------------------------------------- */
+  /*  Click chooses where the next paste will go                   */
+  /* ------------------------------------------------------------- */
   const handleCanvasClick = (e: MouseEvent) => {
-    if (!fabricRef.current) return;
-    
     const canvas = fabricRef.current;
-    if (canvas.isDrawingMode) return;
-    
-    const pointer = canvas.getPointer(e);
-    setPastePosition(new Point(pointer.x, pointer.y));
+    if (!canvas || canvas.isDrawingMode) return;
 
-    // If we're waiting for placement, capture the click position
+    const p = canvas.getPointer(e);
+    placementPointRef.current = { x: p.x, y: p.y };
+    setPastePosition(new Point(p.x, p.y));
+
     if (awaitingPlacementRef.current) {
-      placementPointRef.current = { x: pointer.x, y: pointer.y };
       awaitingPlacementRef.current = false;
-      
-      // Trigger paste with the new position
-      if (clipboardDataRef.current?.length) {
-        pasteAtPosition(placementPointRef.current);
-      }
+      toast("Paste location set. Press Ctrl+V to paste.");
     }
   };
 
+  /* ------------------------------------------------------------- */
+  /*  Copy (Ctrl‑C)  &  Cut (Ctrl‑X) – broadcast globally          */
+  /* ------------------------------------------------------------- */
   const handleCopy = (e: KeyboardEvent) => {
-    if (e.repeat) return;
+    if (!e.ctrlKey || (e.key !== "c" && e.key !== "x") || e.repeat) return;
+    e.preventDefault();
+
     const canvas = fabricRef.current;
     if (!canvas) return;
 
-    if (e.ctrlKey && e.key === 'c') {
-      e.preventDefault();
-      
-      const activeObjects = canvas.getActiveObjects();
-      if (!activeObjects.length) return;
-      
-      clipboardDataRef.current = activeObjects.map(obj => obj.toObject(['id']));
-      
-      const itemText = activeObjects.length > 1 ? `${activeObjects.length} items` : '1 item';
-      toast(`Copied ${itemText} to clipboard`);
+    const active = canvas.getActiveObjects();
+    if (!active.length) return;
 
-      // Set flag to await placement on next click
-      awaitingPlacementRef.current = true;
-      toast("Click anywhere to place the copied item(s)");
+    clipboardDataRef.current = active.map((o) => o.toObject(["id"]));
+
+    /* 🌐 GLOBAL: share with every board */
+    window.dispatchEvent(
+      new CustomEvent("whiteboard-global-clipboard", {
+        detail: { data: clipboardDataRef.current },
+      })
+    );
+
+    const verb = e.key === "x" ? "Cut" : "Copied";
+    toast(`${verb} ${active.length > 1 ? active.length + " items" : "1 item"}`);
+
+    awaitingPlacementRef.current = true;
+    toast("Click on the destination board to set paste location");
+
+    if (e.key === "x") {
+      active.forEach((o) => canvas.remove(o));
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
     }
   };
 
-  const pasteAtPosition = (position: {x: number, y: number} | null) => {
-    if (!fabricRef.current || !clipboardDataRef.current?.length || !position) return;
+  /* ------------------------------------------------------------- */
+  /*  Paste objects keeping their relative offsets                 */
+  /* ------------------------------------------------------------- */
+  const pasteAtPosition = (pos: { x: number; y: number } | null) => {
+    if (!fabricRef.current || !clipboardDataRef.current?.length || !pos) return;
 
     const canvas = fabricRef.current;
     const toEnliven = [...clipboardDataRef.current];
 
     util.enlivenObjects(toEnliven).then((objects: any[]) => {
-      // If we have multiple objects, calculate group bounds to maintain relative positions
-      let groupBounds = null;
-      
-      if (objects.length > 1) {
-        // Create a temporary group to get bounds
-        const tempGroup = canvas.getActiveObjects().length > 1 
-          ? canvas.getActiveObject() 
-          : null;
-          
-        if (tempGroup && 'getBoundingRect' in tempGroup) {
-          groupBounds = (tempGroup as any).getBoundingRect();
-        } else {
-          // Fallback: manually calculate bounds
-          let minX = Infinity, minY = Infinity;
-          objects.forEach(obj => {
-            if (typeof obj.left === 'number' && typeof obj.top === 'number') {
-              minX = Math.min(minX, obj.left);
-              minY = Math.min(minY, obj.top);
-            }
-          });
-          
-          if (minX !== Infinity && minY !== Infinity) {
-            groupBounds = { left: minX, top: minY };
-          }
-        }
-      }
+      if (!objects.length) return;
 
-      objects.forEach((obj: any) => {
-        if (typeof obj.set !== 'function') return;
+      let minL = Infinity,
+        minT = Infinity;
+      objects.forEach((o: any) => {
+        if (typeof o.left === "number" && o.left < minL) minL = o.left;
+        if (typeof o.top === "number" && o.top < minT) minT = o.top;
+      });
+      if (!isFinite(minL)) minL = 0;
+      if (!isFinite(minT)) minT = 0;
 
-        // Calculate the new position
-        let newLeft = position.x;
-        let newTop = position.y;
-        
-        // If we have group bounds, maintain relative positions
-        if (groupBounds) {
-          const offsetX = typeof obj.left === 'number' ? obj.left - groupBounds.left : 0;
-          const offsetY = typeof obj.top === 'number' ? obj.top - groupBounds.top : 0;
-          newLeft = position.x + offsetX;
-          newTop = position.y + offsetY;
-        }
-        
-        // Set the new position
-        obj.set({ 
-          left: newLeft, 
-          top: newTop,
-          evented: true 
-        });
-        
-        canvas.add(obj);
-        
-        if (typeof obj.setCoords === 'function') {
-          obj.setCoords();
-        }
+      objects.forEach((o: any) => {
+        if (typeof o.set !== "function") return;
+        const offL = typeof o.left === "number" ? o.left - minL : 0;
+        const offT = typeof o.top === "number" ? o.top - minT : 0;
+        o.set({ left: pos.x + offL, top: pos.y + offT, evented: true });
+        canvas.add(o);
+        if (typeof o.setCoords === "function") o.setCoords();
       });
 
-      // Select the pasted object(s)
-      if (objects.length === 1 && objects[0]) {
-        const firstObject = objects[0];
-        if ('setCoords' in firstObject && typeof firstObject.setCoords === 'function') {
-          canvas.setActiveObject(firstObject as FabricObject);
-        }
-      } else if (objects.length > 1) {
-        const selection = canvas.getActiveObjects();
-        if (selection.length) {
-          canvas.discardActiveObject();
-          canvas.requestRenderAll();
-        }
-      }
-
-      placementPointRef.current = null;
-      canvas.requestRenderAll();
+      placementPointRef.current = null; // reset after successful paste
       toast("Object(s) pasted successfully");
+      canvas.requestRenderAll();
     });
   };
 
-  const calculatePastePosition = (originalLeft: number = 0, originalTop: number = 0): { left: number, top: number } => {
+  /* ------------------------------------------------------------- */
+  /*  Helper for Ctrl‑V without pre‑click                          */
+  /* ------------------------------------------------------------- */
+  const calculatePastePosition = (l = 0, t = 0) => {
     if (pastePosition) {
-      const position = { left: pastePosition.x, top: pastePosition.y };
+      const p = { left: pastePosition.x, top: pastePosition.y };
       setPastePosition(null);
-      return position;
-    } else {
-      return { 
-        left: originalLeft + 20, 
-        top: originalTop + 20 
-      };
+      return p;
     }
+    return { left: l + 20, top: t + 20 };
   };
 
   return {
@@ -157,6 +138,6 @@ export const useInternalClipboard = (fabricRef: React.MutableRefObject<Canvas | 
     calculatePastePosition,
     awaitingPlacementRef,
     placementPointRef,
-    pasteAtPosition
+    pasteAtPosition,
   };
 };
