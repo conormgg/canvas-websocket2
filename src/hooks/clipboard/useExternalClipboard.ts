@@ -1,3 +1,4 @@
+
 import { Canvas, Image as FabricImage, Point } from "fabric";
 import { useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -10,8 +11,7 @@ declare global {
 export const useExternalClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   pastePosition: Point | null,
-  /* 🔑  NEW: ref to internal clipboard so we can give it priority */
-  internalClipboardRef: React.MutableRefObject<any[] | null>
+  internalClipboardRef: React.MutableRefObject<any[] | null> = { current: null }
 ) => {
   /* -------- keep freshest click position -------- */
   const posRef = useRef<Point | null>(pastePosition);
@@ -28,8 +28,38 @@ export const useExternalClipboard = (
     return () => view.removeEventListener("pointerdown", setActive);
   }, [fabricRef.current]);
 
+  /* Function to try pasting external clipboard content */
+  const tryExternalPaste = () => {
+    navigator.clipboard.read().then(
+      (clipboardItems) => {
+        for (const clipboardItem of clipboardItems) {
+          for (const type of clipboardItem.types) {
+            if (type.startsWith("image/")) {
+              clipboardItem.getType(type).then((blob) => {
+                if (posRef.current) {
+                  addImageFromBlob(blob, posRef.current);
+                } else {
+                  const canvas = fabricRef.current;
+                  if (canvas) {
+                    const center = new Point(canvas.width! / 2, canvas.height! / 2);
+                    addImageFromBlob(blob, center);
+                  }
+                }
+              });
+              return;
+            }
+          }
+        }
+        toast("No image found in clipboard");
+      },
+      () => {
+        toast("Could not access clipboard. Try clicking on the canvas first.");
+      }
+    );
+  };
+
   /* ------------------------------------------------------- */
-  /*  DOM “paste” event handler – runs in every board        */
+  /*  DOM "paste" event handler – runs in every board        */
   /* ------------------------------------------------------- */
   const handleExternalPaste = (e: ClipboardEvent) => {
     /* 1️⃣  Only handle if this is the board user clicked last */
@@ -84,5 +114,5 @@ export const useExternalClipboard = (
     reader.readAsDataURL(blob);
   };
 
-  return { handleExternalPaste };
+  return { handleExternalPaste, tryExternalPaste };
 };

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
@@ -46,6 +47,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
 
+      // Fix the enlivenObjects call by providing proper callback
       util.enlivenObjects([e.detail.object], (objects: FabricObject[]) => {
         objects.forEach((obj) => canvas.add(obj));
         canvas.renderAll();
