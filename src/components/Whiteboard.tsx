@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
@@ -47,12 +46,10 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      // Fix the TypeScript error by using the correct approach for fabric.js v6
-      util.enlivenObjects([e.detail.object])
-        .then((objects: FabricObject[]) => {
-          objects.forEach((obj) => canvas.add(obj));
-          canvas.renderAll();
-        });
+      util.enlivenObjects([e.detail.object], (objects: FabricObject[]) => {
+        objects.forEach((obj) => canvas.add(obj));
+        canvas.renderAll();
+      });
     };
 
     window.addEventListener("whiteboard-update", handleUpdate as EventListener);
