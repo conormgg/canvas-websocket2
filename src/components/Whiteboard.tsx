@@ -47,10 +47,12 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      // Fix the enlivenObjects call by providing proper callback
-      util.enlivenObjects([e.detail.object], (objects: FabricObject[]) => {
-        objects.forEach((obj) => canvas.add(obj));
-        canvas.renderAll();
+      // Update to use the correct options format for enlivenObjects
+      util.enlivenObjects([e.detail.object], {
+        onComplete: (objects: FabricObject[]) => {
+          objects.forEach((obj) => canvas.add(obj));
+          canvas.renderAll();
+        }
       });
     };
 

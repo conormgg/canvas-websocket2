@@ -1,4 +1,3 @@
-
 // src/hooks/useCanvasClipboard.ts
 import { Canvas, util, Point, FabricObject } from "fabric";
 import { useEffect } from "react";
@@ -55,11 +54,10 @@ export const useCanvasClipboard = (
       return;
     }
 
-    // otherwise do a normal “click-free” paste at last click or offset
+    // otherwise do a normal "click-free" paste at last click or offset
     const toEnliven = [...internalData];
-    util.enlivenObjects(
-      toEnliven, 
-      (objects: FabricObject[]) => {
+    util.enlivenObjects(toEnliven, {
+      onComplete: (objects: FabricObject[]) => {
         objects.forEach((obj: any) => {
           if (typeof obj !== "object") return;
           const originalLeft = typeof obj.left === "number" ? obj.left : 0;
@@ -86,7 +84,7 @@ export const useCanvasClipboard = (
         setPastePosition(null);
         canvas?.requestRenderAll();
       }
-    );
+    });
   };
 
   useEffect(() => {

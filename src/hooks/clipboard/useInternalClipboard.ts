@@ -1,3 +1,4 @@
+
 import { Canvas, FabricObject, util, Point } from "fabric";
 import { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -47,7 +48,7 @@ export const useInternalClipboard = (
   };
 
   /* ------------------------------------------------------------- */
-  /*  Copy (Ctrl‑C)  &  Cut (Ctrl‑X) – broadcast globally          */
+  /*  Copy (Ctrl‑C)  &  Cut (Ctrl‑X) – broadcast globally          */
   /* ------------------------------------------------------------- */
   const handleCopy = (e: KeyboardEvent) => {
     if (!e.ctrlKey || (e.key !== "c" && e.key !== "x") || e.repeat) return;
@@ -90,30 +91,32 @@ export const useInternalClipboard = (
     const canvas = fabricRef.current;
     const toEnliven = [...clipboardDataRef.current];
 
-    util.enlivenObjects(toEnliven).then((objects: any[]) => {
-      if (!objects.length) return;
+    util.enlivenObjects(toEnliven, {
+      onComplete: (objects: FabricObject[]) => {
+        if (!objects.length) return;
 
-      let minL = Infinity,
-        minT = Infinity;
-      objects.forEach((o: any) => {
-        if (typeof o.left === "number" && o.left < minL) minL = o.left;
-        if (typeof o.top === "number" && o.top < minT) minT = o.top;
-      });
-      if (!isFinite(minL)) minL = 0;
-      if (!isFinite(minT)) minT = 0;
+        let minL = Infinity,
+          minT = Infinity;
+        objects.forEach((o: any) => {
+          if (typeof o.left === "number" && o.left < minL) minL = o.left;
+          if (typeof o.top === "number" && o.top < minT) minT = o.top;
+        });
+        if (!isFinite(minL)) minL = 0;
+        if (!isFinite(minT)) minT = 0;
 
-      objects.forEach((o: any) => {
-        if (typeof o.set !== "function") return;
-        const offL = typeof o.left === "number" ? o.left - minL : 0;
-        const offT = typeof o.top === "number" ? o.top - minT : 0;
-        o.set({ left: pos.x + offL, top: pos.y + offT, evented: true });
-        canvas.add(o);
-        if (typeof o.setCoords === "function") o.setCoords();
-      });
+        objects.forEach((o: any) => {
+          if (typeof o.set !== "function") return;
+          const offL = typeof o.left === "number" ? o.left - minL : 0;
+          const offT = typeof o.top === "number" ? o.top - minT : 0;
+          o.set({ left: pos.x + offL, top: pos.y + offT, evented: true });
+          canvas.add(o);
+          if (typeof o.setCoords === "function") o.setCoords();
+        });
 
-      placementPointRef.current = null; // reset after successful paste
-      toast("Object(s) pasted successfully");
-      canvas.requestRenderAll();
+        placementPointRef.current = null; // reset after successful paste
+        toast("Object(s) pasted successfully");
+        canvas.requestRenderAll();
+      }
     });
   };
 
