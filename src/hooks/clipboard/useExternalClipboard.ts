@@ -1,3 +1,4 @@
+
 import { Canvas, Image as FabricImage, Point } from "fabric";
 import { useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -10,16 +11,14 @@ declare global {
 export const useExternalClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   pastePosition: Point | null,
-  /* 🔑  NEW: ref to internal clipboard so we can give it priority */
   internalClipboardRef: React.MutableRefObject<any[] | null>
 ) => {
-  /* -------- keep freshest click position -------- */
   const posRef = useRef<Point | null>(pastePosition);
+  
   useEffect(() => {
     posRef.current = pastePosition;
   }, [pastePosition]);
 
-  /* -------- mark this board as the active target -------- */
   useEffect(() => {
     const view = fabricRef.current?.upperCanvasEl;
     if (!view) return;
@@ -28,60 +27,57 @@ export const useExternalClipboard = (
     return () => view.removeEventListener("pointerdown", setActive);
   }, [fabricRef.current]);
 
-  /* ------------------------------------------------------- */
-  /*  DOM “paste” event handler – runs in every board        */
-  /* ------------------------------------------------------- */
   const handleExternalPaste = (e: ClipboardEvent) => {
-    /* 1️⃣  Only handle if this is the board user clicked last */
     if (fabricRef.current?.upperCanvasEl !== window.__wbActiveBoard) return;
 
-    /* 2️⃣  Give priority to internal clipboard: if it has data,
-           skip processing the external image.                 */
-    if (internalClipboardRef.current && internalClipboardRef.current.length) {
-      return; // internal handler will deal with this Ctrl‑V
+    // Skip if internal clipboard has data
+    if (internalClipboardRef.current?.length) {
+      return;
     }
-
-    /* Need a click first */
-    const p = posRef.current;
-    if (!p || !fabricRef.current) return;
 
     const items = e.clipboardData?.items;
     if (!items) return;
 
     for (let i = 0; i < items.length; i++) {
-      if (items[i].type.includes("image")) {
+      if (items[i].type.indexOf("image") !== -1) {
         const blob = items[i].getAsFile();
-        if (blob) {
-          e.preventDefault(); // stop default
-          addImageFromBlob(blob, p);
-          break; // handle only one image
-        }
+        if (!blob) continue;
+
+        e.preventDefault();
+        const reader = new FileReader();
+        
+        reader.onload = (event) => {
+          const imgUrl = event.target?.result as string;
+          if (!imgUrl) return;
+
+          FabricImage.fromURL(imgUrl).then((img) => {
+            const canvas = fabricRef.current;
+            if (!canvas) return;
+
+            img.scale(0.5);
+            
+            // If we have a paste position, use it. Otherwise, center the image
+            if (posRef.current) {
+              img.set({
+                left: posRef.current.x - ((img.width || 0) * (img.scaleX || 1)) / 2,
+                top: posRef.current.y - ((img.height || 0) * (img.scaleY || 1)) / 2,
+              });
+            } else {
+              img.scaleToWidth(200);
+              canvas.centerObject(img);
+            }
+
+            canvas.add(img);
+            canvas.setActiveObject(img);
+            canvas.renderAll();
+            toast("External image pasted successfully");
+          });
+        };
+
+        reader.readAsDataURL(blob);
+        break; // Only handle the first image found
       }
     }
-  };
-
-  /* -------- helper to drop FabricImage at point p -------- */
-  const addImageFromBlob = (blob: Blob, p: Point) => {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const url = ev.target?.result as string;
-      if (!url) return;
-      FabricImage.fromURL(url).then((img) => {
-        img.scale(0.5);
-        img.set({
-          left: p.x - ((img.width || 0) * (img.scaleX || 1)) / 2,
-          top: p.y - ((img.height || 0) * (img.scaleY || 1)) / 2,
-        });
-        canvas.add(img);
-        canvas.setActiveObject(img);
-        canvas.renderAll();
-        toast("Image pasted successfully");
-      });
-    };
-    reader.readAsDataURL(blob);
   };
 
   return { handleExternalPaste };
