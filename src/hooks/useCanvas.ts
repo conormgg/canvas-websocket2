@@ -1,21 +1,26 @@
-
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps } from "@/types/canvas";
 import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 
-export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange, onObjectAdded }: UseCanvasProps) => {
+export const useCanvas = ({
+  activeTool,
+  activeColor,
+  inkThickness,
+  onZoomChange,
+  onObjectAdded,
+}: UseCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
 
   const { updateCursorAndNotify } = useCanvasTools();
-  const { 
-    handleMouseWheel, 
-    handleMouseDown, 
-    handleMouseMove, 
+  const {
+    handleMouseWheel,
+    handleMouseDown,
+    handleMouseMove,
     handleMouseUp,
-    handleKeyDown 
+    handleKeyDown,
   } = useCanvasMouseHandlers(fabricRef, activeTool, onZoomChange);
 
   useEffect(() => {
@@ -35,67 +40,63 @@ export const useCanvas = ({ activeTool, activeColor, inkThickness, onZoomChange,
     canvas.freeDrawingBrush.color = activeColor;
 
     if (onObjectAdded) {
-      canvas.on('object:added', (e) => {
+      canvas.on("object:added", (e) => {
         if (e.target) {
           onObjectAdded(e.target);
         }
       });
     }
 
-    canvas.on('mouse:wheel', handleMouseWheel);
-    canvas.on('mouse:down', handleMouseDown);
-    canvas.on('mouse:move', handleMouseMove);
-    canvas.on('mouse:up', handleMouseUp);
+    canvas.on("mouse:wheel", handleMouseWheel);
+    canvas.on("mouse:down", handleMouseDown);
+    canvas.on("mouse:move", handleMouseMove);
+    canvas.on("mouse:up", handleMouseUp);
 
     fabricRef.current = canvas;
 
     const handleResize = () => {
-      canvas.setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
+      const parent = canvasRef.current?.parentElement;
+      if (parent) {
+        canvas.setDimensions({
+          width: parent.clientWidth,
+          height: parent.clientHeight,
+        });
+      } else {
+        canvas.setDimensions({
+          width: window.innerWidth,
+          height: window.innerHeight,
+        });
+      }
       canvas.renderAll();
     };
 
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("keydown", handleKeyDown);
+
     updateCursorAndNotify(canvas, activeTool, inkThickness);
 
     return () => {
       canvas.dispose();
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 
+  // Update drawing mode, brush settings and cursor on tool/color changes
   useEffect(() => {
-    if (!fabricRef.current) return;
-    
     const canvas = fabricRef.current;
-    
-    if (activeTool === "select") {
-      canvas.isDrawingMode = false;
-      canvas.selection = false;
-    } else if (activeTool === "draw") {
+    if (!canvas) return;
+    if (activeTool === "draw" || activeTool === "eraser") {
       canvas.isDrawingMode = true;
-      canvas.selection = false;
-      
       if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.color = activeColor;
         canvas.freeDrawingBrush.width = inkThickness;
+        canvas.freeDrawingBrush.color =
+          activeTool === "draw" ? activeColor : "#ffffff";
       }
-    } else if (activeTool === "eraser") {
-      canvas.isDrawingMode = true;
-      canvas.selection = false;
-      
-      if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.color = "#ffffff";
-        canvas.freeDrawingBrush.width = inkThickness * 2;
-      }
+    } else {
+      canvas.isDrawingMode = false;
     }
-    
     updateCursorAndNotify(canvas, activeTool, inkThickness);
-    canvas.renderAll();
   }, [activeTool, activeColor, inkThickness]);
 
   return { canvasRef, fabricRef };

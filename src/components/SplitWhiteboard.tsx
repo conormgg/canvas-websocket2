@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
@@ -6,7 +5,12 @@ import { WhiteboardId, StudentId } from "@/types/canvas";
 
 export const SplitWhiteboard = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
-  const studentIds: StudentId[] = ["student1", "student2", "student3", "student4"];
+  const studentIds: StudentId[] = [
+    "student1",
+    "student2",
+    "student3",
+    "student4",
+  ];
 
   const toggle = (id: WhiteboardId, e: React.MouseEvent) => {
     if (e.ctrlKey) {
@@ -14,13 +18,15 @@ export const SplitWhiteboard = () => {
     }
   };
 
-  const teacherCls = enlarged === "teacher"
-    ? "fixed inset-4 z-50"
-    : enlarged ? "w-1/5" : "w-1/2";
+  const teacherCls =
+    enlarged === "teacher"
+      ? "fixed inset-4 z-50"
+      : enlarged
+      ? "w-1/5"
+      : "w-1/2";
 
-  const studentGridCls = enlarged === "teacher"
-    ? "w-0 opacity-0"
-    : enlarged ? "w-full" : "w-1/2";
+  const studentGridCls =
+    enlarged === "teacher" ? "w-0 opacity-0" : enlarged ? "w-full" : "w-1/2";
 
   const studentCls = (id: StudentId) => {
     if (enlarged === id) return "fixed inset-4 z-50";
@@ -30,7 +36,7 @@ export const SplitWhiteboard = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#E8EDF5] p-4 flex gap-4">
-      <div 
+      <div
         className={cn(
           "transition-all duration-300 ease-in-out h-full relative",
           teacherCls
@@ -38,26 +44,26 @@ export const SplitWhiteboard = () => {
         onClick={(e) => toggle("teacher", e)}
       >
         <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden">
-          <Whiteboard id="teacher" />
+          <Whiteboard id="teacher" isSplitScreen={!enlarged} />
         </div>
       </div>
 
-      <div 
+      <div
         className={cn(
           "transition-all duration-300 ease-in-out h-full grid grid-cols-2 gap-4",
           studentGridCls
         )}
       >
-        {studentIds.map((studentId) => (
+        {studentIds.map((id) => (
           <div
-            key={studentId}
+            key={id}
             className={cn(
-              "transition-all duration-300 ease-in-out bg-white rounded-xl shadow-lg overflow-hidden",
-              studentCls(studentId)
+              "relative bg-white rounded-xl shadow-lg overflow-hidden",
+              studentCls(id)
             )}
-            onClick={(e) => toggle(studentId, e)}
+            onClick={(e) => toggle(id, e)}
           >
-            <Whiteboard id={studentId} />
+            <Whiteboard id={id} isSplitScreen={!enlarged} />
           </div>
         ))}
       </div>

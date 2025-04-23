@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useCanvasClipboard } from "@/hooks/useCanvasClipboard";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
+import { util, FabricObject } from "fabric";
 
 interface WhiteboardProps {
   id: WhiteboardId;
+  isSplitScreen?: boolean;
 }
 
-export const Whiteboard = ({ id }: WhiteboardProps) => {
-  const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
+export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
+  const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">(
+    "draw"
+  );
   const [activeColor, setActiveColor] = useState("#000000e6");
   const [zoomLevel, setZoomLevel] = useState(1);
   const [inkThickness, setInkThickness] = useState(3);
@@ -21,11 +25,11 @@ export const Whiteboard = ({ id }: WhiteboardProps) => {
     inkThickness,
     onZoomChange: setZoomLevel,
     onObjectAdded: (object) => {
-      const event = new CustomEvent('whiteboard-update', {
-        detail: { sourceId: id, object: object.toJSON() }
+      const event = new CustomEvent("whiteboard-update", {
+        detail: { sourceId: id, object: object.toJSON() },
       });
       window.dispatchEvent(event);
-    }
+    },
   });
 
   useCanvasClipboard(fabricRef);
@@ -35,44 +39,43 @@ export const Whiteboard = ({ id }: WhiteboardProps) => {
     return false;
   };
 
-  useState(() => {
-    const handleWhiteboardUpdate = (e: CustomEvent) => {
-      if (e.detail.sourceId !== id && fabricRef.current) {
-        fabricRef.current.loadFromJSON(e.detail.object, () => {
-          fabricRef.current?.renderAll();
-        });
-      }
+  // Listen for remote whiteboard updates and add objects incrementally
+  useEffect(() => {
+    const handleUpdate = (e: CustomEvent) => {
+      if (e.detail.sourceId === id) return;
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+
+      util.enlivenObjects([e.detail.object], (objects: FabricObject[]) => {
+        objects.forEach((obj) => canvas.add(obj));
+        canvas.renderAll();
+      });
     };
 
-    window.addEventListener('whiteboard-update', handleWhiteboardUpdate as EventListener);
+    window.addEventListener("whiteboard-update", handleUpdate as EventListener);
     return () => {
-      window.removeEventListener('whiteboard-update', handleWhiteboardUpdate as EventListener);
+      window.removeEventListener(
+        "whiteboard-update",
+        handleUpdate as EventListener
+      );
     };
-  });
+  }, [fabricRef, id]);
 
   return (
-    <div 
-      className="relative w-full h-full" 
+    <div
+      className="w-full h-full relative flex flex-col items-center justify-start"
       onContextMenu={handleContextMenu}
     >
-      <div className="absolute top-0 left-0 w-full z-10">
-        <div className="flex justify-between items-center p-2 px-3">
-          <div className="scale-90 origin-left">
-            <Toolbar 
-              activeTool={activeTool}
-              activeColor={activeColor}
-              onToolChange={setActiveTool}
-              onColorChange={setActiveColor}
-              inkThickness={inkThickness}
-              onInkThicknessChange={setInkThickness}
-            />
-          </div>
-          <div className="bg-[#221F26] text-white px-2 py-1 rounded-lg text-sm">
-            {Math.round(zoomLevel * 100)}%
-          </div>
-        </div>
-      </div>
-      <canvas ref={canvasRef} className="w-full h-full touch-none" />
+      <Toolbar
+        activeTool={activeTool}
+        activeColor={activeColor}
+        onToolChange={setActiveTool}
+        onColorChange={setActiveColor}
+        inkThickness={inkThickness}
+        onInkThicknessChange={setInkThickness}
+        isSplitScreen={isSplitScreen}
+      />
+      <canvas ref={canvasRef} className="w-full h-full z-0" />
     </div>
   );
 };
