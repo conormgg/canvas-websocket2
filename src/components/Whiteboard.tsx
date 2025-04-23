@@ -49,9 +49,11 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
 
       util.enlivenObjects(
         [e.detail.object],
-        function(objects: FabricObject[]) {
-          objects.forEach((obj) => canvas.add(obj));
-          canvas.renderAll();
+        {
+          onComplete: (objects: FabricObject[]) => {
+            objects.forEach((obj) => canvas.add(obj));
+            canvas.renderAll();
+          }
         }
       );
     };
