@@ -24,8 +24,12 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
       // Paste (Ctrl/Cmd + V)
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         e.preventDefault();
-        const pointer = canvas.getPointer({ clientX: e.clientX, clientY: e.clientY } as MouseEvent);
-        pasteToCanvas(canvas, pointer);
+        // For keyboard events, paste to the center of the viewport
+        const centerPoint = { 
+          x: canvas.width! / 2, 
+          y: canvas.height! / 2 
+        };
+        pasteToCanvas(canvas, centerPoint);
         return;
       }
 

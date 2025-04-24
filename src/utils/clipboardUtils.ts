@@ -1,5 +1,5 @@
 
-import { Canvas, FabricObject, Point, ActiveSelection, util } from "fabric";
+import { Canvas, FabricObject, Point, ActiveSelection, util, Image } from "fabric";
 import { ClipboardData } from "@/types/clipboard";
 import { toast } from "sonner";
 
@@ -121,7 +121,7 @@ export const clipboardUtils = {
         
         // Create fabric Image from data URL
         util.loadImage(url).then((img) => {
-          const fabricImage = new fabric.Image(img, {
+          const fabricImage = new Image(img, {
             scaleX: 0.5,
             scaleY: 0.5,
           });
