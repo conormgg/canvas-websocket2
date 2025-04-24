@@ -4,20 +4,20 @@ import { useInternalClipboard } from "./clipboard/useInternalClipboard";
 import { useExternalClipboard } from "./clipboard/useExternalClipboard";
 import { clipboardUtils } from "@/utils/clipboardUtils";
 import { toast } from "sonner";
+import { usePasteProgress } from "./clipboard/usePasteProgress";
+import { useClipboardSource } from "./clipboard/useClipboardSource";
 
 export const useCanvasClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>
 ) => {
-  // Track if a paste operation is in progress to prevent duplicates
-  const pasteInProgressRef = useRef(false);
-
   const {
     clipboardDataRef,
     handleCanvasClick,
     handleCopy,
     calculatePastePosition,
     selectedPositionRef,
-    lastCopyTimeRef
+    lastCopyTimeRef,
+    activeBoard
   } = useInternalClipboard(fabricRef);
 
   // Get all external clipboard functionality
@@ -28,20 +28,24 @@ export const useCanvasClipboard = (
     lastExternalCopyTimeRef 
   } = useExternalClipboard(fabricRef, clipboardDataRef);
 
+  // Get paste progress tracking
+  const { startPasteOperation } = usePasteProgress();
+
+  // Get clipboard source determination
+  const { shouldUseInternalClipboard, isActiveBoard } = useClipboardSource(
+    fabricRef,
+    lastCopyTimeRef.current,
+    lastExternalCopyTimeRef.current,
+    clipboardDataRef
+  );
+
   // Wrap the external paste function with additional handling
   const tryExternalPaste = useCallback(() => {
     // Prevent duplicate paste operations
-    if (pasteInProgressRef.current) return;
-    
-    pasteInProgressRef.current = true;
-    setTimeout(() => { pasteInProgressRef.current = false; }, 300); // Reset after short timeout
+    if (!startPasteOperation()) return;
     
     // Check if this canvas is currently active
-    const isActiveBoard = 
-      fabricRef.current?.upperCanvasEl === window.__wbActiveBoard ||
-      window.__wbActiveBoardId === fabricRef.current?.lowerCanvasEl?.dataset.boardId;
-      
-    if (!isActiveBoard) {
+    if (!isActiveBoard()) {
       console.log("Canvas not active, ignoring paste request");
       return;
     }
@@ -61,18 +65,14 @@ export const useCanvasClipboard = (
       console.log("Trying external paste (more recent or no internal data)");
       rawTryExternalPaste();
     }
-  }, [rawTryExternalPaste, clipboardDataRef, fabricRef, lastCopyTimeRef, lastExternalCopyTimeRef]);
+  }, [rawTryExternalPaste, clipboardDataRef, fabricRef, lastCopyTimeRef, lastExternalCopyTimeRef, isActiveBoard, startPasteOperation]);
 
   /* ------------------------------------------------------------- */
   /*  Paste handler for internal objects                           */
   /* ------------------------------------------------------------- */
   const pasteInternal = useCallback((internalData: any[]) => {
     // Check if this canvas is active
-    const isActiveBoard = 
-      fabricRef.current?.upperCanvasEl === window.__wbActiveBoard ||
-      fabricRef.current?.lowerCanvasEl?.dataset.boardId === window.__wbActiveBoardId;
-      
-    if (!isActiveBoard) {
+    if (!isActiveBoard()) {
       console.log("Canvas not active, ignoring internal paste");
       return;
     }
@@ -132,7 +132,7 @@ export const useCanvasClipboard = (
         console.error("Paste failed:", err);
         toast.error("Failed to paste object");
       });
-  }, [fabricRef, calculatePastePosition, selectedPositionRef]);
+  }, [fabricRef, calculatePastePosition, selectedPositionRef, isActiveBoard]);
 
   /* Attach click handler, etc. */
   useEffect(() => {
@@ -151,16 +151,10 @@ export const useCanvasClipboard = (
         console.log("Ctrl+V detected, initiating paste operation");
         
         // Prevent duplicate paste operations
-        if (pasteInProgressRef.current) return;
-        pasteInProgressRef.current = true;
-        setTimeout(() => { pasteInProgressRef.current = false; }, 300);
+        if (!startPasteOperation()) return;
         
         // Check if this canvas is active
-        const isActiveBoard = 
-          fabricRef.current?.upperCanvasEl === window.__wbActiveBoard ||
-          fabricRef.current?.lowerCanvasEl?.dataset.boardId === window.__wbActiveBoardId;
-          
-        if (!isActiveBoard) {
+        if (!isActiveBoard()) {
           console.log("Canvas not active for keyboard paste");
           return;
         }
@@ -192,7 +186,7 @@ export const useCanvasClipboard = (
       document.removeEventListener('keydown', handlePaste);
       console.log("Paste event listener removed");
     };
-  }, [tryExternalPaste, clipboardDataRef, pasteInternal, fabricRef, rawTryExternalPaste, lastCopyTimeRef, lastExternalCopyTimeRef]);
+  }, [tryExternalPaste, clipboardDataRef, pasteInternal, fabricRef, rawTryExternalPaste, lastCopyTimeRef, lastExternalCopyTimeRef, isActiveBoard, startPasteOperation]);
 
   return { 
     pasteInternal,

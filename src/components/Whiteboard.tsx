@@ -6,6 +6,7 @@ import { useCanvasClipboard } from "@/hooks/useCanvasClipboard";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
 import { util, FabricObject } from "fabric";
+import { useClipboardContext } from "@/context/ClipboardContext";
 
 interface WhiteboardProps {
   id: WhiteboardId;

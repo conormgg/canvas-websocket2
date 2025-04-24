@@ -1,15 +1,7 @@
 
-import { useRef } from "react";
+import { useClipboardContext } from "@/context/ClipboardContext";
 
 export const usePasteProgress = () => {
-  const pasteInProgressRef = useRef(false);
-  
-  const startPasteOperation = () => {
-    if (pasteInProgressRef.current) return false;
-    pasteInProgressRef.current = true;
-    setTimeout(() => { pasteInProgressRef.current = false; }, 300);
-    return true;
-  };
-  
+  const { startPasteOperation } = useClipboardContext();
   return { startPasteOperation };
 };
