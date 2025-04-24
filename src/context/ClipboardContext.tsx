@@ -27,7 +27,6 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
            canvas.lowerCanvasEl?.dataset.boardId === window.__wbActiveBoardId;
   };
 
-  // Add the shouldUseInternalClipboard function
   const shouldUseInternalClipboard = () => {
     return !!clipboardData && clipboardData.length > 0;
   };
