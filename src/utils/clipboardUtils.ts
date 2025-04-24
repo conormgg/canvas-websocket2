@@ -8,12 +8,17 @@ export const clipboardUtils = {
     clipboardDataRef: React.MutableRefObject<any[] | null>
   ) => {
     const activeObjects = canvas.getActiveObjects();
-    if (!activeObjects.length) return false;
+    if (!activeObjects.length) {
+      console.log("No active objects to copy");
+      return false;
+    }
 
     clipboardDataRef.current = activeObjects.map((obj) =>
       obj.toObject(["left", "top", "scaleX", "scaleY", "angle"])
     );
     
+    const sourceBoard = canvas.lowerCanvasEl?.dataset.boardId;
+    console.log(`Objects copied from board: ${sourceBoard}`);
     toast.success("Object copied");
     return true;
   },
@@ -24,9 +29,11 @@ export const clipboardUtils = {
     originalTop: number
   ) => {
     if (!canvas || !canvas.viewportTransform) {
+      console.log("Invalid canvas for paste position calculation");
       return { left: originalLeft, top: originalTop };
     }
     
+    console.log("Calculating paste position for board:", canvas.lowerCanvasEl?.dataset.boardId);
     return {
       left: originalLeft,
       top: originalTop,
@@ -44,5 +51,6 @@ export const clipboardUtils = {
     }
     
     canvas.requestRenderAll();
+    console.log("Objects pasted and selected on board:", canvas.lowerCanvasEl?.dataset.boardId);
   }
 };
