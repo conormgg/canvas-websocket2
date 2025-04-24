@@ -34,16 +34,12 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     isActiveBoard
   );
 
+  // We're using the fabricRef as null since we'll pass the canvas directly to the methods
+  const fabricRef = React.useRef<Canvas | null>(null);
   const { 
     tryExternalPaste,
     addImageFromBlob
-  } = useExternalClipboard({ 
-    clipboardDataRef,
-    selectedPositionRef,
-    lastExternalCopyTimeRef,
-    isActiveBoard,
-    startPasteOperation
-  });
+  } = useExternalClipboard(fabricRef);
 
   const contextValue: ClipboardContextType = {
     clipboardData: clipboardDataRef.current,

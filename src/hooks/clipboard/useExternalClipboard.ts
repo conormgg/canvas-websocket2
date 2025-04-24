@@ -6,6 +6,15 @@ import { useImagePaste, SimplePoint } from "./useImagePaste";
 import { usePositionTracking } from "./usePositionTracking";
 import { clipboardAccess } from "@/utils/clipboardAccess";
 
+// Define a more specific props interface for the hook
+interface UseExternalClipboardProps {
+  clipboardDataRef: React.MutableRefObject<any[] | null>;
+  selectedPositionRef: React.MutableRefObject<any | null>;
+  lastExternalCopyTimeRef: React.MutableRefObject<number>;
+  isActiveBoard: (canvas: Canvas) => boolean;
+  startPasteOperation: () => boolean;
+}
+
 export const useExternalClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   internalClipboardRef: React.MutableRefObject<any[] | null> = { current: null }
@@ -93,7 +102,10 @@ export const useExternalClipboard = (
   return { 
     handleExternalPaste, 
     tryExternalPaste, 
-    addImageFromBlob,
-    lastExternalCopyTimeRef // Export the timestamp reference
+    addImageFromBlob: useCallback((canvas: Canvas, blob: Blob, position: SimplePoint) => {
+      if (canvas !== fabricRef.current) return;
+      addImageFromBlob(blob, position);
+    }, [addImageFromBlob, fabricRef]),
+    lastExternalCopyTimeRef
   };
 };

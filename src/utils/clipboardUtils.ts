@@ -36,7 +36,7 @@ export const clipboardUtils = {
     };
   },
 
-  selectPastedObjects: (canvas: Canvas, objects: FabricObject[]) => {
+  selectPastedObjects: (canvas: Canvas, objects: any[]) => {
     if (!canvas || !objects.length) return;
     
     if (objects.length === 1) {
