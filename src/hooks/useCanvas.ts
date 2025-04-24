@@ -1,15 +1,18 @@
+
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
-import { UseCanvasProps } from "@/types/canvas";
+import { UseCanvasProps, WhiteboardId } from "@/types/canvas";
 import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 
 export const useCanvas = ({
+  id,
   activeTool,
   activeColor,
   inkThickness,
   onZoomChange,
   onObjectAdded,
+  isSplitScreen,
 }: UseCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
@@ -21,7 +24,11 @@ export const useCanvas = ({
     handleMouseMove,
     handleMouseUp,
     handleKeyDown,
-  } = useCanvasMouseHandlers(fabricRef, activeTool, onZoomChange);
+  } = useCanvasMouseHandlers(
+    fabricRef, 
+    activeTool, 
+    onZoomChange || (() => {})
+  );
 
   useEffect(() => {
     if (!canvasRef.current) return;

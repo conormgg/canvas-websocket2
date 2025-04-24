@@ -18,13 +18,15 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
   );
   const [activeColor, setActiveColor] = useState<string>("#ff0000");
   const [inkThickness, setInkThickness] = useState<number>(2);
+  const [zoom, setZoom] = useState<number>(1);
 
   const { canvasRef, fabricRef } = useCanvas({
-    id,
+    id, // Now allowed by the updated interface
     activeTool,
     activeColor,
     inkThickness,
     isSplitScreen,
+    onZoomChange: setZoom,
   });
 
   useCanvasClipboard(fabricRef);
@@ -45,11 +47,10 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       if (!canvas) return;
 
       util
-        .enlivenObjects([e.detail.object], {
-          callback: (objects: FabricObject[]) => {
-            objects.forEach((obj) => canvas.add(obj));
-            canvas.renderAll();
-          }
+        .enlivenObjects([e.detail.object])
+        .then((objects: FabricObject[]) => {
+          objects.forEach((obj) => canvas.add(obj));
+          canvas.renderAll();
         })
         .catch((err) => {
           console.error("Failed to enliven object", err);

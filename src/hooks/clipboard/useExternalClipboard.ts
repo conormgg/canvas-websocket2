@@ -10,14 +10,10 @@ declare global {
 
 export const useExternalClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>,
-  pastePosition: Point | null,
   internalClipboardRef: React.MutableRefObject<any[] | null> = { current: null }
 ) => {
   /* -------- keep freshest click position -------- */
-  const posRef = useRef<Point | null>(pastePosition);
-  useEffect(() => {
-    posRef.current = pastePosition;
-  }, [pastePosition]);
+  const posRef = useRef<Point | null>(null);
 
   /* -------- mark this board as the active target -------- */
   useEffect(() => {
@@ -72,8 +68,8 @@ export const useExternalClipboard = (
     }
 
     /* Need a click first */
-    const p = posRef.current;
-    if (!p || !fabricRef.current) return;
+    const canvas = fabricRef.current;
+    if (!canvas) return;
 
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -83,7 +79,8 @@ export const useExternalClipboard = (
         const blob = items[i].getAsFile();
         if (blob) {
           e.preventDefault(); // stop default
-          addImageFromBlob(blob, p);
+          const pointer = canvas.getPointer(e as any);
+          addImageFromBlob(blob, pointer);
           break; // handle only one image
         }
       }
