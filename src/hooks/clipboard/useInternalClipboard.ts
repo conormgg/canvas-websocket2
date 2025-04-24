@@ -9,7 +9,6 @@ export const useInternalClipboard = (
 ) => {
   const clipboardDataRef = useRef<any[] | null>(null);
   const selectedPositionRef = useRef<Point | null>(null);
-  const lastCopyTimeRef = useRef<number>(0);
   const [activeBoard, setActiveBoard] = useState<string | null>(null);
 
   const handleCanvasClick = useCallback((opt: TPointerEventInfo<TPointerEvent>) => {
@@ -42,15 +41,16 @@ export const useInternalClipboard = (
     }
 
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      // Clear any existing clipboard data before copying new content
+      clipboardDataRef.current = null;
+      
       const copied = clipboardUtils.copyObjectsToClipboard(
         fabricRef.current, 
-        clipboardDataRef, 
-        lastCopyTimeRef  // Add the lastCopyTimeRef as third parameter
+        clipboardDataRef
       );
       
       if (copied) {
-        lastCopyTimeRef.current = Date.now();
-        console.log("Objects copied to internal clipboard at:", lastCopyTimeRef.current);
+        console.log("Objects copied to internal clipboard");
         console.log("Source board:", fabricRef.current.lowerCanvasEl?.dataset.boardId);
         toast.success("Object copied to clipboard");
       }
@@ -60,15 +60,17 @@ export const useInternalClipboard = (
   // This is now just used by the component to programmatically trigger a copy
   const copyActiveObjects = useCallback(() => {
     if (!fabricRef.current) return;
+    
+    // Clear any existing clipboard data before copying new content
+    clipboardDataRef.current = null;
+    
     const copied = clipboardUtils.copyObjectsToClipboard(
       fabricRef.current, 
-      clipboardDataRef,
-      lastCopyTimeRef  // Add the lastCopyTimeRef as third parameter
+      clipboardDataRef
     );
     
     if (copied) {
-      lastCopyTimeRef.current = Date.now();
-      console.log("Objects programmatically copied to internal clipboard at:", lastCopyTimeRef.current);
+      console.log("Objects programmatically copied to internal clipboard");
       toast.success("Object copied to clipboard");
       return true;
     }
@@ -97,7 +99,6 @@ export const useInternalClipboard = (
     handleCopy: copyActiveObjects,
     calculatePastePosition: clipboardUtils.calculatePastePosition,
     selectedPositionRef,
-    lastCopyTimeRef,
     activeBoard
   };
 };

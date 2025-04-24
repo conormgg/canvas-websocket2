@@ -31,6 +31,9 @@ export const useCanvasHandlers = (
       return false;
     }
 
+    // Clear clipboard first
+    setClipboardData(null);
+
     const newClipboardData = activeObjects.map((obj) => obj.toObject([
       'objectType', 'left', 'top', 'width', 'height', 'scaleX', 'scaleY',
       'angle', 'flipX', 'flipY', 'opacity', 'stroke', 'strokeWidth',

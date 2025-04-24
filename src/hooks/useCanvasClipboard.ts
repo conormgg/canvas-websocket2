@@ -1,4 +1,3 @@
-
 import { Canvas, util, FabricObject } from "fabric";
 import { useCallback, useEffect } from "react";
 import { useInternalClipboard } from "./clipboard/useInternalClipboard";
@@ -20,7 +19,6 @@ export const useCanvasClipboard = (
     handleCopy,
     calculatePastePosition,
     selectedPositionRef,
-    lastCopyTimeRef,
     activeBoard
   } = useInternalClipboard(fabricRef);
 
@@ -28,8 +26,7 @@ export const useCanvasClipboard = (
   const { 
     handleExternalPaste, 
     tryExternalPaste: rawTryExternalPaste, 
-    addImageFromBlob,
-    lastExternalCopyTimeRef 
+    addImageFromBlob
   } = useExternalClipboard(fabricRef, clipboardDataRef);
 
   // Get paste progress tracking
@@ -46,22 +43,16 @@ export const useCanvasClipboard = (
       return;
     }
 
-    // Compare timestamps to determine which clipboard is more recent
-    const internalTime = lastCopyTimeRef.current || 0;
-    const externalTime = lastExternalCopyTimeRef.current || 0;
-    
-    console.log("Clipboard timestamps - Internal:", internalTime, "External:", externalTime);
-    
-    // If internal clipboard is more recent and has data, use it
-    if (internalTime > externalTime && clipboardDataRef.current && clipboardDataRef.current.length) {
-      console.log("Using internal clipboard data (more recent) for paste");
+    // Check if internal clipboard has data first
+    if (clipboardDataRef.current && clipboardDataRef.current.length) {
+      console.log("Using internal clipboard data for paste");
       pasteInternal(clipboardDataRef.current);
     } else {
-      // Otherwise try external paste (which will check if there's external data)
-      console.log("Trying external paste (more recent or no internal data)");
+      // If internal clipboard is empty, try external paste
+      console.log("Internal clipboard is empty, trying external paste");
       rawTryExternalPaste();
     }
-  }, [rawTryExternalPaste, clipboardDataRef, fabricRef, lastCopyTimeRef, lastExternalCopyTimeRef, isActiveBoard, startPasteOperation]);
+  }, [rawTryExternalPaste, clipboardDataRef, fabricRef, isActiveBoard, startPasteOperation]);
 
   /* ------------------------------------------------------------- */
   /*  Paste handler for internal objects                           */
@@ -157,19 +148,13 @@ export const useCanvasClipboard = (
         
         e.preventDefault();
         
-        // Compare timestamps to determine which clipboard is more recent
-        const internalTime = lastCopyTimeRef.current || 0;
-        const externalTime = lastExternalCopyTimeRef.current || 0;
-        
-        console.log("Clipboard timestamps - Internal:", internalTime, "External:", externalTime);
-        
-        // If internal clipboard is more recent and has data, use it
-        if (internalTime > externalTime && clipboardDataRef.current && clipboardDataRef.current.length) {
-          console.log("Using internal clipboard data (more recent) for paste");
+        // Check internal clipboard first
+        if (clipboardDataRef.current && clipboardDataRef.current.length) {
+          console.log("Using internal clipboard data for paste");
           pasteInternal(clipboardDataRef.current);
         } else {
-          // Otherwise try external paste
-          console.log("Trying external paste (more recent or no internal data)");
+          // Try external paste if internal clipboard is empty
+          console.log("Internal clipboard is empty, trying external paste");
           rawTryExternalPaste();
         }
       }
@@ -182,7 +167,7 @@ export const useCanvasClipboard = (
       document.removeEventListener('keydown', handlePaste);
       console.log("Paste event listener removed");
     };
-  }, [tryExternalPaste, clipboardDataRef, pasteInternal, fabricRef, rawTryExternalPaste, lastCopyTimeRef, lastExternalCopyTimeRef, isActiveBoard, startPasteOperation]);
+  }, [tryExternalPaste, clipboardDataRef, pasteInternal, fabricRef, rawTryExternalPaste, isActiveBoard, startPasteOperation]);
 
   return { 
     pasteInternal,

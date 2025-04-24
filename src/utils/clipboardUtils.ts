@@ -4,8 +4,7 @@ import { Canvas, FabricObject, util, Point, ActiveSelection } from "fabric";
 export const clipboardUtils = {
   copyObjectsToClipboard: (
     canvas: Canvas,
-    clipboardDataRef: React.MutableRefObject<any[] | null>,
-    lastInternalCopyTimeRef: React.MutableRefObject<number>
+    clipboardDataRef: React.MutableRefObject<any[] | null>
   ) => {
     const activeObjects = canvas.getActiveObjects();
     if (!activeObjects.length) {
@@ -22,9 +21,7 @@ export const clipboardUtils = {
     // Update clipboard data
     clipboardDataRef.current = newClipboardData;
     
-    // Update timestamp
-    lastInternalCopyTimeRef.current = Date.now();
-    console.log("Internal clipboard updated with", newClipboardData.length, "objects at:", lastInternalCopyTimeRef.current);
+    console.log("Internal clipboard updated with", newClipboardData.length, "objects");
     
     return true;
   },

@@ -1,3 +1,4 @@
+
 import { Canvas } from "fabric";
 import { useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
@@ -5,30 +6,20 @@ import { useImagePaste, SimplePoint } from "./useImagePaste";
 import { usePositionTracking } from "./usePositionTracking";
 import { clipboardAccess } from "@/utils/clipboardAccess";
 
-interface UseExternalClipboardProps {
-  clipboardDataRef: React.MutableRefObject<any[] | null>;
-  selectedPositionRef: React.MutableRefObject<any | null>;
-  lastExternalCopyTimeRef: React.MutableRefObject<number>;
-  isActiveBoard: (canvas: Canvas) => boolean;
-  startPasteOperation: () => boolean;
-}
-
 export const useExternalClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   internalClipboardRef: React.MutableRefObject<any[] | null> = { current: null }
 ) => {
   const { addImageFromBlob } = useImagePaste(fabricRef);
   const { posRef, boardIdRef } = usePositionTracking(fabricRef);
-  const lastExternalCopyTimeRef = useRef<number>(0);
 
   useEffect(() => {
     const handleClipboardChange = async () => {
       try {
         const items = await navigator.clipboard.read();
         if (items.length > 0) {
-          internalClipboardRef.current = null;
-          lastExternalCopyTimeRef.current = Date.now();
-          console.log("External clipboard change detected at:", lastExternalCopyTimeRef.current);
+          // Don't clear internal clipboard here - only clear on active copy
+          console.log("External clipboard change detected");
         }
       } catch (err) {
         if (!(err instanceof Error && err.name === 'NotAllowedError')) {
@@ -71,9 +62,8 @@ export const useExternalClipboard = (
     
     clipboardAccess.readClipboard().then((blob) => {
       if (blob) {
-        internalClipboardRef.current = null;
-        lastExternalCopyTimeRef.current = Date.now();
-        console.log("External clipboard accessed at:", lastExternalCopyTimeRef.current);
+        // Note: We're not clearing internal clipboard here anymore
+        console.log("External clipboard accessed");
         
         const canvas = fabricRef.current;
         if (!canvas) return;
@@ -102,9 +92,8 @@ export const useExternalClipboard = (
 
     const blob = clipboardAccess.getImageFromClipboardEvent(e);
     if (blob) {
-      internalClipboardRef.current = null;
-      lastExternalCopyTimeRef.current = Date.now();
-      console.log("External clipboard accessed from event at:", lastExternalCopyTimeRef.current);
+      // Note: We're not clearing internal clipboard here anymore
+      console.log("External clipboard accessed from event");
       
       const pointer = canvas.getPointer(e as any);
       const pastePoint: SimplePoint = pointer || posRef.current || { x: canvas.width! / 2, y: canvas.height! / 2 };
@@ -121,10 +110,7 @@ export const useExternalClipboard = (
     tryExternalPaste, 
     addImageFromBlob: useCallback((canvas: Canvas, blob: Blob, position: SimplePoint) => {
       if (canvas !== fabricRef.current) return;
-      internalClipboardRef.current = null;
-      lastExternalCopyTimeRef.current = Date.now();
       addImageFromBlob(blob, position);
-    }, [addImageFromBlob, fabricRef, internalClipboardRef]),
-    lastExternalCopyTimeRef
+    }, [addImageFromBlob, fabricRef, internalClipboardRef])
   };
 };

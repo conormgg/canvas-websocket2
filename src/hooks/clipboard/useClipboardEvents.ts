@@ -11,10 +11,12 @@ export const useClipboardEvents = (
 ) => {
   const handleCopy = (e: KeyboardEvent) => {
     if (e.ctrlKey && e.key === "c" && fabricRef.current) {
+      // Clear clipboard before copying
+      clipboardDataRef.current = null;
+      
       clipboardUtils.copyObjectsToClipboard(
         fabricRef.current, 
-        clipboardDataRef,
-        { current: Date.now() } // Add lastInternalCopyTimeRef as third argument
+        clipboardDataRef
       );
     }
   };

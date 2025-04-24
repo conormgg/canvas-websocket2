@@ -9,8 +9,6 @@ export const useClipboardOperations = () => {
   const clipboardDataRef = useRef<any[] | null>(null);
   const selectedPositionRef = useRef<Point | null>(null);
   const pasteInProgressRef = useRef(false);
-  const lastInternalCopyTimeRef = useRef<number>(0);
-  const lastExternalCopyTimeRef = useRef<number>(0);
   const [activeBoard, setActiveBoard] = useState<string | null>(null);
 
   const startPasteOperation = useCallback(() => {
@@ -21,8 +19,7 @@ export const useClipboardOperations = () => {
   }, []);
 
   const shouldUseInternalClipboard = useCallback(() => {
-    if (!clipboardDataRef.current?.length) return false;
-    return lastInternalCopyTimeRef.current > lastExternalCopyTimeRef.current;
+    return !!clipboardDataRef.current?.length;
   }, []);
 
   const isActiveBoard = useCallback((canvas: Canvas) => {
@@ -34,8 +31,6 @@ export const useClipboardOperations = () => {
   return {
     clipboardDataRef,
     selectedPositionRef,
-    lastInternalCopyTimeRef,
-    lastExternalCopyTimeRef,
     activeBoard,
     setActiveBoard,
     startPasteOperation,
