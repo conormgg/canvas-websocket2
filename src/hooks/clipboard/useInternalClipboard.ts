@@ -1,5 +1,5 @@
 
-import { Canvas, util, Point, FabricObject, ActiveSelection } from "fabric";
+import { Canvas, util, Point, FabricObject, ActiveSelection, TPointerEventInfo, TPointerEvent } from "fabric";
 import { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { clipboardUtils } from "@/utils/clipboardUtils";
@@ -87,10 +87,10 @@ export const useInternalClipboard = (
   /* ------------------------------------------------------------- */
   /*  Mouse-click placement handler                                */
   /* ------------------------------------------------------------- */
-  const handleCanvasClick = (e: fabric.IEvent) => {
+  const handleCanvasClick = (opt: TPointerEventInfo<TPointerEvent>) => {
     if (!awaitingPlacementRef.current) return;
     awaitingPlacementRef.current = false;
-    const pointer = fabricRef.current?.getPointer(e.e);
+    const pointer = fabricRef.current?.getPointer(opt.e);
     if (pointer) pasteAtPosition(pointer);
   };
 
