@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useCanvasClipboard } from "@/hooks/useCanvasClipboard";
@@ -13,12 +13,11 @@ interface WhiteboardProps {
 }
 
 export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
-  const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">(
-    "draw"
-  );
+  const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
   const [activeColor, setActiveColor] = useState<string>("#ff0000");
   const [inkThickness, setInkThickness] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
+  const isActiveRef = useRef(false);
 
   const { canvasRef, fabricRef } = useCanvas({
     id,
@@ -39,21 +38,22 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
 
   // Mark this board as active when clicked
   const handleCanvasClick = () => {
+    console.log(`Setting ${id} as active board`);
     // Update global reference to track which board is currently active
     window.__wbActiveBoard = canvasRef.current;
     window.__wbActiveBoardId = id;
+    isActiveRef.current = true;
   };
 
   // Add global paste event listener specifically for this whiteboard
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       // Only handle if this whiteboard's canvas is focused/active
-      if (
-        window.__wbActiveBoardId === id &&
-        (document.activeElement === canvasRef.current || 
-         e.target === canvasRef.current)
-      ) {
+      if (window.__wbActiveBoardId === id) {
+        console.log(`Paste event detected for active board ${id}`);
         tryExternalPaste();
+        // Prevent the event from bubbling to avoid multiple boards handling it
+        e.stopPropagation();
       }
     };
 
@@ -65,6 +65,13 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       document.removeEventListener("paste", handlePaste);
     };
   }, [canvasRef, tryExternalPaste, id]);
+
+  // Set data attributes on canvas element when it's created
+  useEffect(() => {
+    if (canvasRef.current) {
+      canvasRef.current.dataset.boardId = id;
+    }
+  }, [canvasRef, id]);
 
   /* --------------------------------------------------------------
    * Cross-whiteboard sync: listen for objects drawn on another
@@ -115,9 +122,11 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         ref={canvasRef} 
         className="w-full h-full z-0" 
         tabIndex={0} // Make canvas focusable
+        data-board-id={id} // Add data attribute to identify the board
         onFocus={() => {
           window.__wbActiveBoard = canvasRef.current;
           window.__wbActiveBoardId = id;
+          isActiveRef.current = true;
         }}
         onClick={handleCanvasClick}
       />

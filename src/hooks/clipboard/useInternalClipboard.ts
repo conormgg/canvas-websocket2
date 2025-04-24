@@ -1,8 +1,6 @@
 
 import { Canvas, Point, TPointerEventInfo, TPointerEvent } from "fabric";
 import { useRef, useState, useEffect } from "react";
-import { useClipboardEvents } from "./useClipboardEvents";
-import { usePasteHandler } from "./usePasteHandler";
 import { clipboardUtils } from "@/utils/clipboardUtils";
 
 export const useInternalClipboard = (
@@ -10,8 +8,6 @@ export const useInternalClipboard = (
 ) => {
   const clipboardDataRef = useRef<any[] | null>(null);
   const selectedPositionRef = useRef<Point | null>(null);
-
-  const { pasteAtPosition } = usePasteHandler(fabricRef);
 
   const handleCanvasClick = (opt: TPointerEventInfo<TPointerEvent>) => {
     const pointer = fabricRef.current?.getPointer(opt.e);
@@ -21,37 +17,38 @@ export const useInternalClipboard = (
   };
 
   const handleCopy = (e: KeyboardEvent) => {
+    // Check if this canvas is active before processing the copy
+    const isActiveBoard = 
+      fabricRef.current?.upperCanvasEl === window.__wbActiveBoard ||
+      window.__wbActiveBoardId === fabricRef.current?.lowerCanvasEl?.dataset.boardId;
+    
+    if (!isActiveBoard) return;
+
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
       if (!fabricRef.current) return;
       clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
     }
   };
 
-  const handlePaste = (e: KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-      e.preventDefault();
-      if (clipboardDataRef.current && selectedPositionRef.current) {
-        pasteAtPosition(clipboardDataRef.current, selectedPositionRef.current);
-      }
-    }
+  // This is now just used by the component to programmatically trigger a copy
+  const copyActiveObjects = () => {
+    if (!fabricRef.current) return;
+    clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
   };
 
+  // Remove the paste handler from here since we're centralizing paste handling in useCanvasClipboard
+  
   useEffect(() => {
     document.addEventListener("keydown", handleCopy);
-    document.addEventListener("keydown", handlePaste);
     return () => {
       document.removeEventListener("keydown", handleCopy);
-      document.removeEventListener("keydown", handlePaste);
     };
-  }, [handleCopy, handlePaste]);
+  }, [handleCopy]);
 
   return {
     clipboardDataRef,
     handleCanvasClick,
-    handleCopy: () => {
-      if (!fabricRef.current) return;
-      clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
-    },
+    handleCopy: copyActiveObjects,
     calculatePastePosition: clipboardUtils.calculatePastePosition,
     selectedPositionRef
   };
