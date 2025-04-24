@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useRef, useState, useCallback } from "react";
-import { Canvas, util, FabricObject, Point } from "fabric";
+import { Canvas, util, FabricObject, Point, Image as FabricImage } from "fabric";
 import { toast } from "sonner";
 import { clipboardUtils } from "@/utils/clipboardUtils";
 import { clipboardAccess } from "@/utils/clipboardAccess";
@@ -153,7 +154,8 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const url = ev.target?.result as string;
       if (!url) return;
       
-      fabric.Image.fromURL(url).then((img: any) => {
+      // Use FabricImage instead of fabric.Image
+      FabricImage.fromURL(url).then((img: any) => {
         img.scale(0.5);
         
         const x = typeof position.x === 'number' ? position.x : canvas.width! / 2;

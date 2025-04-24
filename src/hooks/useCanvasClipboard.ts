@@ -1,5 +1,6 @@
+
 import { Canvas, util, FabricObject } from "fabric";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useInternalClipboard } from "./clipboard/useInternalClipboard";
 import { useExternalClipboard } from "./clipboard/useExternalClipboard";
 import { clipboardUtils } from "@/utils/clipboardUtils";
@@ -139,7 +140,6 @@ export const useCanvasClipboard = (
     };
   }, [fabricRef, handleCanvasClick]);
 
-  // Add a centralized paste event handler
   useEffect(() => {
     const handlePaste = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {

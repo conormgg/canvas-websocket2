@@ -12,7 +12,7 @@ export const useCanvasMouseHandlers = (
 ) => {
   const [isDrawing, setIsDrawing] = useState(false);
   
-  const { handleKeyDown } = useCanvasKeyboard(fabricRef);
+  useCanvasKeyboard(fabricRef); // Just use the hook, no destructuring
   const { handleMouseWheel, handlePanning, resetPanPoint } = useCanvasZoomPan(fabricRef, onZoomChange);
   const { handleSelectionStart, handleSelectionMoving, handleSelectionEnd } = useCanvasSelection(fabricRef, activeTool);
 
@@ -70,13 +70,13 @@ export const useCanvasMouseHandlers = (
     setIsDrawing(false);
   };
 
+  // Since useCanvasKeyboard no longer returns handleKeyDown,
+  // we don't need to pass it to the return object
   return {
     isDrawing,
     handleMouseWheel,
     handleMouseDown,
     handleMouseMove,
-    handleMouseUp,
-    handleKeyDown
+    handleMouseUp
   };
 };
-
