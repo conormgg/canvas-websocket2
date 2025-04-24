@@ -33,27 +33,22 @@ export const useCanvasClipboard = (
     // Check if this canvas is currently active
     const isActiveBoard = 
       fabricRef.current?.upperCanvasEl === window.__wbActiveBoard ||
-      fabricRef.current?.lowerCanvasEl?.dataset.boardId === window.__wbActiveBoardId;
+      window.__wbActiveBoardId === fabricRef.current?.lowerCanvasEl?.dataset.boardId;
       
     if (!isActiveBoard) {
       console.log("Canvas not active, ignoring paste request");
       return;
     }
     
-    // If there's internal clipboard data, clear it so external paste takes precedence
+    // If there's internal clipboard data, use internal paste
     if (clipboardDataRef.current && clipboardDataRef.current.length) {
-      const shouldClearInternal = true; // Set to false if you want internal data to have priority
-      
-      if (shouldClearInternal) {
-        console.log("Clearing internal clipboard data to allow external paste");
-        clipboardDataRef.current = null;
-      } else {
-        toast.info("Using internal clipboard data (copied objects)");
-        return; // Skip external paste and let internal paste handle it
-      }
+      console.log("Using internal clipboard data for paste");
+      pasteInternal(clipboardDataRef.current);
+    } else {
+      // Otherwise try external paste
+      console.log("No internal data, trying external paste");
+      rawTryExternalPaste();
     }
-    
-    rawTryExternalPaste();
   }, [rawTryExternalPaste, clipboardDataRef, fabricRef]);
 
   /* ------------------------------------------------------------- */
@@ -85,15 +80,33 @@ export const useCanvasClipboard = (
           if (typeof obj !== "object") return;
           const originalLeft = typeof obj.left === "number" ? obj.left : 0;
           const originalTop = typeof obj.top === "number" ? obj.top : 0;
-          // Fix the calculatePastePosition call to include the canvas argument
-          const { left, top } = calculatePastePosition(
-            canvas,
-            originalLeft,
-            originalTop
-          );
+          
+          let pastePosition = { left: originalLeft, top: originalTop };
+          
+          // If we have a selected position (from a click), use that instead
+          if (selectedPositionRef.current) {
+            pastePosition = {
+              left: selectedPositionRef.current.x,
+              top: selectedPositionRef.current.y
+            };
+            // Add slight offset for multiple pastes
+            selectedPositionRef.current.x += 10;
+            selectedPositionRef.current.y += 10;
+          } else {
+            // Otherwise use the calculated paste position
+            pastePosition = calculatePastePosition(
+              canvas,
+              originalLeft,
+              originalTop
+            );
+          }
 
           if (typeof obj.set === "function") {
-            obj.set({ left, top, evented: true });
+            obj.set({ 
+              left: pastePosition.left, 
+              top: pastePosition.top, 
+              evented: true 
+            });
             canvas.add(obj);
             if (typeof obj.setCoords === "function") obj.setCoords();
           }
@@ -101,11 +114,13 @@ export const useCanvasClipboard = (
 
         clipboardUtils.selectPastedObjects(canvas, objects);
         canvas.requestRenderAll();
+        toast.success("Object pasted");
       })
       .catch((err) => {
         console.error("Paste failed:", err);
+        toast.error("Failed to paste object");
       });
-  }, [fabricRef, calculatePastePosition]);
+  }, [fabricRef, calculatePastePosition, selectedPositionRef]);
 
   /* Attach click handler, etc. */
   useEffect(() => {
@@ -121,6 +136,8 @@ export const useCanvasClipboard = (
   useEffect(() => {
     const handlePaste = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        console.log("Ctrl+V detected, initiating paste operation");
+        
         // Prevent duplicate paste operations
         if (pasteInProgressRef.current) return;
         pasteInProgressRef.current = true;
@@ -145,14 +162,19 @@ export const useCanvasClipboard = (
         } else {
           // Otherwise try external paste
           console.log("No internal data, trying external paste");
-          tryExternalPaste();
+          rawTryExternalPaste();
         }
       }
     };
     
     document.addEventListener('keydown', handlePaste);
-    return () => document.removeEventListener('keydown', handlePaste);
-  }, [tryExternalPaste, clipboardDataRef, pasteInternal, fabricRef]);
+    console.log("Paste event listener added");
+    
+    return () => {
+      document.removeEventListener('keydown', handlePaste);
+      console.log("Paste event listener removed");
+    };
+  }, [tryExternalPaste, clipboardDataRef, pasteInternal, fabricRef, rawTryExternalPaste]);
 
   return { 
     pasteInternal,

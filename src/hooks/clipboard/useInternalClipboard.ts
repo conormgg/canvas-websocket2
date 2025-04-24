@@ -1,7 +1,8 @@
 
 import { Canvas, Point, TPointerEventInfo, TPointerEvent } from "fabric";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { clipboardUtils } from "@/utils/clipboardUtils";
+import { toast } from "sonner";
 
 export const useInternalClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>
@@ -9,14 +10,15 @@ export const useInternalClipboard = (
   const clipboardDataRef = useRef<any[] | null>(null);
   const selectedPositionRef = useRef<Point | null>(null);
 
-  const handleCanvasClick = (opt: TPointerEventInfo<TPointerEvent>) => {
+  const handleCanvasClick = useCallback((opt: TPointerEventInfo<TPointerEvent>) => {
     const pointer = fabricRef.current?.getPointer(opt.e);
     if (pointer) {
+      console.log("Canvas click detected at position:", pointer);
       selectedPositionRef.current = pointer;
     }
-  };
+  }, [fabricRef]);
 
-  const handleCopy = (e: KeyboardEvent) => {
+  const handleCopy = useCallback((e: KeyboardEvent) => {
     // Check if this canvas is active before processing the copy
     const isActiveBoard = 
       fabricRef.current?.upperCanvasEl === window.__wbActiveBoard ||
@@ -26,22 +28,28 @@ export const useInternalClipboard = (
 
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
       if (!fabricRef.current) return;
-      clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
+      const copied = clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
+      if (copied) {
+        console.log("Objects copied to internal clipboard");
+      }
     }
-  };
+  }, [fabricRef]);
 
   // This is now just used by the component to programmatically trigger a copy
-  const copyActiveObjects = () => {
+  const copyActiveObjects = useCallback(() => {
     if (!fabricRef.current) return;
-    clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
-  };
-
-  // Remove the paste handler from here since we're centralizing paste handling in useCanvasClipboard
+    const copied = clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
+    if (copied) {
+      console.log("Objects programmatically copied to internal clipboard");
+    }
+  }, [fabricRef]);
   
   useEffect(() => {
+    console.log("Setting up copy event listener");
     document.addEventListener("keydown", handleCopy);
     return () => {
       document.removeEventListener("keydown", handleCopy);
+      console.log("Copy event listener removed");
     };
   }, [handleCopy]);
 

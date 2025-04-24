@@ -45,27 +45,6 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     isActiveRef.current = true;
   };
 
-  // Add global paste event listener specifically for this whiteboard
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      // Only handle if this whiteboard's canvas is focused/active
-      if (window.__wbActiveBoardId === id) {
-        console.log(`Paste event detected for active board ${id}`);
-        tryExternalPaste();
-        // Prevent the event from bubbling to avoid multiple boards handling it
-        e.stopPropagation();
-      }
-    };
-
-    // Attach a direct paste event listener to the document
-    document.addEventListener("paste", handlePaste);
-    
-    // Clean up
-    return () => {
-      document.removeEventListener("paste", handlePaste);
-    };
-  }, [canvasRef, tryExternalPaste, id]);
-
   // Set data attributes on canvas element when it's created
   useEffect(() => {
     if (canvasRef.current) {
@@ -127,6 +106,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
           window.__wbActiveBoard = canvasRef.current;
           window.__wbActiveBoardId = id;
           isActiveRef.current = true;
+          console.log(`Canvas ${id} focused and set as active`);
         }}
         onClick={handleCanvasClick}
       />
