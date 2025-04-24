@@ -79,6 +79,7 @@ export const useCanvasClipboard = (
     }
 
     console.log("Pasting internal objects on active board:", window.__wbActiveBoardId);
+    console.log("Object data to paste:", internalData);
     const toEnliven = [...internalData];
 
     util

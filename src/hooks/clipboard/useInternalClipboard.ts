@@ -47,6 +47,7 @@ export const useInternalClipboard = (
         lastCopyTimeRef.current = Date.now();
         console.log("Objects copied to internal clipboard at:", lastCopyTimeRef.current);
         console.log("Source board:", fabricRef.current.lowerCanvasEl?.dataset.boardId);
+        toast.success("Object copied to clipboard");
       }
     }
   }, [fabricRef]);
@@ -58,7 +59,10 @@ export const useInternalClipboard = (
     if (copied) {
       lastCopyTimeRef.current = Date.now();
       console.log("Objects programmatically copied to internal clipboard at:", lastCopyTimeRef.current);
+      toast.success("Object copied to clipboard");
+      return true;
     }
+    return false;
   }, [fabricRef]);
 
   // Monitor active board changes

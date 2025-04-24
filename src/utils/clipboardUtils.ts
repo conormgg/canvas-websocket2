@@ -13,13 +13,12 @@ export const clipboardUtils = {
       return false;
     }
 
-    clipboardDataRef.current = activeObjects.map((obj) =>
-      obj.toObject(["left", "top", "scaleX", "scaleY", "angle"])
-    );
+    // Use toObject with additional parameters to ensure all properties are copied
+    clipboardDataRef.current = activeObjects.map((obj) => obj.toObject(['objectType', 'left', 'top', 'width', 'height', 'scaleX', 'scaleY', 'angle', 'flipX', 'flipY', 'opacity', 'stroke', 'strokeWidth', 'fill', 'paintFirst', 'globalCompositeOperation']));
     
     const sourceBoard = canvas.lowerCanvasEl?.dataset.boardId;
     console.log(`Objects copied from board: ${sourceBoard}`);
-    toast.success("Object copied");
+    console.log("Copied objects data:", clipboardDataRef.current);
     return true;
   },
 
@@ -35,8 +34,8 @@ export const clipboardUtils = {
     
     console.log("Calculating paste position for board:", canvas.lowerCanvasEl?.dataset.boardId);
     return {
-      left: originalLeft,
-      top: originalTop,
+      left: originalLeft + 10, // Add a small offset each time
+      top: originalTop + 10,
     };
   },
 
