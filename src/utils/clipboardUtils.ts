@@ -1,5 +1,5 @@
 
-import { Canvas, FabricObject, util } from "fabric";
+import { Canvas, FabricObject, util, Point, ActiveSelection } from "fabric";
 
 export const clipboardUtils = {
   copyObjectsToClipboard: (

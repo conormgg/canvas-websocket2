@@ -42,7 +42,12 @@ export const useInternalClipboard = (
     }
 
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-      const copied = clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
+      const copied = clipboardUtils.copyObjectsToClipboard(
+        fabricRef.current, 
+        clipboardDataRef, 
+        lastCopyTimeRef  // Add the lastCopyTimeRef as third parameter
+      );
+      
       if (copied) {
         lastCopyTimeRef.current = Date.now();
         console.log("Objects copied to internal clipboard at:", lastCopyTimeRef.current);
@@ -55,7 +60,12 @@ export const useInternalClipboard = (
   // This is now just used by the component to programmatically trigger a copy
   const copyActiveObjects = useCallback(() => {
     if (!fabricRef.current) return;
-    const copied = clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
+    const copied = clipboardUtils.copyObjectsToClipboard(
+      fabricRef.current, 
+      clipboardDataRef,
+      lastCopyTimeRef  // Add the lastCopyTimeRef as third parameter
+    );
+    
     if (copied) {
       lastCopyTimeRef.current = Date.now();
       console.log("Objects programmatically copied to internal clipboard at:", lastCopyTimeRef.current);
@@ -65,7 +75,7 @@ export const useInternalClipboard = (
     return false;
   }, [fabricRef]);
 
-  // Monitor active board changes
+  /* Monitor active board changes */
   useEffect(() => {
     if (fabricRef.current?.lowerCanvasEl?.dataset.boardId) {
       setActiveBoard(fabricRef.current.lowerCanvasEl.dataset.boardId);
