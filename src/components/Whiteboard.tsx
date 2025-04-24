@@ -7,6 +7,7 @@ import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
 import { util, FabricObject } from "fabric";
 import { useClipboardContext } from "@/context/ClipboardContext";
+import { cn } from "@/lib/utils";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -18,6 +19,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
   const [activeColor, setActiveColor] = useState<string>("#ff0000");
   const [inkThickness, setInkThickness] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
+  const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
 
   const { canvasRef, fabricRef } = useCanvas({
@@ -40,11 +42,36 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
   // Mark this board as active when clicked
   const handleCanvasClick = () => {
     console.log(`Setting ${id} as active board`);
-    // Update global reference to track which board is currently active
     window.__wbActiveBoard = canvasRef.current;
     window.__wbActiveBoardId = id;
     isActiveRef.current = true;
+    setIsActive(true);
   };
+
+  // Update active state when global active board changes
+  useEffect(() => {
+    const checkActiveStatus = () => {
+      const isCurrentlyActive = 
+        window.__wbActiveBoardId === id || 
+        window.__wbActiveBoard === canvasRef.current;
+      setIsActive(isCurrentlyActive);
+    };
+
+    // Check initially
+    checkActiveStatus();
+
+    // Create a MutationObserver to watch for changes to data-board-id
+    const observer = new MutationObserver(checkActiveStatus);
+    
+    if (canvasRef.current) {
+      observer.observe(canvasRef.current, {
+        attributes: true,
+        attributeFilter: ['data-board-id']
+      });
+    }
+
+    return () => observer.disconnect();
+  }, [id]);
 
   // Set data attributes on canvas element when it's created
   useEffect(() => {
@@ -85,9 +112,13 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
 
   return (
     <div
-      className="w-full h-full relative flex flex-col items-center justify-start"
+      className={cn(
+        "w-full h-full relative flex flex-col items-center justify-start",
+        "transition-all duration-200",
+        isActive && "ring-2 ring-sidebar-ring ring-opacity-50 bg-sidebar/5 rounded-lg"
+      )}
       onContextMenu={handleContextMenu}
-      onClick={handleCanvasClick} // Added click handler to the container
+      onClick={handleCanvasClick}
     >
       <Toolbar
         activeTool={activeTool}
@@ -101,12 +132,13 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       <canvas 
         ref={canvasRef} 
         className="w-full h-full z-0" 
-        tabIndex={0} // Make canvas focusable
-        data-board-id={id} // Add data attribute to identify the board
+        tabIndex={0}
+        data-board-id={id}
         onFocus={() => {
           window.__wbActiveBoard = canvasRef.current;
           window.__wbActiveBoardId = id;
           isActiveRef.current = true;
+          setIsActive(true);
           console.log(`Canvas ${id} focused and set as active`);
         }}
         onClick={handleCanvasClick}
