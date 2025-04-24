@@ -1,13 +1,12 @@
+
 import { useCallback } from "react";
 import { Canvas, Point } from "fabric";
 import { clipboardUtils } from "@/utils/clipboardUtils";
 import { toast } from "sonner";
-import { SimplePoint } from "@/hooks/clipboard/useImagePaste";
 
 export const useCanvasHandlers = (
-  clipboardDataRef: React.MutableRefObject<any[] | null>,
+  setClipboardData: (data: any[] | null) => void,
   selectedPositionRef: React.MutableRefObject<Point | null>,
-  lastInternalCopyTimeRef: React.MutableRefObject<number>,
   setActiveBoard: (id: string | null) => void,
   isActiveBoard: (canvas: Canvas) => boolean
 ) => {
@@ -26,17 +25,23 @@ export const useCanvasHandlers = (
   const copyObjects = useCallback((canvas: Canvas) => {
     if (!isActiveBoard(canvas)) return false;
 
-    const copied = clipboardUtils.copyObjectsToClipboard(
-      canvas, 
-      clipboardDataRef,
-      lastInternalCopyTimeRef
-    );
-    
-    if (copied) {
-      toast.success("Objects copied to clipboard");
+    const activeObjects = canvas.getActiveObjects();
+    if (!activeObjects.length) {
+      console.log("No active objects to copy");
+      return false;
     }
-    return copied;
-  }, [clipboardDataRef, lastInternalCopyTimeRef, isActiveBoard]);
+
+    const newClipboardData = activeObjects.map((obj) => obj.toObject([
+      'objectType', 'left', 'top', 'width', 'height', 'scaleX', 'scaleY',
+      'angle', 'flipX', 'flipY', 'opacity', 'stroke', 'strokeWidth',
+      'fill', 'paintFirst', 'globalCompositeOperation'
+    ]));
+    
+    setClipboardData(newClipboardData);
+    console.log("Objects copied to clipboard:", newClipboardData.length);
+    toast.success("Objects copied to clipboard");
+    return true;
+  }, [setClipboardData, isActiveBoard]);
 
   const pasteInternal = useCallback((canvas: Canvas, internalData: any[]) => {
     if (!isActiveBoard(canvas) || !canvas || !internalData?.length) return;
@@ -44,10 +49,10 @@ export const useCanvasHandlers = (
     const toEnliven = [...internalData];
     
     clipboardUtils.enlivenAndPasteObjects(canvas, toEnliven, selectedPositionRef.current)
-      .then(() => toast.success("Object pasted"))
+      .then(() => toast.success("Objects pasted"))
       .catch((err) => {
         console.error("Paste failed:", err);
-        toast.error("Failed to paste object");
+        toast.error("Failed to paste objects");
       });
   }, [selectedPositionRef, isActiveBoard]);
 

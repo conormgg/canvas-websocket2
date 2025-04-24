@@ -1,22 +1,16 @@
 
 import React from "react";
 import { useClipboardContext } from "@/context/ClipboardContext";
-import { Clipboard, Clock } from "lucide-react";
+import { Clipboard } from "lucide-react";
 import { Badge } from "./ui/badge";
 
 export const ClipboardDebugPanel: React.FC = () => {
   const { 
     clipboardData,
-    lastInternalCopyTime, 
-    lastExternalCopyTime 
+    activeBoard
   } = useClipboardContext();
   
   const itemCount = clipboardData?.length || 0;
-
-  const formatTime = (timestamp: number) => {
-    if (!timestamp) return 'Never';
-    return new Date(timestamp).toLocaleTimeString();
-  };
 
   if (!clipboardData || clipboardData.length === 0) {
     return (
@@ -27,12 +21,7 @@ export const ClipboardDebugPanel: React.FC = () => {
           <span className="text-gray-500">Clipboard is empty</span>
         </div>
         <div className="text-xs text-gray-400">
-          <Clock className="w-4 h-4 inline mr-1" />
-          Last internal: {formatTime(lastInternalCopyTime)}
-        </div>
-        <div className="text-xs text-gray-400">
-          <Clock className="w-4 h-4 inline mr-1" />
-          Last external: {formatTime(lastExternalCopyTime)}
+          Active Board: {activeBoard || 'None'}
         </div>
       </div>
     );
@@ -46,12 +35,7 @@ export const ClipboardDebugPanel: React.FC = () => {
         <h3 className="font-semibold">Clipboard Contents</h3>
       </div>
       <div className="text-xs text-gray-500 mb-2">
-        <Clock className="w-4 h-4 inline mr-1" />
-        Last internal: {formatTime(lastInternalCopyTime)}
-      </div>
-      <div className="text-xs text-gray-500 mb-2">
-        <Clock className="w-4 h-4 inline mr-1" />
-        Last external: {formatTime(lastExternalCopyTime)}
+        Active Board: {activeBoard || 'None'}
       </div>
       {clipboardData.map((item, index) => (
         <div key={index} className="mb-2 p-2 bg-white border rounded">

@@ -6,8 +6,6 @@ export interface ClipboardContextType {
   // State
   clipboardData: any[] | null;
   setClipboardData: (data: any[] | null) => void;
-  lastInternalCopyTime: number;
-  lastExternalCopyTime: number;
   activeBoard: string | null;
   selectedPosition: Point | null;
   
@@ -18,6 +16,5 @@ export interface ClipboardContextType {
   addImageFromBlob: (canvas: Canvas, blob: Blob, position: SimplePoint) => void;
   handleCanvasClick: (canvas: Canvas, pointer: Point) => void;
   isActiveBoard: (canvas: Canvas) => boolean;
-  shouldUseInternalClipboard: () => boolean;
   startPasteOperation: () => boolean;
 }
