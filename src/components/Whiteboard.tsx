@@ -37,6 +37,25 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     return false;
   };
 
+  // Add global paste event listener specifically for this whiteboard
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      // Only handle if this whiteboard's canvas is focused/active
+      if (document.activeElement === canvasRef.current || 
+          e.target === canvasRef.current) {
+        tryExternalPaste();
+      }
+    };
+
+    // Attach a direct paste event listener to the document
+    document.addEventListener("paste", handlePaste);
+    
+    // Clean up
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+    };
+  }, [canvasRef, tryExternalPaste]);
+
   /* --------------------------------------------------------------
    * Cross-whiteboard sync: listen for objects drawn on another
    * board and "enliven" them locally.
@@ -81,7 +100,12 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         onInkThicknessChange={setInkThickness}
         isSplitScreen={isSplitScreen}
       />
-      <canvas ref={canvasRef} className="w-full h-full z-0" />
+      <canvas 
+        ref={canvasRef} 
+        className="w-full h-full z-0" 
+        tabIndex={0} // Make canvas focusable
+        onFocus={() => window.__wbActiveBoard = canvasRef.current}
+      />
     </div>
   );
 };

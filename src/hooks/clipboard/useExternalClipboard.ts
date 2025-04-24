@@ -14,19 +14,34 @@ export const useExternalClipboard = (
 ) => {
   /* -------- keep freshest click position -------- */
   const posRef = useRef<Point | null>(null);
+  const lastClickTimeRef = useRef<number>(0);
 
-  /* -------- mark this board as the active target -------- */
+  /* -------- track when user clicked on canvas -------- */
   useEffect(() => {
-    const view = fabricRef.current?.upperCanvasEl;
-    if (!view) return;
-    const setActive = () => (window.__wbActiveBoard = view);
-    view.addEventListener("pointerdown", setActive);
-    return () => view.removeEventListener("pointerdown", setActive);
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    
+    const handleCanvasClick = () => {
+      lastClickTimeRef.current = Date.now();
+      window.__wbActiveBoard = canvas.upperCanvasEl;
+      
+      // Store last clicked position
+      const pointer = canvas.getPointer({ clientX: 0, clientY: 0 } as any);
+      posRef.current = pointer;
+    };
+    
+    canvas.on('mouse:down', handleCanvasClick);
+    return () => canvas.off('mouse:down', handleCanvasClick);
   }, [fabricRef.current]);
 
   /* Function to try pasting external clipboard content */
   const tryExternalPaste = useCallback(() => {
     toast("Accessing clipboard...");
+    
+    // Always update the active board reference when trying to paste
+    if (fabricRef.current) {
+      window.__wbActiveBoard = fabricRef.current.upperCanvasEl;
+    }
     
     if (navigator.clipboard && typeof navigator.clipboard.read === 'function') {
       navigator.clipboard.read()
@@ -54,12 +69,35 @@ export const useExternalClipboard = (
           }
           
           if (!foundImage) {
-            toast("No image found in clipboard");
+            toast.error("No image found in clipboard");
           }
         })
         .catch((err) => {
           console.error("Clipboard access error:", err);
-          toast.error("Could not access clipboard. Try clicking on the canvas first.");
+          
+          // Fallback to using document.execCommand for older browsers
+          try {
+            const textArea = document.createElement("textarea");
+            textArea.style.position = "fixed";
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.width = "2em";
+            textArea.style.height = "2em";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            
+            const successful = document.execCommand('paste');
+            if (successful) {
+              toast.success("Attempted paste via legacy method");
+            } else {
+              toast.error("Clipboard access failed. Try clicking on the canvas first.");
+            }
+            
+            document.body.removeChild(textArea);
+          } catch (e) {
+            toast.error("Could not access clipboard. Try clicking on the canvas first.");
+          }
         });
     } else {
       toast.error("Clipboard API not supported in this browser");
@@ -83,21 +121,25 @@ export const useExternalClipboard = (
     const canvas = fabricRef.current;
     if (!canvas) return;
 
-    const items = e.clipboardData?.items;
-    if (!items) return;
+    e.preventDefault(); // Prevent default paste behavior
 
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.includes("image")) {
-        const blob = items[i].getAsFile();
-        if (blob) {
-          e.preventDefault(); // stop default
-          const pointer = canvas.getPointer(e as any);
-          posRef.current = pointer;
-          addImageFromBlob(blob, pointer);
-          break; // handle only one image
+    // Try to get images from clipboard
+    if (e.clipboardData?.items) {
+      for (let i = 0; i < e.clipboardData.items.length; i++) {
+        if (e.clipboardData.items[i].type.indexOf("image") !== -1) {
+          const blob = e.clipboardData.items[i].getAsFile();
+          if (blob) {
+            const pointer = canvas.getPointer(e as any) || posRef.current;
+            const pastePoint = pointer || new Point(canvas.width! / 2, canvas.height! / 2);
+            addImageFromBlob(blob, pastePoint);
+            return; // Exit after handling the first image
+          }
         }
       }
     }
+    
+    // If we got here, no image was found in clipboard
+    toast("No image found in clipboard data");
   }, [fabricRef, internalClipboardRef]);
 
   /* -------- helper to drop FabricImage at point p -------- */
@@ -109,16 +151,26 @@ export const useExternalClipboard = (
     reader.onload = (ev) => {
       const url = ev.target?.result as string;
       if (!url) return;
+      
       FabricImage.fromURL(url).then((img) => {
         img.scale(0.5);
+        
+        // Ensure coordinates are valid
+        const x = typeof p.x === 'number' ? p.x : canvas.width! / 2;
+        const y = typeof p.y === 'number' ? p.y : canvas.height! / 2;
+        
         img.set({
-          left: p.x - ((img.width || 0) * (img.scaleX || 1)) / 2,
-          top: p.y - ((img.height || 0) * (img.scaleY || 1)) / 2,
+          left: x - ((img.width || 0) * (img.scaleX || 1)) / 2,
+          top: y - ((img.height || 0) * (img.scaleY || 1)) / 2,
         });
+        
         canvas.add(img);
         canvas.setActiveObject(img);
         canvas.renderAll();
         toast.success("Image pasted successfully");
+      }).catch(err => {
+        console.error("Failed to load image:", err);
+        toast.error("Failed to load image");
       });
     };
     reader.readAsDataURL(blob);
@@ -127,8 +179,24 @@ export const useExternalClipboard = (
   // Register the paste event listener
   useEffect(() => {
     document.addEventListener("paste", handleExternalPaste);
-    return () => document.removeEventListener("paste", handleExternalPaste);
-  }, [handleExternalPaste]);
+    
+    // Also handle the keyboard shortcut more directly
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+V to force external paste
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'v') {
+        e.preventDefault();
+        e.stopPropagation();
+        tryExternalPaste();
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener("paste", handleExternalPaste);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleExternalPaste, tryExternalPaste]);
 
   return { handleExternalPaste, tryExternalPaste, addImageFromBlob };
 };

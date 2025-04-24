@@ -1,9 +1,10 @@
 
 import { Canvas, util, FabricObject } from "fabric";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useInternalClipboard } from "./clipboard/useInternalClipboard";
 import { useExternalClipboard } from "./clipboard/useExternalClipboard";
 import { clipboardUtils } from "@/utils/clipboardUtils";
+import { toast } from "sonner";
 
 export const useCanvasClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>
@@ -17,7 +18,25 @@ export const useCanvasClipboard = (
   } = useInternalClipboard(fabricRef);
 
   // Get all external clipboard functionality
-  const { handleExternalPaste, tryExternalPaste, addImageFromBlob } = useExternalClipboard(fabricRef, clipboardDataRef);
+  const { handleExternalPaste, tryExternalPaste: rawTryExternalPaste, addImageFromBlob } = useExternalClipboard(fabricRef, clipboardDataRef);
+
+  // Wrap the external paste function with additional handling
+  const tryExternalPaste = useCallback(() => {
+    // If there's internal clipboard data, clear it so external paste takes precedence
+    if (clipboardDataRef.current && clipboardDataRef.current.length) {
+      const shouldClearInternal = true; // Set to false if you want internal data to have priority
+      
+      if (shouldClearInternal) {
+        console.log("Clearing internal clipboard data to allow external paste");
+        clipboardDataRef.current = null;
+      } else {
+        toast.info("Using internal clipboard data (copied objects)");
+        return; // Skip external paste and let internal paste handle it
+      }
+    }
+    
+    rawTryExternalPaste();
+  }, [rawTryExternalPaste, clipboardDataRef]);
 
   /* ------------------------------------------------------------- */
   /*  Paste handler for internal objects                           */
@@ -57,7 +76,7 @@ export const useCanvasClipboard = (
       });
   };
 
-  /* Attach click handler, etc. (rest of hook unchanged) */
+  /* Attach click handler, etc. */
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -67,19 +86,21 @@ export const useCanvasClipboard = (
     };
   }, [fabricRef, handleCanvasClick]);
 
-  // Add a keyboard shortcut for external paste (Ctrl+Shift+V)
+  // Add a global paste event handler to enhance paste detection
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+Shift+V to force external paste
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'v') {
-        e.preventDefault();
-        tryExternalPaste();
+    const handlePaste = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        // If we don't have internal clipboard data, try external paste
+        if (!clipboardDataRef.current || clipboardDataRef.current.length === 0) {
+          e.preventDefault();
+          tryExternalPaste();
+        }
       }
     };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [tryExternalPaste]);
+    
+    document.addEventListener('keydown', handlePaste);
+    return () => document.removeEventListener('keydown', handlePaste);
+  }, [tryExternalPaste, clipboardDataRef]);
 
   return { 
     pasteInternal,
