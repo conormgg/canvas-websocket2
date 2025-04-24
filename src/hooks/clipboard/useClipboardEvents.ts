@@ -11,7 +11,7 @@ export const useClipboardEvents = (
 ) => {
   const handleCopy = (e: KeyboardEvent) => {
     if (e.ctrlKey && e.key === "c" && fabricRef.current) {
-      // Clear clipboard before copying
+      // Use the spread operator to create a new array reference
       clipboardDataRef.current = null;
       
       clipboardUtils.copyObjectsToClipboard(
