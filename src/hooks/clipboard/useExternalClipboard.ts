@@ -1,6 +1,6 @@
 
 import { Canvas } from "fabric";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useImagePaste, SimplePoint } from "./useImagePaste";
 import { usePositionTracking } from "./usePositionTracking";
@@ -12,6 +12,7 @@ export const useExternalClipboard = (
 ) => {
   const { addImageFromBlob } = useImagePaste(fabricRef);
   const { posRef, boardIdRef } = usePositionTracking(fabricRef);
+  const lastExternalCopyTimeRef = useRef<number>(0); // Track when external copy occurs
 
   // Function to check if this is the active board
   const isActiveBoard = useCallback(() => {
@@ -44,6 +45,10 @@ export const useExternalClipboard = (
     
     clipboardAccess.readClipboard().then((blob) => {
       if (blob) {
+        // When accessing external clipboard content, update the timestamp
+        lastExternalCopyTimeRef.current = Date.now();
+        console.log("External clipboard accessed at:", lastExternalCopyTimeRef.current);
+        
         const canvas = fabricRef.current;
         if (!canvas) return;
         
@@ -63,11 +68,6 @@ export const useExternalClipboard = (
       return;
     }
 
-    if (internalClipboardRef.current && internalClipboardRef.current.length) {
-      console.log("Using internal clipboard data, ignoring external paste");
-      return;
-    }
-
     const canvas = fabricRef.current;
     if (!canvas) return;
 
@@ -76,6 +76,10 @@ export const useExternalClipboard = (
 
     const blob = clipboardAccess.getImageFromClipboardEvent(e);
     if (blob) {
+      // When accessing external clipboard content, update the timestamp
+      lastExternalCopyTimeRef.current = Date.now();
+      console.log("External clipboard accessed from event at:", lastExternalCopyTimeRef.current);
+      
       const pointer = canvas.getPointer(e as any);
       const pastePoint: SimplePoint = pointer || posRef.current || { x: canvas.width! / 2, y: canvas.height! / 2 };
       console.log("Pasting external image at position:", pastePoint);
@@ -84,7 +88,12 @@ export const useExternalClipboard = (
       console.log("No image found in clipboard data");
       toast("No image found in clipboard data");
     }
-  }, [fabricRef, internalClipboardRef, posRef, addImageFromBlob, isActiveBoard]);
+  }, [fabricRef, posRef, addImageFromBlob, isActiveBoard]);
 
-  return { handleExternalPaste, tryExternalPaste, addImageFromBlob };
+  return { 
+    handleExternalPaste, 
+    tryExternalPaste, 
+    addImageFromBlob,
+    lastExternalCopyTimeRef // Export the timestamp reference
+  };
 };

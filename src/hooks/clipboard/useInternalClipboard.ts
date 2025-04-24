@@ -9,6 +9,7 @@ export const useInternalClipboard = (
 ) => {
   const clipboardDataRef = useRef<any[] | null>(null);
   const selectedPositionRef = useRef<Point | null>(null);
+  const lastCopyTimeRef = useRef<number>(0); // Track when internal copy occurs
 
   const handleCanvasClick = useCallback((opt: TPointerEventInfo<TPointerEvent>) => {
     const pointer = fabricRef.current?.getPointer(opt.e);
@@ -30,7 +31,8 @@ export const useInternalClipboard = (
       if (!fabricRef.current) return;
       const copied = clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
       if (copied) {
-        console.log("Objects copied to internal clipboard");
+        lastCopyTimeRef.current = Date.now(); // Record timestamp of internal copy
+        console.log("Objects copied to internal clipboard at:", lastCopyTimeRef.current);
       }
     }
   }, [fabricRef]);
@@ -40,7 +42,8 @@ export const useInternalClipboard = (
     if (!fabricRef.current) return;
     const copied = clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
     if (copied) {
-      console.log("Objects programmatically copied to internal clipboard");
+      lastCopyTimeRef.current = Date.now(); // Record timestamp of internal copy
+      console.log("Objects programmatically copied to internal clipboard at:", lastCopyTimeRef.current);
     }
   }, [fabricRef]);
   
@@ -58,6 +61,7 @@ export const useInternalClipboard = (
     handleCanvasClick,
     handleCopy: copyActiveObjects,
     calculatePastePosition: clipboardUtils.calculatePastePosition,
-    selectedPositionRef
+    selectedPositionRef,
+    lastCopyTimeRef // Export the timestamp reference
   };
 };
