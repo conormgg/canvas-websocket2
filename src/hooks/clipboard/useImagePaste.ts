@@ -3,8 +3,13 @@ import { Canvas, Point, Image as FabricImage } from "fabric";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
+export interface SimplePoint {
+  x: number;
+  y: number;
+}
+
 export const useImagePaste = (fabricRef: React.MutableRefObject<Canvas | null>) => {
-  const addImageFromBlob = useCallback((blob: Blob, p: Point) => {
+  const addImageFromBlob = useCallback((blob: Blob, p: Point | SimplePoint) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
 

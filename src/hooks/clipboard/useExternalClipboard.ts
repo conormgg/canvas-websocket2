@@ -2,7 +2,7 @@
 import { Canvas } from "fabric";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { useImagePaste } from "./useImagePaste";
+import { useImagePaste, SimplePoint } from "./useImagePaste";
 import { usePositionTracking } from "./usePositionTracking";
 import { clipboardAccess } from "@/utils/clipboardAccess";
 
@@ -27,7 +27,7 @@ export const useExternalClipboard = (
         if (posRef.current) {
           addImageFromBlob(blob, posRef.current);
         } else {
-          const center = { x: canvas.width! / 2, y: canvas.height! / 2 };
+          const center: SimplePoint = { x: canvas.width! / 2, y: canvas.height! / 2 };
           addImageFromBlob(blob, center);
         }
       }
@@ -52,8 +52,8 @@ export const useExternalClipboard = (
 
     const blob = clipboardAccess.getImageFromClipboardEvent(e);
     if (blob) {
-      const pointer = canvas.getPointer(e as any) || posRef.current;
-      const pastePoint = pointer || { x: canvas.width! / 2, y: canvas.height! / 2 };
+      const pointer = canvas.getPointer(e as any);
+      const pastePoint: SimplePoint = pointer || posRef.current || { x: canvas.width! / 2, y: canvas.height! / 2 };
       addImageFromBlob(blob, pastePoint);
     } else {
       toast("No image found in clipboard data");
