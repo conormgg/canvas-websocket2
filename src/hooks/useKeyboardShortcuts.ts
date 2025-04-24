@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { Canvas } from 'fabric';
+import { Canvas, Point } from 'fabric';
 import { useClipboardContext } from '@/context/ClipboardContext';
 
 export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | null>) => {
@@ -25,10 +25,10 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         e.preventDefault();
         // For keyboard events, paste to the center of the viewport
-        const centerPoint = { 
-          x: canvas.width! / 2, 
-          y: canvas.height! / 2 
-        };
+        const centerX = canvas.width! / 2;
+        const centerY = canvas.height! / 2;
+        // Create a proper Fabric.js Point object
+        const centerPoint = new Point(centerX, centerY);
         pasteToCanvas(canvas, centerPoint);
         return;
       }
