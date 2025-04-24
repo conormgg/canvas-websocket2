@@ -1,6 +1,5 @@
 
-import { FabricObject, Canvas, ActiveSelection } from "fabric";
-import { toast } from "sonner";
+import { Canvas, FabricObject, Point, ActiveSelection, util } from "fabric";
 
 export const clipboardUtils = {
   copyObjectsToClipboard: (
@@ -13,12 +12,12 @@ export const clipboardUtils = {
       return false;
     }
 
-    // Use toObject with additional parameters to ensure all properties are copied
-    clipboardDataRef.current = activeObjects.map((obj) => obj.toObject(['objectType', 'left', 'top', 'width', 'height', 'scaleX', 'scaleY', 'angle', 'flipX', 'flipY', 'opacity', 'stroke', 'strokeWidth', 'fill', 'paintFirst', 'globalCompositeOperation']));
+    clipboardDataRef.current = activeObjects.map((obj) => obj.toObject([
+      'objectType', 'left', 'top', 'width', 'height', 'scaleX', 'scaleY',
+      'angle', 'flipX', 'flipY', 'opacity', 'stroke', 'strokeWidth',
+      'fill', 'paintFirst', 'globalCompositeOperation'
+    ]));
     
-    const sourceBoard = canvas.lowerCanvasEl?.dataset.boardId;
-    console.log(`Objects copied from board: ${sourceBoard}`);
-    console.log("Copied objects data:", clipboardDataRef.current);
     return true;
   },
 
@@ -28,13 +27,11 @@ export const clipboardUtils = {
     originalTop: number
   ) => {
     if (!canvas || !canvas.viewportTransform) {
-      console.log("Invalid canvas for paste position calculation");
       return { left: originalLeft, top: originalTop };
     }
     
-    console.log("Calculating paste position for board:", canvas.lowerCanvasEl?.dataset.boardId);
     return {
-      left: originalLeft + 10, // Add a small offset each time
+      left: originalLeft + 10,
       top: originalTop + 10,
     };
   },
@@ -50,6 +47,39 @@ export const clipboardUtils = {
     }
     
     canvas.requestRenderAll();
-    console.log("Objects pasted and selected on board:", canvas.lowerCanvasEl?.dataset.boardId);
+  },
+
+  enlivenAndPasteObjects: async (canvas: Canvas, objectsData: any[], position: Point | null) => {
+    const objects = await util.enlivenObjects(objectsData);
+    
+    objects.forEach((obj: any) => {
+      if (typeof obj !== "object") return;
+      
+      const originalLeft = typeof obj.left === "number" ? obj.left : 0;
+      const originalTop = typeof obj.top === "number" ? obj.top : 0;
+      
+      let pastePosition;
+      if (position) {
+        pastePosition = {
+          left: position.x,
+          top: position.y
+        };
+      } else {
+        pastePosition = clipboardUtils.calculatePastePosition(canvas, originalLeft, originalTop);
+      }
+
+      if (typeof obj.set === "function") {
+        obj.set({ 
+          left: pastePosition.left, 
+          top: pastePosition.top, 
+          evented: true 
+        });
+        canvas.add(obj);
+        if (typeof obj.setCoords === "function") obj.setCoords();
+      }
+    });
+
+    clipboardUtils.selectPastedObjects(canvas, objects);
+    canvas.requestRenderAll();
   }
 };
