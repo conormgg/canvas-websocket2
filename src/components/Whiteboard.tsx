@@ -8,11 +8,7 @@ import { toast } from "sonner";
 import { util, FabricObject } from "fabric";
 import { useClipboardContext } from "@/context/ClipboardContext";
 import { cn } from "@/lib/utils";
-
-interface WhiteboardProps {
-  id: WhiteboardId;
-  isSplitScreen?: boolean;
-}
+import { ClipboardDebugPanel } from "./ClipboardDebugPanel"; // Add this import
 
 export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
@@ -129,20 +125,26 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         onInkThicknessChange={setInkThickness}
         isSplitScreen={isSplitScreen}
       />
-      <canvas 
-        ref={canvasRef} 
-        className="w-full h-full z-0" 
-        tabIndex={0}
-        data-board-id={id}
-        onFocus={() => {
-          window.__wbActiveBoard = canvasRef.current;
-          window.__wbActiveBoardId = id;
-          isActiveRef.current = true;
-          setIsActive(true);
-          console.log(`Canvas ${id} focused and set as active`);
-        }}
-        onClick={handleCanvasClick}
-      />
+      <div className="flex w-full">
+        <canvas 
+          ref={canvasRef} 
+          className="w-full h-full z-0" 
+          tabIndex={0}
+          data-board-id={id}
+          onFocus={() => {
+            window.__wbActiveBoard = canvasRef.current;
+            window.__wbActiveBoardId = id;
+            isActiveRef.current = true;
+            setIsActive(true);
+            console.log(`Canvas ${id} focused and set as active`);
+          }}
+          onClick={handleCanvasClick}
+        />
+        {/* Add the ClipboardDebugPanel here */}
+        <div className="w-64 ml-4">
+          <ClipboardDebugPanel />
+        </div>
+      </div>
     </div>
   );
 };
