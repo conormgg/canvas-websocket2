@@ -1,6 +1,6 @@
 
 import { Canvas, Image as FabricImage, Point } from "fabric";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
 declare global {
@@ -25,39 +25,51 @@ export const useExternalClipboard = (
   }, [fabricRef.current]);
 
   /* Function to try pasting external clipboard content */
-  const tryExternalPaste = () => {
-    navigator.clipboard.read().then(
-      (clipboardItems) => {
-        for (const clipboardItem of clipboardItems) {
-          for (const type of clipboardItem.types) {
-            if (type.startsWith("image/")) {
-              clipboardItem.getType(type).then((blob) => {
-                if (posRef.current) {
-                  addImageFromBlob(blob, posRef.current);
-                } else {
+  const tryExternalPaste = useCallback(() => {
+    toast("Accessing clipboard...");
+    
+    if (navigator.clipboard && typeof navigator.clipboard.read === 'function') {
+      navigator.clipboard.read()
+        .then((clipboardItems) => {
+          let foundImage = false;
+          
+          for (const clipboardItem of clipboardItems) {
+            for (const type of clipboardItem.types) {
+              if (type.startsWith("image/")) {
+                foundImage = true;
+                clipboardItem.getType(type).then((blob) => {
                   const canvas = fabricRef.current;
-                  if (canvas) {
+                  if (!canvas) return;
+                  
+                  if (posRef.current) {
+                    addImageFromBlob(blob, posRef.current);
+                  } else {
                     const center = new Point(canvas.width! / 2, canvas.height! / 2);
                     addImageFromBlob(blob, center);
                   }
-                }
-              });
-              return;
+                });
+                return;
+              }
             }
           }
-        }
-        toast("No image found in clipboard");
-      },
-      () => {
-        toast("Could not access clipboard. Try clicking on the canvas first.");
-      }
-    );
-  };
+          
+          if (!foundImage) {
+            toast("No image found in clipboard");
+          }
+        })
+        .catch((err) => {
+          console.error("Clipboard access error:", err);
+          toast.error("Could not access clipboard. Try clicking on the canvas first.");
+        });
+    } else {
+      toast.error("Clipboard API not supported in this browser");
+    }
+  }, [fabricRef]);
 
   /* ------------------------------------------------------- */
   /*  DOM "paste" event handler – runs in every board        */
   /* ------------------------------------------------------- */
-  const handleExternalPaste = (e: ClipboardEvent) => {
+  const handleExternalPaste = useCallback((e: ClipboardEvent) => {
     /* 1️⃣  Only handle if this is the board user clicked last */
     if (fabricRef.current?.upperCanvasEl !== window.__wbActiveBoard) return;
 
@@ -80,15 +92,16 @@ export const useExternalClipboard = (
         if (blob) {
           e.preventDefault(); // stop default
           const pointer = canvas.getPointer(e as any);
+          posRef.current = pointer;
           addImageFromBlob(blob, pointer);
           break; // handle only one image
         }
       }
     }
-  };
+  }, [fabricRef, internalClipboardRef]);
 
   /* -------- helper to drop FabricImage at point p -------- */
-  const addImageFromBlob = (blob: Blob, p: Point) => {
+  const addImageFromBlob = useCallback((blob: Blob, p: Point) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
 
@@ -105,17 +118,17 @@ export const useExternalClipboard = (
         canvas.add(img);
         canvas.setActiveObject(img);
         canvas.renderAll();
-        toast("Image pasted successfully");
+        toast.success("Image pasted successfully");
       });
     };
     reader.readAsDataURL(blob);
-  };
+  }, [fabricRef]);
   
   // Register the paste event listener
   useEffect(() => {
     document.addEventListener("paste", handleExternalPaste);
     return () => document.removeEventListener("paste", handleExternalPaste);
-  }, [fabricRef, internalClipboardRef]);
+  }, [handleExternalPaste]);
 
   return { handleExternalPaste, tryExternalPaste, addImageFromBlob };
 };

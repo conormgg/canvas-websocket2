@@ -16,8 +16,8 @@ export const useCanvasClipboard = (
     awaitingPlacementRef,
   } = useInternalClipboard(fabricRef);
 
-  // Pass proper arguments to useExternalClipboard
-  const { handleExternalPaste } = useExternalClipboard(fabricRef, clipboardDataRef);
+  // Get all external clipboard functionality
+  const { handleExternalPaste, tryExternalPaste, addImageFromBlob } = useExternalClipboard(fabricRef, clipboardDataRef);
 
   /* ------------------------------------------------------------- */
   /*  Paste handler for internal objects                           */
@@ -67,5 +67,23 @@ export const useCanvasClipboard = (
     };
   }, [fabricRef, handleCanvasClick]);
 
-  return { pasteInternal };
+  // Add a keyboard shortcut for external paste (Ctrl+Shift+V)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+V to force external paste
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'v') {
+        e.preventDefault();
+        tryExternalPaste();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [tryExternalPaste]);
+
+  return { 
+    pasteInternal,
+    tryExternalPaste,
+    addImageFromBlob
+  };
 };

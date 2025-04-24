@@ -29,8 +29,8 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     onZoomChange: setZoom,
   });
 
-  // Using the updated clipboard functionality
-  useCanvasClipboard(fabricRef);
+  // Using the updated clipboard functionality with the returned methods
+  const { tryExternalPaste } = useCanvasClipboard(fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
