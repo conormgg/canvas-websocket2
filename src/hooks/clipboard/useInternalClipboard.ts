@@ -1,4 +1,3 @@
-
 import { Canvas, Point, TPointerEventInfo, TPointerEvent } from "fabric";
 import { useRef, useState, useEffect, useCallback } from "react";
 import { clipboardUtils } from "@/utils/clipboardUtils";
@@ -17,12 +16,12 @@ export const useInternalClipboard = (
       console.log("Canvas click detected at position:", pointer);
       selectedPositionRef.current = pointer;
       
-      // Update active board tracking
       if (fabricRef.current?.lowerCanvasEl?.dataset.boardId) {
-        setActiveBoard(fabricRef.current.lowerCanvasEl.dataset.boardId);
-        window.__wbActiveBoardId = fabricRef.current.lowerCanvasEl.dataset.boardId;
+        const boardId = fabricRef.current.lowerCanvasEl.dataset.boardId;
+        setActiveBoard(boardId);
+        window.__wbActiveBoardId = boardId;
         window.__wbActiveBoard = fabricRef.current.upperCanvasEl || null;
-        console.log("Active board updated to:", fabricRef.current.lowerCanvasEl.dataset.boardId);
+        console.log("Active board updated to:", boardId);
       }
     }
   }, [fabricRef]);
@@ -30,10 +29,9 @@ export const useInternalClipboard = (
   const handleCopy = useCallback((e: KeyboardEvent) => {
     if (!fabricRef.current) return;
     
-    // Check if this canvas is active before processing the copy
     const isActiveBoard = 
-      fabricRef.current?.upperCanvasEl === window.__wbActiveBoard ||
-      window.__wbActiveBoardId === fabricRef.current?.lowerCanvasEl?.dataset.boardId;
+      fabricRef.current.upperCanvasEl === window.__wbActiveBoard ||
+      fabricRef.current.lowerCanvasEl?.dataset.boardId === window.__wbActiveBoardId;
     
     if (!isActiveBoard) {
       console.log("Copy ignored - not active board");
@@ -41,7 +39,7 @@ export const useInternalClipboard = (
     }
 
     if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-      // Clear any existing clipboard data before copying new content
+      console.log("Clearing clipboard before copy");
       clipboardDataRef.current = null;
       
       const copied = clipboardUtils.copyObjectsToClipboard(

@@ -1,28 +1,33 @@
 
 import { Canvas } from "fabric";
-import { RefObject, MutableRefObject } from "react";
+import { MutableRefObject } from "react";
 import { toast } from "sonner";
 import { clipboardUtils } from "@/utils/clipboardUtils";
 
 export const useClipboardEvents = (
-  fabricRef: RefObject<Canvas | null>,
+  fabricRef: MutableRefObject<Canvas | null>,
   clipboardDataRef: MutableRefObject<any[] | null>,
   setAwaitingPlacement: (value: boolean) => void
 ) => {
   const handleCopy = (e: KeyboardEvent) => {
     if (e.ctrlKey && e.key === "c" && fabricRef.current) {
-      // Use the spread operator to create a new array reference
+      console.log("Copy initiated, clearing clipboard data");
       clipboardDataRef.current = null;
       
-      clipboardUtils.copyObjectsToClipboard(
+      const success = clipboardUtils.copyObjectsToClipboard(
         fabricRef.current, 
         clipboardDataRef
       );
+      
+      if (success) {
+        console.log("Objects copied to clipboard:", clipboardDataRef.current?.length);
+      }
     }
   };
 
   const handlePaste = (e: KeyboardEvent) => {
     if (e.ctrlKey && e.key === "v") {
+      console.log("Paste initiated");
       e.preventDefault();
       setAwaitingPlacement(true);
       toast.info("Click to place pasted object");

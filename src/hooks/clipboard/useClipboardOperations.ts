@@ -12,20 +12,31 @@ export const useClipboardOperations = () => {
   const [activeBoard, setActiveBoard] = useState<string | null>(null);
 
   const startPasteOperation = useCallback(() => {
-    if (pasteInProgressRef.current) return false;
+    if (pasteInProgressRef.current) {
+      console.log("Paste operation already in progress, skipping");
+      return false;
+    }
     pasteInProgressRef.current = true;
-    setTimeout(() => { pasteInProgressRef.current = false; }, 300);
+    console.log("Starting paste operation");
+    setTimeout(() => {
+      pasteInProgressRef.current = false;
+      console.log("Paste operation timeout cleared");
+    }, 300);
     return true;
   }, []);
 
   const shouldUseInternalClipboard = useCallback(() => {
-    return !!clipboardDataRef.current?.length;
+    const hasData = !!clipboardDataRef.current?.length;
+    console.log("Checking internal clipboard:", hasData ? "Has data" : "Empty");
+    return hasData;
   }, []);
 
   const isActiveBoard = useCallback((canvas: Canvas) => {
     if (!canvas) return false;
-    return canvas.upperCanvasEl === window.__wbActiveBoard ||
+    const isActive = canvas.upperCanvasEl === window.__wbActiveBoard ||
            canvas.lowerCanvasEl?.dataset.boardId === window.__wbActiveBoardId;
+    console.log("Board active check:", isActive, "Board ID:", canvas.lowerCanvasEl?.dataset.boardId);
+    return isActive;
   }, []);
 
   return {

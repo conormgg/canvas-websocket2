@@ -12,16 +12,17 @@ export const clipboardUtils = {
       return false;
     }
 
+    console.log("Clearing clipboard before copy");
+    clipboardDataRef.current = null;
+
     const newClipboardData = activeObjects.map((obj) => obj.toObject([
       'objectType', 'left', 'top', 'width', 'height', 'scaleX', 'scaleY',
       'angle', 'flipX', 'flipY', 'opacity', 'stroke', 'strokeWidth',
       'fill', 'paintFirst', 'globalCompositeOperation'
     ]));
     
-    // Update clipboard data
     clipboardDataRef.current = newClipboardData;
-    
-    console.log("Internal clipboard updated with", newClipboardData.length, "objects");
+    console.log("Clipboard updated with", newClipboardData.length, "objects");
     
     return true;
   },
