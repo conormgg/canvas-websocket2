@@ -6,6 +6,7 @@ import { toast } from "sonner";
 declare global {
   /* eslint-disable-next-line no-var */
   var __wbActiveBoard: HTMLElement | null | undefined;
+  var __wbActiveBoardId: string | null | undefined;
 }
 
 export const useExternalClipboard = (
@@ -15,6 +16,15 @@ export const useExternalClipboard = (
   /* -------- keep freshest click position -------- */
   const posRef = useRef<Point | null>(null);
   const lastClickTimeRef = useRef<number>(0);
+  const boardIdRef = useRef<string | null>(null);
+  
+  // Store the ID of this board's canvas for comparison
+  useEffect(() => {
+    if (fabricRef.current) {
+      // Store a reference to this specific board's ID
+      boardIdRef.current = fabricRef.current.lowerCanvasEl.dataset.boardId || null;
+    }
+  }, [fabricRef.current]);
 
   /* -------- track when user clicked on canvas -------- */
   useEffect(() => {
@@ -23,7 +33,6 @@ export const useExternalClipboard = (
     
     const handleCanvasClick = () => {
       lastClickTimeRef.current = Date.now();
-      window.__wbActiveBoard = canvas.upperCanvasEl;
       
       // Store last clicked position
       const pointer = canvas.getPointer({ clientX: 0, clientY: 0 } as any);
@@ -38,9 +47,11 @@ export const useExternalClipboard = (
   const tryExternalPaste = useCallback(() => {
     toast("Accessing clipboard...");
     
-    // Always update the active board reference when trying to paste
-    if (fabricRef.current) {
-      window.__wbActiveBoard = fabricRef.current.upperCanvasEl;
+    // Only proceed if this hook instance belongs to the active board
+    const isActiveBoard = window.__wbActiveBoard === fabricRef.current?.upperCanvasEl;
+    if (!isActiveBoard) {
+      // This is not the active board, so don't process the paste
+      return;
     }
     
     if (navigator.clipboard && typeof navigator.clipboard.read === 'function') {
@@ -109,7 +120,11 @@ export const useExternalClipboard = (
   /* ------------------------------------------------------- */
   const handleExternalPaste = useCallback((e: ClipboardEvent) => {
     /* 1️⃣  Only handle if this is the board user clicked last */
-    if (fabricRef.current?.upperCanvasEl !== window.__wbActiveBoard) return;
+    const isActiveBoard = 
+      fabricRef.current?.upperCanvasEl === window.__wbActiveBoard ||
+      window.__wbActiveBoardId === boardIdRef.current;
+    
+    if (!isActiveBoard) return;
 
     /* 2️⃣  Give priority to internal clipboard: if it has data,
            skip processing the external image.                 */
@@ -140,7 +155,7 @@ export const useExternalClipboard = (
     
     // If we got here, no image was found in clipboard
     toast("No image found in clipboard data");
-  }, [fabricRef, internalClipboardRef]);
+  }, [fabricRef, internalClipboardRef, boardIdRef.current]);
 
   /* -------- helper to drop FabricImage at point p -------- */
   const addImageFromBlob = useCallback((blob: Blob, p: Point) => {
@@ -186,7 +201,15 @@ export const useExternalClipboard = (
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'v') {
         e.preventDefault();
         e.stopPropagation();
-        tryExternalPaste();
+        
+        // Only process if this is the active board
+        const isActiveBoard = 
+          fabricRef.current?.upperCanvasEl === window.__wbActiveBoard ||
+          window.__wbActiveBoardId === boardIdRef.current;
+          
+        if (isActiveBoard) {
+          tryExternalPaste();
+        }
       }
     };
     
@@ -196,7 +219,7 @@ export const useExternalClipboard = (
       document.removeEventListener("paste", handleExternalPaste);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleExternalPaste, tryExternalPaste]);
+  }, [handleExternalPaste, tryExternalPaste, boardIdRef.current]);
 
   return { handleExternalPaste, tryExternalPaste, addImageFromBlob };
 };

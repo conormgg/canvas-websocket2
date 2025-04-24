@@ -33,6 +33,9 @@ export const useCanvas = ({
   useEffect(() => {
     if (!canvasRef.current) return;
 
+    // Set data attribute on canvas element to identify the board
+    canvasRef.current.dataset.boardId = id;
+
     const canvas = new Canvas(canvasRef.current, {
       width: window.innerWidth,
       height: window.innerHeight,
@@ -41,6 +44,10 @@ export const useCanvas = ({
       preserveObjectStacking: true,
       selection: false,
     });
+
+    // Also set data attribute on fabric-created elements
+    if (canvas.lowerCanvasEl) canvas.lowerCanvasEl.dataset.boardId = id;
+    if (canvas.upperCanvasEl) canvas.upperCanvasEl.dataset.boardId = id;
 
     canvas.freeDrawingBrush = new PencilBrush(canvas);
     canvas.freeDrawingBrush.width = inkThickness;

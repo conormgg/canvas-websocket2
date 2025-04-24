@@ -37,12 +37,22 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     return false;
   };
 
+  // Mark this board as active when clicked
+  const handleCanvasClick = () => {
+    // Update global reference to track which board is currently active
+    window.__wbActiveBoard = canvasRef.current;
+    window.__wbActiveBoardId = id;
+  };
+
   // Add global paste event listener specifically for this whiteboard
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       // Only handle if this whiteboard's canvas is focused/active
-      if (document.activeElement === canvasRef.current || 
-          e.target === canvasRef.current) {
+      if (
+        window.__wbActiveBoardId === id &&
+        (document.activeElement === canvasRef.current || 
+         e.target === canvasRef.current)
+      ) {
         tryExternalPaste();
       }
     };
@@ -54,7 +64,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     return () => {
       document.removeEventListener("paste", handlePaste);
     };
-  }, [canvasRef, tryExternalPaste]);
+  }, [canvasRef, tryExternalPaste, id]);
 
   /* --------------------------------------------------------------
    * Cross-whiteboard sync: listen for objects drawn on another
@@ -90,6 +100,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     <div
       className="w-full h-full relative flex flex-col items-center justify-start"
       onContextMenu={handleContextMenu}
+      onClick={handleCanvasClick} // Added click handler to the container
     >
       <Toolbar
         activeTool={activeTool}
@@ -104,7 +115,11 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         ref={canvasRef} 
         className="w-full h-full z-0" 
         tabIndex={0} // Make canvas focusable
-        onFocus={() => window.__wbActiveBoard = canvasRef.current}
+        onFocus={() => {
+          window.__wbActiveBoard = canvasRef.current;
+          window.__wbActiveBoardId = id;
+        }}
+        onClick={handleCanvasClick}
       />
     </div>
   );

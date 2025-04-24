@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
 import { WhiteboardId, StudentId } from "@/types/canvas";
@@ -11,6 +12,23 @@ export const SplitWhiteboard = () => {
     "student3",
     "student4",
   ];
+  
+  // Initialize active board tracking when component mounts
+  useEffect(() => {
+    // Initialize global tracking variables if they don't exist
+    if (typeof window.__wbActiveBoard === 'undefined') {
+      window.__wbActiveBoard = null;
+    }
+    if (typeof window.__wbActiveBoardId === 'undefined') {
+      window.__wbActiveBoardId = null;
+    }
+    
+    // Clean up
+    return () => {
+      window.__wbActiveBoard = null;
+      window.__wbActiveBoardId = null;
+    };
+  }, []);
 
   const toggle = (id: WhiteboardId, e: React.MouseEvent) => {
     if (e.ctrlKey) {
