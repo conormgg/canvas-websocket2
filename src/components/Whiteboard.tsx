@@ -8,7 +8,12 @@ import { toast } from "sonner";
 import { util, FabricObject } from "fabric";
 import { useClipboardContext } from "@/context/ClipboardContext";
 import { cn } from "@/lib/utils";
-import { ClipboardDebugPanel } from "./ClipboardDebugPanel"; // Add this import
+import { ClipboardDebugPanel } from "./ClipboardDebugPanel";
+
+interface WhiteboardProps {
+  id: WhiteboardId;
+  isSplitScreen?: boolean;
+}
 
 export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
