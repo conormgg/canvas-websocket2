@@ -9,14 +9,32 @@ export const useInternalClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>
 ) => {
   const clipboardDataRef = useRef<any[] | null>(null);
-  const [awaitingPlacement, setAwaitingPlacement] = useState<boolean>(false);
-  
+  const selectedPositionRef = useRef<Point | null>(null);
+
   const { pasteAtPosition } = usePasteHandler(fabricRef);
-  const { handleCopy, handlePaste } = useClipboardEvents(
-    fabricRef,
-    clipboardDataRef,
-    setAwaitingPlacement
-  );
+
+  const handleCanvasClick = (opt: TPointerEventInfo<TPointerEvent>) => {
+    const pointer = fabricRef.current?.getPointer(opt.e);
+    if (pointer) {
+      selectedPositionRef.current = pointer;
+    }
+  };
+
+  const handleCopy = (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      if (!fabricRef.current) return;
+      clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
+    }
+  };
+
+  const handlePaste = (e: KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      e.preventDefault();
+      if (clipboardDataRef.current && selectedPositionRef.current) {
+        pasteAtPosition(clipboardDataRef.current, selectedPositionRef.current);
+      }
+    }
+  };
 
   useEffect(() => {
     document.addEventListener("keydown", handleCopy);
@@ -27,20 +45,6 @@ export const useInternalClipboard = (
     };
   }, [handleCopy, handlePaste]);
 
-  const handleCanvasClick = (opt: TPointerEventInfo<TPointerEvent>) => {
-    if (!awaitingPlacement) return;
-    setAwaitingPlacement(false);
-    const pointer = fabricRef.current?.getPointer(opt.e);
-    if (pointer) pasteAtPosition(clipboardDataRef.current, pointer);
-  };
-
-  const calculatePastePosition = (originalLeft: number, originalTop: number) => {
-    const canvas = fabricRef.current;
-    if (!canvas) return { left: originalLeft, top: originalTop };
-    
-    return clipboardUtils.calculatePastePosition(canvas, originalLeft, originalTop);
-  };
-
   return {
     clipboardDataRef,
     handleCanvasClick,
@@ -48,7 +52,7 @@ export const useInternalClipboard = (
       if (!fabricRef.current) return;
       clipboardUtils.copyObjectsToClipboard(fabricRef.current, clipboardDataRef);
     },
-    calculatePastePosition,
-    awaitingPlacementRef: { current: awaitingPlacement }
+    calculatePastePosition: clipboardUtils.calculatePastePosition,
+    selectedPositionRef
   };
 };

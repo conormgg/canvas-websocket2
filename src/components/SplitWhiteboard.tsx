@@ -31,6 +31,12 @@ export const SplitWhiteboard = () => {
   }, []);
 
   const toggle = (id: WhiteboardId, e: React.MouseEvent) => {
+    // Update active board tracking
+    if (e.target instanceof HTMLCanvasElement) {
+      window.__wbActiveBoard = e.target;
+      window.__wbActiveBoardId = id;
+    }
+    
     if (e.ctrlKey) {
       setEnlarged(enlarged === id ? null : id);
     }
