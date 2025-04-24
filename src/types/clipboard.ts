@@ -17,4 +17,5 @@ export interface ClipboardContextType {
   handleCanvasClick: (canvas: Canvas, pointer: Point) => void;
   isActiveBoard: (canvas: Canvas) => boolean;
   startPasteOperation: () => boolean;
+  shouldUseInternalClipboard: () => boolean;
 }
