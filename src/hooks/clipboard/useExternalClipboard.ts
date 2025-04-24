@@ -110,6 +110,12 @@ export const useExternalClipboard = (
     };
     reader.readAsDataURL(blob);
   };
+  
+  // Register the paste event listener
+  useEffect(() => {
+    document.addEventListener("paste", handleExternalPaste);
+    return () => document.removeEventListener("paste", handleExternalPaste);
+  }, [fabricRef, internalClipboardRef]);
 
-  return { handleExternalPaste, tryExternalPaste };
+  return { handleExternalPaste, tryExternalPaste, addImageFromBlob };
 };

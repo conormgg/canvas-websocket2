@@ -21,7 +21,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
   const [zoom, setZoom] = useState<number>(1);
 
   const { canvasRef, fabricRef } = useCanvas({
-    id, // Now allowed by the updated interface
+    id,
     activeTool,
     activeColor,
     inkThickness,
@@ -29,6 +29,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     onZoomChange: setZoom,
   });
 
+  // Using the updated clipboard functionality
   useCanvasClipboard(fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {

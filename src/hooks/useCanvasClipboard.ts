@@ -17,7 +17,7 @@ export const useCanvasClipboard = (
   } = useInternalClipboard(fabricRef);
 
   // Pass proper arguments to useExternalClipboard
-  useExternalClipboard(fabricRef, clipboardDataRef);
+  const { handleExternalPaste } = useExternalClipboard(fabricRef, clipboardDataRef);
 
   /* ------------------------------------------------------------- */
   /*  Paste handler for internal objects                           */
