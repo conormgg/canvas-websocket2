@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useCanvasClipboard } from "@/hooks/useCanvasClipboard";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
-import { util, FabricObject, Object as FabricObj } from "fabric";
+import { util, FabricObject } from "fabric";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -35,7 +36,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
 
   /* --------------------------------------------------------------
    * Cross-whiteboard sync: listen for objects drawn on another
-   * board and “enliven” them locally.
+   * board and "enliven" them locally.
    * ------------------------------------------------------------ */
   useEffect(() => {
     const handleUpdate = (e: CustomEvent) => {
@@ -44,10 +45,11 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       if (!canvas) return;
 
       util
-        .enlivenObjects([e.detail.object])
-        .then((objects: FabricObject[]) => {
-          objects.forEach((obj) => canvas.add(obj));
-          canvas.renderAll();
+        .enlivenObjects([e.detail.object], {
+          callback: (objects: FabricObject[]) => {
+            objects.forEach((obj) => canvas.add(obj));
+            canvas.renderAll();
+          }
         })
         .catch((err) => {
           console.error("Failed to enliven object", err);

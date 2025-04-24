@@ -1,3 +1,4 @@
+
 import { Canvas, util, FabricObject } from "fabric";
 import { useEffect } from "react";
 import { useInternalClipboard } from "./clipboard/useInternalClipboard";
@@ -30,33 +31,34 @@ export const useCanvasClipboard = (
     const toEnliven = [...internalData];
 
     util
-      .enlivenObjects(toEnliven)
-      .then((objects: FabricObject[]) => {
-        objects.forEach((obj: any) => {
-          if (typeof obj !== "object") return;
-          const originalLeft = typeof obj.left === "number" ? obj.left : 0;
-          const originalTop = typeof obj.top === "number" ? obj.top : 0;
-          const { left, top } = calculatePastePosition(
-            originalLeft,
-            originalTop
-          );
+      .enlivenObjects(toEnliven, {
+        callback: (objects: FabricObject[]) => {
+          objects.forEach((obj: any) => {
+            if (typeof obj !== "object") return;
+            const originalLeft = typeof obj.left === "number" ? obj.left : 0;
+            const originalTop = typeof obj.top === "number" ? obj.top : 0;
+            const { left, top } = calculatePastePosition(
+              originalLeft,
+              originalTop
+            );
 
-          if (typeof obj.set === "function") {
-            obj.set({ left, top, evented: true });
-            canvas.add(obj);
-            if (typeof obj.setCoords === "function") obj.setCoords();
-          }
-        });
-
-        if (objects.length === 1) {
-          canvas.setActiveObject(objects[0]);
-        } else if (objects.length > 1) {
-          const selection = new fabric.ActiveSelection(objects, {
-            canvas,
+            if (typeof obj.set === "function") {
+              obj.set({ left, top, evented: true });
+              canvas.add(obj);
+              if (typeof obj.setCoords === "function") obj.setCoords();
+            }
           });
-          canvas.setActiveObject(selection);
+
+          if (objects.length === 1) {
+            canvas.setActiveObject(objects[0]);
+          } else if (objects.length > 1) {
+            const selection = new fabric.ActiveSelection(objects, {
+              canvas,
+            });
+            canvas.setActiveObject(selection);
+          }
+          canvas.requestRenderAll();
         }
-        canvas.requestRenderAll();
       })
       .catch((err) => {
         console.error("Paste failed:", err);
