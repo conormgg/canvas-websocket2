@@ -1,12 +1,10 @@
-
 import { Canvas } from "fabric";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useImagePaste, SimplePoint } from "./useImagePaste";
 import { usePositionTracking } from "./usePositionTracking";
 import { clipboardAccess } from "@/utils/clipboardAccess";
 
-// Define a more specific props interface for the hook
 interface UseExternalClipboardProps {
   clipboardDataRef: React.MutableRefObject<any[] | null>;
   selectedPositionRef: React.MutableRefObject<any | null>;
@@ -21,9 +19,28 @@ export const useExternalClipboard = (
 ) => {
   const { addImageFromBlob } = useImagePaste(fabricRef);
   const { posRef, boardIdRef } = usePositionTracking(fabricRef);
-  const lastExternalCopyTimeRef = useRef<number>(0); // Track when external copy occurs
+  const lastExternalCopyTimeRef = useRef<number>(0);
 
-  // Function to check if this is the active board
+  useEffect(() => {
+    const handleClipboardChange = async () => {
+      try {
+        const items = await navigator.clipboard.read();
+        if (items.length > 0) {
+          internalClipboardRef.current = null;
+          lastExternalCopyTimeRef.current = Date.now();
+          console.log("External clipboard change detected at:", lastExternalCopyTimeRef.current);
+        }
+      } catch (err) {
+        if (!(err instanceof Error && err.name === 'NotAllowedError')) {
+          console.error("Clipboard monitoring error:", err);
+        }
+      }
+    };
+
+    const interval = setInterval(handleClipboardChange, 1000);
+    return () => clearInterval(interval);
+  }, [internalClipboardRef]);
+
   const isActiveBoard = useCallback(() => {
     const canvasId = fabricRef.current?.lowerCanvasEl?.dataset.boardId;
     const activeElementId = window.__wbActiveBoardId;
@@ -54,7 +71,7 @@ export const useExternalClipboard = (
     
     clipboardAccess.readClipboard().then((blob) => {
       if (blob) {
-        // When accessing external clipboard content, update the timestamp
+        internalClipboardRef.current = null;
         lastExternalCopyTimeRef.current = Date.now();
         console.log("External clipboard accessed at:", lastExternalCopyTimeRef.current);
         
@@ -69,7 +86,7 @@ export const useExternalClipboard = (
         }
       }
     });
-  }, [fabricRef, posRef, addImageFromBlob, isActiveBoard]);
+  }, [fabricRef, posRef, addImageFromBlob, isActiveBoard, internalClipboardRef]);
 
   const handleExternalPaste = useCallback((e: ClipboardEvent) => {
     if (!isActiveBoard()) {
@@ -81,11 +98,11 @@ export const useExternalClipboard = (
     if (!canvas) return;
 
     e.preventDefault();
-    e.stopPropagation();  // Add this to prevent multiple boards from handling the same event
+    e.stopPropagation();
 
     const blob = clipboardAccess.getImageFromClipboardEvent(e);
     if (blob) {
-      // When accessing external clipboard content, update the timestamp
+      internalClipboardRef.current = null;
       lastExternalCopyTimeRef.current = Date.now();
       console.log("External clipboard accessed from event at:", lastExternalCopyTimeRef.current);
       
@@ -97,15 +114,17 @@ export const useExternalClipboard = (
       console.log("No image found in clipboard data");
       toast("No image found in clipboard data");
     }
-  }, [fabricRef, posRef, addImageFromBlob, isActiveBoard]);
+  }, [fabricRef, posRef, addImageFromBlob, isActiveBoard, internalClipboardRef]);
 
   return { 
     handleExternalPaste, 
     tryExternalPaste, 
     addImageFromBlob: useCallback((canvas: Canvas, blob: Blob, position: SimplePoint) => {
       if (canvas !== fabricRef.current) return;
+      internalClipboardRef.current = null;
+      lastExternalCopyTimeRef.current = Date.now();
       addImageFromBlob(blob, position);
-    }, [addImageFromBlob, fabricRef]),
+    }, [addImageFromBlob, fabricRef, internalClipboardRef]),
     lastExternalCopyTimeRef
   };
 };

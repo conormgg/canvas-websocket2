@@ -1,4 +1,3 @@
-
 import { useCallback } from "react";
 import { Canvas, Point } from "fabric";
 import { clipboardUtils } from "@/utils/clipboardUtils";
@@ -27,9 +26,13 @@ export const useCanvasHandlers = (
   const copyObjects = useCallback((canvas: Canvas) => {
     if (!isActiveBoard(canvas)) return false;
 
-    const copied = clipboardUtils.copyObjectsToClipboard(canvas, clipboardDataRef);
+    const copied = clipboardUtils.copyObjectsToClipboard(
+      canvas, 
+      clipboardDataRef,
+      lastInternalCopyTimeRef
+    );
+    
     if (copied) {
-      lastInternalCopyTimeRef.current = Date.now();
       toast.success("Objects copied to clipboard");
     }
     return copied;

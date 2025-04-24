@@ -1,21 +1,34 @@
 
 import React from "react";
 import { useClipboardDebug } from "@/utils/clipboardDebug";
-import { Clipboard } from "lucide-react";
+import { Clipboard, Clock } from "lucide-react";
 import { Badge } from "./ui/badge";
 
 export const ClipboardDebugPanel: React.FC = () => {
-  const { clipboardItems } = useClipboardDebug();
+  const { clipboardItems, lastInternalCopyTime, lastExternalCopyTime } = useClipboardDebug();
   const itemCount = clipboardItems?.length || 0;
+
+  const formatTime = (timestamp: number) => {
+    if (!timestamp) return 'Never';
+    return new Date(timestamp).toLocaleTimeString();
+  };
 
   if (!clipboardItems || clipboardItems.length === 0) {
     return (
-      <div className="p-4 bg-gray-50 border rounded-lg flex items-center gap-2 text-gray-500">
+      <div className="p-4 bg-gray-50 border rounded-lg flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <Clipboard className="w-5 h-5" />
+          <Clipboard className="w-5 h-5 text-gray-500" />
           <Badge variant="secondary">0</Badge>
+          <span className="text-gray-500">Clipboard is empty</span>
         </div>
-        <span>Clipboard is empty</span>
+        <div className="text-xs text-gray-400">
+          <Clock className="w-4 h-4 inline mr-1" />
+          Last internal: {formatTime(lastInternalCopyTime)}
+        </div>
+        <div className="text-xs text-gray-400">
+          <Clock className="w-4 h-4 inline mr-1" />
+          Last external: {formatTime(lastExternalCopyTime)}
+        </div>
       </div>
     );
   }
@@ -26,6 +39,14 @@ export const ClipboardDebugPanel: React.FC = () => {
         <Clipboard className="w-5 h-5" />
         <Badge variant="default">{itemCount}</Badge>
         <h3 className="font-semibold">Clipboard Contents</h3>
+      </div>
+      <div className="text-xs text-gray-500 mb-2">
+        <Clock className="w-4 h-4 inline mr-1" />
+        Last internal: {formatTime(lastInternalCopyTime)}
+      </div>
+      <div className="text-xs text-gray-500 mb-2">
+        <Clock className="w-4 h-4 inline mr-1" />
+        Last external: {formatTime(lastExternalCopyTime)}
       </div>
       {clipboardItems.map((item, index) => (
         <div key={index} className="mb-2 p-2 bg-white border rounded">

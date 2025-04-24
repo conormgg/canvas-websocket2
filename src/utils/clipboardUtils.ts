@@ -1,11 +1,15 @@
 
-import { Canvas, FabricObject, Point, ActiveSelection, util } from "fabric";
+import { Canvas, FabricObject, util } from "fabric";
 
 export const clipboardUtils = {
   copyObjectsToClipboard: (
     canvas: Canvas,
-    clipboardDataRef: React.MutableRefObject<any[] | null>
+    clipboardDataRef: React.MutableRefObject<any[] | null>,
+    lastInternalCopyTimeRef: React.MutableRefObject<number>
   ) => {
+    // Clear existing clipboard data first
+    clipboardDataRef.current = null;
+    
     const activeObjects = canvas.getActiveObjects();
     if (!activeObjects.length) {
       console.log("No active objects to copy");
@@ -17,6 +21,10 @@ export const clipboardUtils = {
       'angle', 'flipX', 'flipY', 'opacity', 'stroke', 'strokeWidth',
       'fill', 'paintFirst', 'globalCompositeOperation'
     ]));
+    
+    // Update internal copy timestamp
+    lastInternalCopyTimeRef.current = Date.now();
+    console.log("Internal clipboard updated at:", lastInternalCopyTimeRef.current);
     
     return true;
   },
