@@ -7,10 +7,16 @@ export const useClipboardDebug = () => {
   const [localClipboardData, setLocalClipboardData] = useState<any[] | null>(null);
 
   useEffect(() => {
+    console.log("Clipboard Debug - Raw Clipboard Data:", clipboardData);
     setLocalClipboardData(clipboardData);
   }, [clipboardData]);
+
+  useEffect(() => {
+    console.log("Clipboard Debug - Local Clipboard Data:", localClipboardData);
+  }, [localClipboardData]);
 
   return {
     clipboardItems: localClipboardData
   };
 };
+
