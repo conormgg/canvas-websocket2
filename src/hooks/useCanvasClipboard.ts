@@ -14,7 +14,7 @@ export const useCanvasClipboard = (
     handleCanvasClick,
     handleCopy,
     calculatePastePosition,
-    awaitingPlacementRef,
+    selectedPositionRef
   } = useInternalClipboard(fabricRef);
 
   // Get all external clipboard functionality
@@ -56,7 +56,9 @@ export const useCanvasClipboard = (
           if (typeof obj !== "object") return;
           const originalLeft = typeof obj.left === "number" ? obj.left : 0;
           const originalTop = typeof obj.top === "number" ? obj.top : 0;
+          // Fix the calculatePastePosition call to include the canvas argument
           const { left, top } = calculatePastePosition(
+            canvas,
             originalLeft,
             originalTop
           );
