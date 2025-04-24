@@ -1,67 +1,64 @@
 
-import React, { createContext, useContext, useState, useRef } from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 import { Canvas, Point } from "fabric";
-import { SimplePoint } from "@/hooks/clipboard/useImagePaste";
-import { ClipboardContextType } from "@/types/clipboard";
-import { useCanvasHandlers } from "@/hooks/clipboard/useCanvasHandlers";
-import { useExternalClipboard } from "@/hooks/clipboard/useExternalClipboard";
+import { ClipboardContextType, ClipboardData } from "@/types/clipboard";
+import { clipboardUtils } from "@/utils/clipboardUtils";
+import { toast } from "sonner";
 
 const ClipboardContext = createContext<ClipboardContextType | undefined>(undefined);
 
 export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [clipboardData, setClipboardData] = useState<any[] | null>(null);
-  const [activeBoard, setActiveBoard] = useState<string | null>(null);
-  const selectedPositionRef = useRef<Point | null>(null);
-  const pasteInProgressRef = useRef(false);
-  const fabricRef = useRef<Canvas | null>(null);
+  const [clipboardData, setClipboardData] = useState<ClipboardData | null>(null);
+  const [activeCanvas, setActiveCanvas] = useState<Canvas | null>(null);
 
-  const startPasteOperation = () => {
-    if (pasteInProgressRef.current) return false;
-    pasteInProgressRef.current = true;
-    setTimeout(() => { pasteInProgressRef.current = false; }, 300);
-    return true;
-  };
+  /**
+   * Copy selected objects from canvas to clipboard
+   */
+  const copySelectedObjects = useCallback((canvas: Canvas) => {
+    const data = clipboardUtils.copySelectedObjects(canvas);
+    if (data) {
+      setClipboardData(data);
+      toast.success("Objects copied to clipboard");
+    }
+  }, []);
 
-  const isActiveBoard = (canvas: Canvas) => {
-    return canvas.upperCanvasEl === window.__wbActiveBoard ||
-           canvas.lowerCanvasEl?.dataset.boardId === window.__wbActiveBoardId;
-  };
-
-  const shouldUseInternalClipboard = () => {
-    return !!clipboardData && clipboardData.length > 0;
-  };
-
-  const {
-    handleCanvasClick,
-    copyObjects,
-    pasteInternal
-  } = useCanvasHandlers(
-    setClipboardData,
-    selectedPositionRef,
-    setActiveBoard,
-    isActiveBoard
-  );
-
-  const { 
-    tryExternalPaste,
-    addImageFromBlob
-  } = useExternalClipboard(fabricRef);
+  /**
+   * Paste content to canvas
+   */
+  const pasteToCanvas = useCallback(async (canvas: Canvas, position?: Point) => {
+    if (!clipboardData) {
+      // Try to get data from browser clipboard
+      const externalData = await clipboardUtils.readExternalClipboard();
+      if (externalData) {
+        await clipboardUtils.pasteObjects(canvas, externalData, position);
+        // Update clipboard data to what we just pasted
+        setClipboardData(externalData);
+      } else {
+        toast.error("Nothing to paste");
+      }
+      return;
+    }
+    
+    // Use existing clipboard data
+    await clipboardUtils.pasteObjects(canvas, clipboardData, position);
+  }, [clipboardData]);
+  
+  /**
+   * Check if we have data to paste
+   */
+  const canPaste = useCallback(() => {
+    return clipboardData !== null;
+  }, [clipboardData]);
 
   const contextValue: ClipboardContextType = {
     clipboardData,
-    setClipboardData,
-    activeBoard,
-    selectedPosition: selectedPositionRef.current,
-    copyObjects,
-    pasteInternal,
-    tryExternalPaste,
-    addImageFromBlob,
-    handleCanvasClick,
-    isActiveBoard,
-    startPasteOperation,
-    shouldUseInternalClipboard
+    activeCanvas,
+    copySelectedObjects,
+    pasteToCanvas,
+    canPaste,
+    setActiveCanvas
   };
-  
+
   return (
     <ClipboardContext.Provider value={contextValue}>
       {children}
@@ -71,8 +68,8 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
 export const useClipboardContext = () => {
   const context = useContext(ClipboardContext);
-  if (context === undefined) {
-    throw new Error('useClipboardContext must be used within a ClipboardProvider');
+  if (!context) {
+    throw new Error("useClipboardContext must be used within a ClipboardProvider");
   }
   return context;
 };

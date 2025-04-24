@@ -2,13 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
-import { useCanvasClipboard } from "@/hooks/useCanvasClipboard";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
 import { util, FabricObject } from "fabric";
 import { useClipboardContext } from "@/context/ClipboardContext";
 import { cn } from "@/lib/utils";
-import { ClipboardDebugPanel } from "./ClipboardDebugPanel";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -22,6 +20,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
   const [zoom, setZoom] = useState<number>(1);
   const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
+  const { setActiveCanvas } = useClipboardContext();
 
   const { canvasRef, fabricRef } = useCanvas({
     id,
@@ -31,9 +30,6 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     isSplitScreen,
     onZoomChange: setZoom,
   });
-
-  // Using the updated clipboard functionality with the returned methods
-  const { tryExternalPaste } = useCanvasClipboard(fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -47,6 +43,11 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     window.__wbActiveBoardId = id;
     isActiveRef.current = true;
     setIsActive(true);
+    
+    // Set this canvas as active in clipboard context
+    if (fabricRef.current) {
+      setActiveCanvas(fabricRef.current);
+    }
   };
 
   // Update active state when global active board changes
@@ -56,6 +57,11 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         window.__wbActiveBoardId === id || 
         window.__wbActiveBoard === canvasRef.current;
       setIsActive(isCurrentlyActive);
+      
+      // Update active canvas in clipboard context when active status changes
+      if (isCurrentlyActive && fabricRef.current) {
+        setActiveCanvas(fabricRef.current);
+      }
     };
 
     // Check initially
@@ -72,7 +78,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     }
 
     return () => observer.disconnect();
-  }, [id]);
+  }, [id, setActiveCanvas]);
 
   // Set data attributes on canvas element when it's created
   useEffect(() => {
@@ -130,26 +136,23 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         onInkThicknessChange={setInkThickness}
         isSplitScreen={isSplitScreen}
       />
-      <div className="flex w-full">
-        <canvas 
-          ref={canvasRef} 
-          className="w-full h-full z-0" 
-          tabIndex={0}
-          data-board-id={id}
-          onFocus={() => {
-            window.__wbActiveBoard = canvasRef.current;
-            window.__wbActiveBoardId = id;
-            isActiveRef.current = true;
-            setIsActive(true);
-            console.log(`Canvas ${id} focused and set as active`);
-          }}
-          onClick={handleCanvasClick}
-        />
-        {/* Add the ClipboardDebugPanel here */}
-        <div className="w-64 ml-4">
-          <ClipboardDebugPanel />
-        </div>
-      </div>
+      <canvas 
+        ref={canvasRef} 
+        className="w-full h-full z-0" 
+        tabIndex={0}
+        data-board-id={id}
+        onFocus={() => {
+          window.__wbActiveBoard = canvasRef.current;
+          window.__wbActiveBoardId = id;
+          isActiveRef.current = true;
+          setIsActive(true);
+          if (fabricRef.current) {
+            setActiveCanvas(fabricRef.current);
+          }
+          console.log(`Canvas ${id} focused and set as active`);
+        }}
+        onClick={handleCanvasClick}
+      />
     </div>
   );
 };

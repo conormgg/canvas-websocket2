@@ -1,21 +1,20 @@
 
 import { Canvas, Point } from "fabric";
-import { SimplePoint } from "@/hooks/clipboard/useImagePaste";
+
+export interface ClipboardData {
+  sourceType: 'internal' | 'external';
+  timestamp: number;
+  data: any[] | Blob | null;
+}
 
 export interface ClipboardContextType {
-  // State
-  clipboardData: any[] | null;
-  setClipboardData: (data: any[] | null) => void;
-  activeBoard: string | null;
-  selectedPosition: Point | null;
+  // Current clipboard state
+  clipboardData: ClipboardData | null;
+  activeCanvas: Canvas | null;
   
   // Methods
-  copyObjects: (canvas: Canvas) => boolean;
-  pasteInternal: (canvas: Canvas, internalData: any[]) => void;
-  tryExternalPaste: (canvas: Canvas) => void;
-  addImageFromBlob: (canvas: Canvas, blob: Blob, position: SimplePoint) => void;
-  handleCanvasClick: (canvas: Canvas, pointer: Point) => void;
-  isActiveBoard: (canvas: Canvas) => boolean;
-  startPasteOperation: () => boolean;
-  shouldUseInternalClipboard: () => boolean;
+  copySelectedObjects: (canvas: Canvas) => void;
+  pasteToCanvas: (canvas: Canvas, position?: Point) => Promise<void>;
+  canPaste: () => boolean;
+  setActiveCanvas: (canvas: Canvas | null) => void;
 }
