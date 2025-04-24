@@ -153,11 +153,9 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const url = ev.target?.result as string;
       if (!url) return;
       
-      // Using fabric's Image.fromURL
-      FabricObject.fromURL(url).then((img: any) => {
+      fabric.Image.fromURL(url).then((img: any) => {
         img.scale(0.5);
         
-        // Ensure coordinates are valid
         const x = typeof position.x === 'number' ? position.x : canvas.width! / 2;
         const y = typeof position.y === 'number' ? position.y : canvas.height! / 2;
         
@@ -177,7 +175,7 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
     reader.readAsDataURL(blob);
   }, []);
-  
+
   const tryExternalPaste = useCallback((canvas: Canvas) => {
     if (!startPasteOperation()) return;
     

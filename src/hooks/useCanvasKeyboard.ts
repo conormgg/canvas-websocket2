@@ -1,14 +1,11 @@
 
 import { Canvas } from 'fabric';
-import { useCanvasDeletion } from './useCanvasDeletion';
+import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
-  const { handleDelete } = useCanvasDeletion(fabricRef);
+  // Use our new keyboard shortcuts hook
+  useKeyboardShortcuts(fabricRef);
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    // Only handle deletion, copy and paste are managed in useCanvasClipboard
-    handleDelete(e);
-  };
-
-  return { handleKeyDown };
+  // We no longer need handleKeyDown as it's handled by useKeyboardShortcuts
+  return {};
 };

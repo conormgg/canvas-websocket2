@@ -1,15 +1,18 @@
 import { Canvas, util, FabricObject } from "fabric";
-import { useEffect, useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { useInternalClipboard } from "./clipboard/useInternalClipboard";
 import { useExternalClipboard } from "./clipboard/useExternalClipboard";
 import { clipboardUtils } from "@/utils/clipboardUtils";
 import { toast } from "sonner";
 import { usePasteProgress } from "./clipboard/usePasteProgress";
 import { useClipboardSource } from "./clipboard/useClipboardSource";
+import { useClipboardContext } from "@/context/ClipboardContext";
 
 export const useCanvasClipboard = (
   fabricRef: React.MutableRefObject<Canvas | null>
 ) => {
+  const { shouldUseInternalClipboard, isActiveBoard } = useClipboardSource(fabricRef);
+  
   const {
     clipboardDataRef,
     handleCanvasClick,
@@ -30,14 +33,6 @@ export const useCanvasClipboard = (
 
   // Get paste progress tracking
   const { startPasteOperation } = usePasteProgress();
-
-  // Get clipboard source determination
-  const { shouldUseInternalClipboard, isActiveBoard } = useClipboardSource(
-    fabricRef,
-    lastCopyTimeRef.current,
-    lastExternalCopyTimeRef.current,
-    clipboardDataRef
-  );
 
   // Wrap the external paste function with additional handling
   const tryExternalPaste = useCallback(() => {
