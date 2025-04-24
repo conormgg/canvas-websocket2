@@ -1,12 +1,12 @@
 
 import { Canvas } from "fabric";
-import { RefObject } from "react";
+import { RefObject, MutableRefObject } from "react";
 import { toast } from "sonner";
 import { clipboardUtils } from "@/utils/clipboardUtils";
 
 export const useClipboardEvents = (
   fabricRef: RefObject<Canvas | null>,
-  clipboardDataRef: RefObject<any[] | null>,
+  clipboardDataRef: MutableRefObject<any[] | null>,
   setAwaitingPlacement: (value: boolean) => void
 ) => {
   const handleCopy = (e: KeyboardEvent) => {
