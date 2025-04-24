@@ -1,4 +1,3 @@
-
 import { Canvas, util, Point, FabricObject } from "fabric";
 import { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -15,72 +14,36 @@ export const useInternalClipboard = (
   const placementPointRef = useRef<{ x: number; y: number } | null>(null);
 
   /* ------------------------------------------------------------- */
-  /*  Sync with GLOBAL clipboard (so every board sees the copy)    */
+  /*  Sync with Global Clipboard (Ctrl+C / Ctrl+V)                  */
   /* ------------------------------------------------------------- */
   useEffect(() => {
-    const handleGlobalCopy = (e: Event) => {
-      const data = (e as CustomEvent).detail?.data;
-      if (data) clipboardDataRef.current = data;
+    const handleCopy = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "c" && fabricRef.current) {
+        const activeObjects = fabricRef.current.getActiveObjects();
+        if (!activeObjects.length) return;
+
+        clipboardDataRef.current = activeObjects.map((obj) =>
+          obj.toObject(["left", "top", "scaleX", "scaleY", "angle"])
+        );
+        toast.success("Object copied");
+      }
     };
-    window.addEventListener("whiteboard-global-clipboard", handleGlobalCopy);
-    return () =>
-      window.removeEventListener(
-        "whiteboard-global-clipboard",
-        handleGlobalCopy
-      );
-  }, []);
 
-  /* ------------------------------------------------------------- */
-  /*  Click chooses where the next paste will go                   */
-  /* ------------------------------------------------------------- */
-  const handleCanvasClick = (e: MouseEvent) => {
-    const canvas = fabricRef.current;
-    if (!canvas || canvas.isDrawingMode) return;
+    const handlePaste = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "v") {
+        e.preventDefault();
+        awaitingPlacementRef.current = true;
+        toast.info("Click to place pasted object");
+      }
+    };
 
-    const p = canvas.getPointer(e);
-    placementPointRef.current = { x: p.x, y: p.y };
-    setPastePosition(new Point(p.x, p.y));
-
-    if (awaitingPlacementRef.current) {
-      awaitingPlacementRef.current = false;
-      toast("Paste location set. Press Ctrl+V to paste.");
-    }
-  };
-
-  /* ------------------------------------------------------------- */
-  /*  Copy (Ctrl‑C)  &  Cut (Ctrl‑X) – broadcast globally          */
-  /* ------------------------------------------------------------- */
-  const handleCopy = (e: KeyboardEvent) => {
-    if (!e.ctrlKey || (e.key !== "c" && e.key !== "x") || e.repeat) return;
-    e.preventDefault();
-
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    const active = canvas.getActiveObjects();
-    if (!active.length) return;
-
-    clipboardDataRef.current = active.map((o) => o.toObject(["id"]));
-
-    /* 🌐 GLOBAL: share with every board */
-    window.dispatchEvent(
-      new CustomEvent("whiteboard-global-clipboard", {
-        detail: { data: clipboardDataRef.current },
-      })
-    );
-
-    const verb = e.key === "x" ? "Cut" : "Copied";
-    toast(`${verb} ${active.length > 1 ? active.length + " items" : "1 item"}`);
-
-    awaitingPlacementRef.current = true;
-    toast("Click on the destination board to set paste location");
-
-    if (e.key === "x") {
-      active.forEach((o) => canvas.remove(o));
-      canvas.discardActiveObject();
-      canvas.requestRenderAll();
-    }
-  };
+    document.addEventListener("keydown", handleCopy);
+    document.addEventListener("keydown", handlePaste);
+    return () => {
+      document.removeEventListener("keydown", handleCopy);
+      document.removeEventListener("keydown", handlePaste);
+    };
+  }, [fabricRef]);
 
   /* ------------------------------------------------------------- */
   /*  Paste objects keeping their relative offsets                 */
@@ -91,12 +54,13 @@ export const useInternalClipboard = (
     const canvas = fabricRef.current;
     const toEnliven = [...clipboardDataRef.current];
 
-    util.enlivenObjects(toEnliven, {
-      onComplete: (objects: FabricObject[]) => {
+    util
+      .enlivenObjects(toEnliven)
+      .then((objects: FabricObject[]) => {
         if (!objects.length) return;
 
         let minL = Infinity,
-            minT = Infinity;
+          minT = Infinity;
         objects.forEach((o: any) => {
           if (typeof o.left === "number" && o.left < minL) minL = o.left;
           if (typeof o.top === "number" && o.top < minT) minT = o.top;
@@ -105,42 +69,38 @@ export const useInternalClipboard = (
         if (!isFinite(minT)) minT = 0;
 
         objects.forEach((o: any) => {
-          if (typeof o.set !== "function") return;
-          const offL = typeof o.left === "number" ? o.left - minL : 0;
-          const offT = typeof o.top === "number" ? o.top - minT : 0;
-          o.set({ left: pos.x + offL, top: pos.y + offT, evented: true });
+          const dx = typeof o.left === "number" ? o.left - minL : 0;
+          const dy = typeof o.top === "number" ? o.top - minT : 0;
+          o.set({
+            left: pos.x + dx,
+            top: pos.y + dy,
+            evented: true,
+          });
           canvas.add(o);
           if (typeof o.setCoords === "function") o.setCoords();
         });
-
-        placementPointRef.current = null; // reset after successful paste
-        toast("Object(s) pasted successfully");
-        canvas.requestRenderAll();
-      }
-    });
+        canvas.renderAll();
+        toast.success("Pasted!");
+      })
+      .catch((err) => {
+        console.error("Paste failed", err);
+        toast.error("Could not paste object.");
+      });
   };
 
   /* ------------------------------------------------------------- */
-  /*  Helper for Ctrl‑V without pre‑click                          */
+  /*  Mouse-click placement handler                                */
   /* ------------------------------------------------------------- */
-  const calculatePastePosition = (l = 0, t = 0) => {
-    if (pastePosition) {
-      const p = { left: pastePosition.x, top: pastePosition.y };
-      setPastePosition(null);
-      return p;
-    }
-    return { left: l + 20, top: t + 20 };
+  const handleCanvasClick = (e: fabric.IEvent) => {
+    if (!awaitingPlacementRef.current) return;
+    awaitingPlacementRef.current = false;
+    const pointer = fabricRef.current?.getPointer(e.e);
+    if (pointer) pasteAtPosition(pointer);
   };
 
   return {
-    clipboardDataRef,
     pastePosition,
     setPastePosition,
     handleCanvasClick,
-    handleCopy,
-    calculatePastePosition,
-    awaitingPlacementRef,
-    placementPointRef,
-    pasteAtPosition,
   };
 };
