@@ -1,19 +1,24 @@
 
 import React from "react";
-import { useClipboardDebug } from "@/utils/clipboardDebug";
+import { useClipboardContext } from "@/context/ClipboardContext";
 import { Clipboard, Clock } from "lucide-react";
 import { Badge } from "./ui/badge";
 
 export const ClipboardDebugPanel: React.FC = () => {
-  const { clipboardItems, lastInternalCopyTime, lastExternalCopyTime } = useClipboardDebug();
-  const itemCount = clipboardItems?.length || 0;
+  const { 
+    clipboardData,
+    lastInternalCopyTime, 
+    lastExternalCopyTime 
+  } = useClipboardContext();
+  
+  const itemCount = clipboardData?.length || 0;
 
   const formatTime = (timestamp: number) => {
     if (!timestamp) return 'Never';
     return new Date(timestamp).toLocaleTimeString();
   };
 
-  if (!clipboardItems || clipboardItems.length === 0) {
+  if (!clipboardData || clipboardData.length === 0) {
     return (
       <div className="p-4 bg-gray-50 border rounded-lg flex flex-col gap-2">
         <div className="flex items-center gap-2">
@@ -48,7 +53,7 @@ export const ClipboardDebugPanel: React.FC = () => {
         <Clock className="w-4 h-4 inline mr-1" />
         Last external: {formatTime(lastExternalCopyTime)}
       </div>
-      {clipboardItems.map((item, index) => (
+      {clipboardData.map((item, index) => (
         <div key={index} className="mb-2 p-2 bg-white border rounded">
           <pre className="text-xs overflow-auto max-h-40">
             {JSON.stringify(item, null, 2)}

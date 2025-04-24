@@ -5,6 +5,7 @@ import { SimplePoint } from "@/hooks/clipboard/useImagePaste";
 export interface ClipboardContextType {
   // State
   clipboardData: any[] | null;
+  setClipboardData: (data: any[] | null) => void;
   lastInternalCopyTime: number;
   lastExternalCopyTime: number;
   activeBoard: string | null;

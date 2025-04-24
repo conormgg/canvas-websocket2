@@ -7,24 +7,24 @@ export const clipboardUtils = {
     clipboardDataRef: React.MutableRefObject<any[] | null>,
     lastInternalCopyTimeRef: React.MutableRefObject<number>
   ) => {
-    // Clear existing clipboard data first
-    clipboardDataRef.current = null;
-    
     const activeObjects = canvas.getActiveObjects();
     if (!activeObjects.length) {
       console.log("No active objects to copy");
       return false;
     }
 
-    clipboardDataRef.current = activeObjects.map((obj) => obj.toObject([
+    const newClipboardData = activeObjects.map((obj) => obj.toObject([
       'objectType', 'left', 'top', 'width', 'height', 'scaleX', 'scaleY',
       'angle', 'flipX', 'flipY', 'opacity', 'stroke', 'strokeWidth',
       'fill', 'paintFirst', 'globalCompositeOperation'
     ]));
     
-    // Update internal copy timestamp
+    // Update clipboard data
+    clipboardDataRef.current = newClipboardData;
+    
+    // Update timestamp
     lastInternalCopyTimeRef.current = Date.now();
-    console.log("Internal clipboard updated at:", lastInternalCopyTimeRef.current);
+    console.log("Internal clipboard updated with", newClipboardData.length, "objects at:", lastInternalCopyTimeRef.current);
     
     return true;
   },
@@ -58,6 +58,12 @@ export const clipboardUtils = {
   },
 
   enlivenAndPasteObjects: async (canvas: Canvas, objectsData: any[], position: Point | null) => {
+    if (!objectsData?.length) {
+      console.log("No objects to paste");
+      return;
+    }
+
+    console.log("Enlivening", objectsData.length, "objects for paste");
     const objects = await util.enlivenObjects(objectsData);
     
     objects.forEach((obj: any) => {

@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { Canvas, Point } from "fabric";
 import { SimplePoint } from "@/hooks/clipboard/useImagePaste";
 import { ClipboardContextType } from "@/types/clipboard";
@@ -10,6 +10,7 @@ import { useExternalClipboard } from "@/hooks/clipboard/useExternalClipboard";
 const ClipboardContext = createContext<ClipboardContextType | undefined>(undefined);
 
 export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [clipboardData, setClipboardData] = useState<any[] | null>(null);
   const {
     clipboardDataRef,
     selectedPositionRef,
@@ -21,6 +22,12 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     shouldUseInternalClipboard,
     isActiveBoard
   } = useClipboardOperations();
+
+  // Update clipboardDataRef when clipboardData changes
+  React.useEffect(() => {
+    clipboardDataRef.current = clipboardData;
+    console.log("Clipboard data updated:", clipboardData?.length || 0, "objects");
+  }, [clipboardData]);
 
   const {
     handleCanvasClick,
@@ -34,7 +41,6 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     isActiveBoard
   );
 
-  // We're using the fabricRef as null since we'll pass the canvas directly to the methods
   const fabricRef = React.useRef<Canvas | null>(null);
   const { 
     tryExternalPaste,
@@ -42,7 +48,8 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   } = useExternalClipboard(fabricRef);
 
   const contextValue: ClipboardContextType = {
-    clipboardData: clipboardDataRef.current,
+    clipboardData,
+    setClipboardData,
     lastInternalCopyTime: lastInternalCopyTimeRef.current,
     lastExternalCopyTime: lastExternalCopyTimeRef.current,
     activeBoard,
