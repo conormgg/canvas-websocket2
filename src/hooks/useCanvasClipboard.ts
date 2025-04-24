@@ -10,8 +10,6 @@ export const useCanvasClipboard = (
 ) => {
   const {
     clipboardDataRef,
-    pastePosition,
-    setPastePosition,
     handleCanvasClick,
     handleCopy,
     calculatePastePosition,

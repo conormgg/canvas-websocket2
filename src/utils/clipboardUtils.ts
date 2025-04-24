@@ -1,5 +1,5 @@
 
-import { FabricObject, Canvas } from "fabric";
+import { FabricObject, Canvas, ActiveSelection } from "fabric";
 import { toast } from "sonner";
 
 export const clipboardUtils = {
@@ -39,7 +39,7 @@ export const clipboardUtils = {
     if (objects.length === 1) {
       canvas.setActiveObject(objects[0]);
     } else {
-      const selection = new fabric.ActiveSelection(objects, { canvas });
+      const selection = new ActiveSelection(objects, { canvas });
       canvas.setActiveObject(selection);
     }
     
