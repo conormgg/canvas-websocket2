@@ -6,10 +6,10 @@ import { useClipboardContext } from '@/context/ClipboardContext';
 export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | null>) => {
   const { copySelectedObjects, pasteToCanvas, setActiveCanvas, activeCanvas } = useClipboardContext();
 
-  // Track the last clicked position for pasting
-  let lastClickPosition: Point | null = null;
-
   useEffect(() => {
+    // Track the last clicked position for pasting
+    let lastClickPosition: Point | null = null;
+
     const handleKeyboard = (e: KeyboardEvent) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
@@ -50,26 +50,52 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       const canvas = fabricRef.current;
       if (!canvas) return;
       
-      // Get the canvas element
-      const canvasEl = canvas.getElement();
-      
-      // Calculate the position relative to the canvas
-      const rect = canvasEl.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      
-      // Store this position for paste operations
-      lastClickPosition = new Point(
-        x / canvas.getZoom(), 
-        y / canvas.getZoom()
-      );
+      try {
+        // Check if canvas is properly initialized
+        if (!canvas.lowerCanvasEl || !canvas.upperCanvasEl) return;
+        
+        // Try to safely get the canvas element
+        let canvasEl: HTMLCanvasElement | null = null;
+        try {
+          canvasEl = canvas.getElement();
+        } catch (err) {
+          console.warn('Could not get canvas element:', err);
+          return;
+        }
+        
+        if (!canvasEl) return;
+        
+        // Calculate the position relative to the canvas
+        const rect = canvasEl.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Store this position for paste operations
+        lastClickPosition = new Point(
+          x / canvas.getZoom(), 
+          y / canvas.getZoom()
+        );
+      } catch (err) {
+        console.error('Error in canvas click handler:', err);
+      }
     };
 
-    // Add both event listeners
+    // Add keyboard event listener
     document.addEventListener('keydown', handleKeyboard);
     
-    // Get the canvas element and add a click listener
-    const canvasEl = fabricRef.current?.getElement();
+    // Try to safely get canvas element and add click listener if possible
+    let canvasEl: HTMLCanvasElement | null = null;
+    try {
+      // Check if canvas has required properties first
+      const canvas = fabricRef.current;
+      if (canvas && canvas.lowerCanvasEl && canvas.upperCanvasEl) {
+        canvasEl = canvas.getElement();
+      }
+    } catch (err) {
+      console.warn('Could not get canvas element during setup:', err);
+    }
+    
+    // Only add click listener if the canvas element exists
     if (canvasEl) {
       canvasEl.addEventListener('click', handleCanvasClick);
     }

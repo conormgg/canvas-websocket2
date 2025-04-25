@@ -54,28 +54,50 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
       const canvas = fabricRef.current;
       if (!canvas) return;
       
-      // Get the canvas element
-      const canvasEl = canvas.getElement();
-      if (!canvasEl) return;  // Guard against missing element
-      
-      // Calculate the position relative to the canvas
-      const rect = canvasEl.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      
-      // Store this position for paste operations
-      lastClickPosition = new Point(
-        x / canvas.getZoom(), 
-        y / canvas.getZoom()
-      );
+      try {
+        // Check if canvas is properly initialized
+        if (!canvas.lowerCanvasEl || !canvas.upperCanvasEl) return;
+        
+        // Try to safely get the canvas element
+        let canvasEl: HTMLCanvasElement | null = null;
+        try {
+          canvasEl = canvas.getElement();
+        } catch (err) {
+          console.warn('Could not get canvas element:', err);
+          return;
+        }
+        
+        if (!canvasEl) return;  // Guard against missing element
+        
+        // Calculate the position relative to the canvas
+        const rect = canvasEl.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Store this position for paste operations
+        lastClickPosition = new Point(
+          x / canvas.getZoom(), 
+          y / canvas.getZoom()
+        );
+      } catch (err) {
+        console.error('Error in canvas click handler:', err);
+      }
     };
 
-    // Get the canvas element safely
-    const canvas = fabricRef.current;
-    const canvasEl = canvas?.getElement();
-    
-    // Add both event listeners only if we have valid elements
+    // Add keyboard event listener
     document.addEventListener('keydown', handleKeyDown);
+    
+    // Try to safely get canvas element and add click listener if possible
+    let canvasEl: HTMLCanvasElement | null = null;
+    try {
+      // Check if canvas has required properties first
+      const canvas = fabricRef.current;
+      if (canvas && canvas.lowerCanvasEl && canvas.upperCanvasEl) {
+        canvasEl = canvas.getElement();
+      }
+    } catch (err) {
+      console.warn('Could not get canvas element during setup:', err);
+    }
     
     // Only add click listener if the canvas element exists
     if (canvasEl) {
