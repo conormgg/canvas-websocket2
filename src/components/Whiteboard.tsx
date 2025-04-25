@@ -152,7 +152,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       className={cn(
         "w-full h-full relative flex flex-col items-center justify-start",
         "transition-all duration-200",
-        isActive && "ring-2 ring-sidebar-ring ring-opacity-50 bg-sidebar/5 rounded-lg"
+        isActive && "ring-4 ring-sidebar-primary ring-opacity-70 bg-sidebar/5 rounded-lg shadow-xl"
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
@@ -183,6 +183,11 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         }}
         onClick={handleCanvasClick}
       />
+      {isActive && (
+        <div className="absolute top-0 left-0 p-2 bg-sidebar-primary text-white rounded-bl-lg font-medium text-xs">
+          Active Board
+        </div>
+      )}
     </div>
   );
 };
