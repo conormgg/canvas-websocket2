@@ -77,10 +77,8 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
         if (!canvasEl) return;
 
         const rect = canvasEl.getBoundingClientRect();
-        const pastePosition = new Point(
-          (touch.clientX - rect.left) / canvas.getZoom(),
-          (touch.clientY - rect.top) / canvas.getZoom()
-        );
+        const lastPosition = canvas.getPointer(touch);
+        const pastePosition = new Point(lastPosition.x, lastPosition.y);
 
         pasteToCanvas(canvas, pastePosition, boardId);
       } catch (err) {
@@ -88,7 +86,6 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
       }
     };
 
-    // Try to safely get canvas element and add event listeners
     let canvasEl: HTMLCanvasElement | null = null;
     try {
       const canvas = fabricRef.current;
@@ -115,3 +112,4 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
     };
   }, [fabricRef, copySelectedObjects, pasteToCanvas, setActiveCanvas, activeBoardId]);
 };
+

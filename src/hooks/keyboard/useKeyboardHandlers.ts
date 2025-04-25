@@ -8,8 +8,6 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
   const { copySelectedObjects, pasteToCanvas, activeBoardId } = useClipboardContext();
 
   useEffect(() => {
-    let lastInteractionPosition: Point | null = null;
-
     // Get board ID helper function
     const getBoardId = (): WhiteboardId | undefined => {
       try {
@@ -34,8 +32,9 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
           return;
         }
         
-        console.log(`Keyboard shortcut on board ${boardId}, active board is ${activeBoardId}`);
-
+        // Get the last click position from the canvas
+        const lastClickPosition = canvas.getPointer(canvas.lastPosX ?? 0, canvas.lastPosY ?? 0);
+        
         // Copy (Ctrl/Cmd + C)
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
           e.preventDefault();
@@ -53,7 +52,7 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
         // Paste (Ctrl/Cmd + V)
         if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
           e.preventDefault();
-          const pastePosition = lastInteractionPosition || new Point(canvas.width! / 2, canvas.height! / 2);
+          const pastePosition = new Point(lastClickPosition.x, lastClickPosition.y);
           pasteToCanvas(canvas, pastePosition, boardId);
           return;
         }
@@ -79,3 +78,4 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
     };
   }, [fabricRef, copySelectedObjects, pasteToCanvas, activeBoardId]);
 };
+
