@@ -4,6 +4,7 @@ import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps, WhiteboardId } from "@/types/canvas";
 import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
+import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 
 export const useCanvas = ({
   id,
@@ -23,12 +24,14 @@ export const useCanvas = ({
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    // handleKeyDown is no longer needed here since it's handled by useKeyboardShortcuts
   } = useCanvasMouseHandlers(
     fabricRef, 
     activeTool, 
     onZoomChange || (() => {})
   );
+
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts(fabricRef);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -85,15 +88,12 @@ export const useCanvas = ({
     };
 
     window.addEventListener("resize", handleResize);
-    // We don't need to add keydown listener here anymore
-    // It's handled by useKeyboardShortcuts
 
     updateCursorAndNotify(canvas, activeTool, inkThickness);
 
     return () => {
       canvas.dispose();
       window.removeEventListener("resize", handleResize);
-      // Remove the keydown listener reference
     };
   }, []);
 
