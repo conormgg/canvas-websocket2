@@ -15,14 +15,14 @@ export const ViewSelector = () => {
             className="w-full h-16 text-lg"
             variant="outline"
           >
-            Teacher View
+            Teacher's View
           </Button>
           <Button 
             onClick={() => navigate("/student")}
             className="w-full h-16 text-lg"
             variant="outline"
           >
-            Student View
+            Students' View
           </Button>
         </div>
       </div>
