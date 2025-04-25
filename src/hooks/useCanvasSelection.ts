@@ -74,7 +74,11 @@ export const useCanvasSelection = (
       if (obj === selectionRect) return false;
       
       // For paths and complex objects, ensure we check properly
-      if (obj.path || obj.paths) {
+      // Check for path-like objects without directly accessing undefined properties
+      const objectType = obj.get('type');
+      const isPathType = objectType === 'path' || objectType === 'group';
+      
+      if (isPathType) {
         // For path objects, check if their bounding box intersects
         const objBounds = obj.getBoundingRect();
         const rectBounds = selectionRect.getBoundingRect();
