@@ -1,4 +1,3 @@
-
 import { Canvas, Point } from 'fabric';
 import { useEffect } from 'react';
 import { useClipboardContext } from '@/context/ClipboardContext';
@@ -32,8 +31,27 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
           return;
         }
         
-        // Get the last click position from the canvas
-        const lastClickPosition = canvas.getPointer(canvas.lastPosX ?? 0, canvas.lastPosY ?? 0);
+        // Get the last pointer position or default to center
+        let lastClickPosition: Point;
+        
+        try {
+          // Try to get the pointer position from the canvas's internal state
+          if (canvas.getActiveObject()) {
+            // If there's an active object, use its center
+            const activeObj = canvas.getActiveObject();
+            lastClickPosition = new Point(
+              activeObj.left! + (activeObj.width! * activeObj.scaleX!) / 2,
+              activeObj.top! + (activeObj.height! * activeObj.scaleY!) / 2
+            );
+          } else {
+            // Otherwise use the center of the canvas
+            lastClickPosition = new Point(canvas.width! / 2, canvas.height! / 2);
+          }
+        } catch (err) {
+          // Fallback to canvas center if we can't get a valid position
+          console.warn('Using fallback position for paste:', err);
+          lastClickPosition = new Point(canvas.width! / 2, canvas.height! / 2);
+        }
         
         // Copy (Ctrl/Cmd + C)
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
@@ -52,8 +70,7 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
         // Paste (Ctrl/Cmd + V)
         if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
           e.preventDefault();
-          const pastePosition = new Point(lastClickPosition.x, lastClickPosition.y);
-          pasteToCanvas(canvas, pastePosition, boardId);
+          pasteToCanvas(canvas, lastClickPosition, boardId);
           return;
         }
 
@@ -78,4 +95,3 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
     };
   }, [fabricRef, copySelectedObjects, pasteToCanvas, activeBoardId]);
 };
-

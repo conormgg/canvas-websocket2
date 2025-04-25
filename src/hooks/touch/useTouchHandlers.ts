@@ -77,8 +77,11 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
         if (!canvasEl) return;
 
         const rect = canvasEl.getBoundingClientRect();
-        const lastPosition = canvas.getPointer(touch);
-        const pastePosition = new Point(lastPosition.x, lastPosition.y);
+        // Calculate the position manually instead of using canvas.getPointer
+        const pastePosition = new Point(
+          (touch.clientX - rect.left) / canvas.getZoom(),
+          (touch.clientY - rect.top) / canvas.getZoom()
+        );
 
         pasteToCanvas(canvas, pastePosition, boardId);
       } catch (err) {
@@ -112,4 +115,3 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
     };
   }, [fabricRef, copySelectedObjects, pasteToCanvas, setActiveCanvas, activeBoardId]);
 };
-
