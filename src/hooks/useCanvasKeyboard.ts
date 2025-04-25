@@ -6,10 +6,13 @@ import { useClipboardContext } from '@/context/ClipboardContext';
 export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
   const { copySelectedObjects, pasteToCanvas, setActiveCanvas } = useClipboardContext();
   
-  // Track the last clicked position for pasting
-  let lastClickPosition: Point | null = null;
-  
   useEffect(() => {
+    // Track the last clicked position for pasting
+    let lastClickPosition: Point | null = null;
+
+    // Only set up event handlers if the canvas reference exists
+    if (!fabricRef.current) return;
+    
     const handleKeyDown = (e: KeyboardEvent) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
@@ -28,7 +31,8 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         e.preventDefault();
         // For keyboard events, paste to the last clicked position or center if not available
-        const pastePosition = lastClickPosition || new Point(canvas.width! / 2, canvas.height! / 2);
+        const pastePosition = lastClickPosition || 
+          new Point(canvas.width! / 2, canvas.height! / 2);
         pasteToCanvas(canvas, pastePosition);
         return;
       }
@@ -52,6 +56,7 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
       
       // Get the canvas element
       const canvasEl = canvas.getElement();
+      if (!canvasEl) return;  // Guard against missing element
       
       // Calculate the position relative to the canvas
       const rect = canvasEl.getBoundingClientRect();
@@ -65,11 +70,14 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
       );
     };
 
-    // Add both event listeners
+    // Get the canvas element safely
+    const canvas = fabricRef.current;
+    const canvasEl = canvas?.getElement();
+    
+    // Add both event listeners only if we have valid elements
     document.addEventListener('keydown', handleKeyDown);
     
-    // Get the canvas element and add a click listener
-    const canvasEl = fabricRef.current?.getElement();
+    // Only add click listener if the canvas element exists
     if (canvasEl) {
       canvasEl.addEventListener('click', handleCanvasClick);
     }
