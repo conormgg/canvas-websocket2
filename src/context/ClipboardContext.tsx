@@ -1,13 +1,16 @@
-
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { Canvas, Point, util, ActiveSelection, Image } from "fabric";
 import { ClipboardContextType } from "@/types/clipboard";
 import { toast } from "sonner";
+import { ClipboardSelector } from "@/components/ClipboardSelector";
 
 const ClipboardContext = createContext<ClipboardContextType | undefined>(undefined);
 
 export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeCanvas, setActiveCanvas] = useState<Canvas | null>(null);
+  const [internalClipboardData, setInternalClipboardData] = useState<any[] | null>(null);
+  const [showSelector, setShowSelector] = useState(false);
+  const [pendingPastePosition, setPendingPastePosition] = useState<Point | null>(null);
 
   /**
    * Copy selected objects from canvas to system clipboard
@@ -18,6 +21,9 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       toast.error("No objects selected to copy");
       return;
     }
+    
+    // Store in internal clipboard
+    setInternalClipboardData(activeObjects.map(obj => obj.toObject()));
     
     // Create a temporary canvas to render the selection
     const tempCanvas = document.createElement('canvas');
@@ -56,7 +62,7 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       tempFabricCanvas.add(cloned);
       tempFabricCanvas.renderAll();
       
-      // Copy to clipboard
+      // Copy to system clipboard
       tempCanvas.toBlob((blob) => {
         if (!blob) {
           toast.error("Failed to convert selection to image");
@@ -86,27 +92,58 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, []);
 
-  /**
-   * Paste content from system clipboard to canvas
-   */
-  const pasteToCanvas = useCallback(async (canvas: Canvas, position: Point) => {
-    if (!canvas) {
-      toast.error("No canvas selected for paste operation");
-      return;
-    }
+  const handleInternalPaste = useCallback(() => {
+    if (!activeCanvas || !internalClipboardData || !pendingPastePosition) return;
+    
+    util.enlivenObjects(internalClipboardData)
+      .then((objects) => {
+        if (!objects.length) return;
 
+        // Calculate offsets and add objects
+        let minL = Infinity, minT = Infinity;
+        objects.forEach((o: any) => {
+          if (typeof o.left === "number" && o.left < minL) minL = o.left;
+          if (typeof o.top === "number" && o.top < minT) minT = o.top;
+        });
+        if (!isFinite(minL)) minL = 0;
+        if (!isFinite(minT)) minT = 0;
+
+        objects.forEach((o: any) => {
+          const dx = typeof o.left === "number" ? o.left - minL : 0;
+          const dy = typeof o.top === "number" ? o.top - minT : 0;
+          o.set({
+            left: pendingPastePosition.x + dx,
+            top: pendingPastePosition.y + dy,
+            evented: true,
+          });
+          activeCanvas.add(o);
+          if (typeof o.setCoords === "function") o.setCoords();
+        });
+        activeCanvas.renderAll();
+        toast.success("Pasted from canvas clipboard!");
+      })
+      .catch((err) => {
+        console.error("Internal paste failed", err);
+        toast.error("Could not paste objects");
+      });
+    
+    setShowSelector(false);
+    setPendingPastePosition(null);
+  }, [activeCanvas, internalClipboardData, pendingPastePosition]);
+
+  const handleSystemPaste = useCallback(async () => {
+    if (!activeCanvas || !pendingPastePosition) return;
+    
     try {
-      // Try to read clipboard items
       const clipboardItems = await navigator.clipboard.read();
-      
-      // Look for image content
       let imageFound = false;
+      
       for (const clipboardItem of clipboardItems) {
         for (const type of clipboardItem.types) {
           if (type.startsWith("image/")) {
             imageFound = true;
             const blob = await clipboardItem.getType(type);
-            await pasteImageBlobToCanvas(canvas, blob, position);
+            await pasteImageBlobToCanvas(activeCanvas, blob, pendingPastePosition);
             break;
           }
         }
@@ -114,16 +151,24 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       
       if (!imageFound) {
-        toast.error("No image content found in clipboard");
+        toast.error("No image content found in system clipboard");
       }
     } catch (err) {
-      console.error("Paste error:", err);
+      console.error("System paste error:", err);
       if (err instanceof Error && err.name !== 'NotAllowedError') {
-        toast.error(`Paste failed: ${err.message}`);
+        toast.error(`System paste failed: ${err.message}`);
       } else {
-        toast.error("Clipboard access denied. Please allow clipboard permissions.");
+        toast.error("System clipboard access denied");
       }
     }
+    
+    setShowSelector(false);
+    setPendingPastePosition(null);
+  }, [activeCanvas, pendingPastePosition]);
+
+  const pasteToCanvas = useCallback(async (canvas: Canvas, position: Point) => {
+    setPendingPastePosition(position);
+    setShowSelector(true);
   }, []);
   
   /**
@@ -176,6 +221,16 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   return (
     <ClipboardContext.Provider value={contextValue}>
       {children}
+      <ClipboardSelector
+        isOpen={showSelector}
+        onClose={() => {
+          setShowSelector(false);
+          setPendingPastePosition(null);
+        }}
+        onInternalPaste={handleInternalPaste}
+        onSystemPaste={handleSystemPaste}
+        hasInternalClipboard={!!internalClipboardData}
+      />
     </ClipboardContext.Provider>
   );
 };
