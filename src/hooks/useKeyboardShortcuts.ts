@@ -5,7 +5,7 @@ import { useClipboardContext } from '@/context/ClipboardContext';
 import { WhiteboardId } from '@/types/canvas';
 
 export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | null>) => {
-  const { copySelectedObjects, pasteToCanvas, setActiveCanvas } = useClipboardContext();
+  const { copySelectedObjects, pasteToCanvas, setActiveCanvas, activeBoardId } = useClipboardContext();
 
   useEffect(() => {
     // Track the last interaction position for pasting
@@ -32,9 +32,15 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       if (!canvas) return;
 
       try {
-        // Get board ID and update active canvas
+        // Get board ID
         const boardId = getBoardId();
-        setActiveCanvas(canvas, boardId);
+        
+        // Only process keyboard shortcuts if this is the active board
+        if (boardId !== activeBoardId) {
+          return;
+        }
+        
+        console.log(`Keyboard shortcut on board ${boardId}, active board is ${activeBoardId}`);
 
         // Copy (Ctrl/Cmd + C)
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
@@ -82,6 +88,13 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       const canvas = fabricRef.current;
       if (!canvas) return;
 
+      // Get board ID
+      const boardId = getBoardId();
+      // Only process if this is the active board
+      if (boardId !== activeBoardId) {
+        return;
+      }
+
       // Start long press timer
       longPressTimeout = setTimeout(() => {
         const touch = e.touches[0];
@@ -96,9 +109,6 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
             (touch.clientX - rect.left) / canvas.getZoom(),
             (touch.clientY - rect.top) / canvas.getZoom()
           );
-
-          const boardId = canvasEl.dataset?.boardId as WhiteboardId | undefined;
-          setActiveCanvas(canvas, boardId);
 
           const activeObjects = canvas.getActiveObjects();
           if (activeObjects.length > 0) {
@@ -118,6 +128,13 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       const canvas = fabricRef.current;
       if (!canvas) return;
 
+      // Get board ID
+      const boardId = getBoardId();
+      // Only process if this is the active board
+      if (boardId !== activeBoardId) {
+        return;
+      }
+
       const touch = e.touches[0];
       if (!touch) return;
 
@@ -131,7 +148,6 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
           (touch.clientY - rect.top) / canvas.getZoom()
         );
 
-        const boardId = canvasEl.dataset?.boardId as WhiteboardId | undefined;
         pasteToCanvas(canvas, pastePosition, boardId);
       } catch (err) {
         console.error('Error in double tap handler:', err);
@@ -208,5 +224,5 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       }
       clearTimeout(longPressTimeout);
     };
-  }, [fabricRef, copySelectedObjects, pasteToCanvas, setActiveCanvas]);
+  }, [fabricRef, copySelectedObjects, pasteToCanvas, setActiveCanvas, activeBoardId]);
 };

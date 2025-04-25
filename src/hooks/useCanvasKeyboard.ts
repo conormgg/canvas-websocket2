@@ -5,7 +5,7 @@ import { useClipboardContext } from '@/context/ClipboardContext';
 import { WhiteboardId } from "@/types/canvas";
 
 export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
-  const { copySelectedObjects, pasteToCanvas, setActiveCanvas } = useClipboardContext();
+  const { copySelectedObjects, pasteToCanvas, setActiveCanvas, activeBoardId } = useClipboardContext();
   
   useEffect(() => {
     // Track the last clicked position for pasting
@@ -35,8 +35,13 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
         // Get board ID from canvas element
         const boardId = getBoardId();
         
-        // Update active canvas on any keyboard interaction
-        setActiveCanvas(canvas, boardId);
+        // Only process keyboard shortcuts if this is the active board
+        // This prevents all boards from responding to the same shortcut
+        if (boardId !== activeBoardId) {
+          return;
+        }
+        
+        console.log(`Keyboard event on board ${boardId}, active board is ${activeBoardId}`);
         
         // Copy (Ctrl/Cmd + C)
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
@@ -149,7 +154,7 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
         canvasEl.removeEventListener('click', handleCanvasClick);
       }
     };
-  }, [fabricRef, copySelectedObjects, pasteToCanvas, setActiveCanvas]);
+  }, [fabricRef, copySelectedObjects, pasteToCanvas, setActiveCanvas, activeBoardId]);
 
   return {};
 };
