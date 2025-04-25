@@ -79,11 +79,14 @@ export const pasteImageBlobToCanvas = (canvas: Canvas, blob: Blob, position: Poi
       }
       
       Image.fromURL(url).then((fabricImage) => {
+        // Ensure the image is selectable and positioned correctly
         fabricImage.set({
           left: position.x - ((fabricImage.width || 0) * (fabricImage.scaleX || 0.5)) / 2,
           top: position.y - ((fabricImage.height || 0) * (fabricImage.scaleY || 0.5)) / 2,
           scaleX: 0.5,
           scaleY: 0.5,
+          selectable: true,
+          evented: true,
         });
         
         canvas.add(fabricImage);

@@ -10,6 +10,7 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
   useEffect(() => {
     let longPressTimeout: NodeJS.Timeout;
     const LONG_PRESS_DURATION = 500;
+    let lastTouchPosition: Point | null = null;
 
     const getBoardId = (): WhiteboardId | undefined => {
       try {
@@ -23,6 +24,26 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
       }
     };
 
+    // Track touch position
+    const updateTouchPosition = (touch: Touch) => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+
+      try {
+        const canvasEl = canvas.getElement();
+        if (!canvasEl) return;
+
+        const rect = canvasEl.getBoundingClientRect();
+        lastTouchPosition = new Point(
+          (touch.clientX - rect.left) / canvas.getZoom(),
+          (touch.clientY - rect.top) / canvas.getZoom()
+        );
+        console.log('Updated last touch position:', lastTouchPosition);
+      } catch (err) {
+        console.error('Error updating touch position:', err);
+      }
+    };
+
     const handleTouchStart = (e: TouchEvent) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
@@ -32,20 +53,15 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
         return;
       }
 
+      const touch = e.touches[0];
+      if (touch) {
+        updateTouchPosition(touch);
+      }
+
       longPressTimeout = setTimeout(() => {
-        const touch = e.touches[0];
         if (!touch) return;
 
         try {
-          const canvasEl = canvas.getElement();
-          if (!canvasEl) return;
-
-          const rect = canvasEl.getBoundingClientRect();
-          const position = new Point(
-            (touch.clientX - rect.left) / canvas.getZoom(),
-            (touch.clientY - rect.top) / canvas.getZoom()
-          );
-
           const activeObjects = canvas.getActiveObjects();
           if (activeObjects.length > 0) {
             copySelectedObjects(canvas);
@@ -73,17 +89,12 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
       if (!touch) return;
 
       try {
-        const canvasEl = canvas.getElement();
-        if (!canvasEl) return;
-
-        const rect = canvasEl.getBoundingClientRect();
-        // Calculate the position manually instead of using canvas.getPointer
-        const pastePosition = new Point(
-          (touch.clientX - rect.left) / canvas.getZoom(),
-          (touch.clientY - rect.top) / canvas.getZoom()
-        );
-
-        pasteToCanvas(canvas, pastePosition, boardId);
+        updateTouchPosition(touch);
+        
+        // Use the last touch position for paste
+        if (lastTouchPosition) {
+          pasteToCanvas(canvas, lastTouchPosition, boardId);
+        }
       } catch (err) {
         console.error('Error in double tap handler:', err);
       }
@@ -101,6 +112,9 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
 
     if (canvasEl) {
       canvasEl.addEventListener('touchstart', handleTouchStart);
+      canvasEl.addEventListener('touchmove', (e) => {
+        if (e.touches[0]) updateTouchPosition(e.touches[0]);
+      });
       canvasEl.addEventListener('touchend', handleTouchEnd);
       canvasEl.addEventListener('touchstart', handleDoubleTap);
     }
@@ -108,6 +122,9 @@ export const useTouchHandlers = (fabricRef: React.MutableRefObject<Canvas | null
     return () => {
       if (canvasEl) {
         canvasEl.removeEventListener('touchstart', handleTouchStart);
+        canvasEl.removeEventListener('touchmove', (e) => {
+          if (e.touches[0]) updateTouchPosition(e.touches[0]);
+        });
         canvasEl.removeEventListener('touchend', handleTouchEnd);
         canvasEl.removeEventListener('touchstart', handleDoubleTap);
       }

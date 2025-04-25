@@ -7,6 +7,9 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
   const { copySelectedObjects, pasteToCanvas, activeBoardId } = useClipboardContext();
 
   useEffect(() => {
+    // Track the last clicked position
+    let lastClickPosition: Point | null = null;
+    
     // Get board ID helper function
     const getBoardId = (): WhiteboardId | undefined => {
       try {
@@ -21,6 +24,26 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
       }
     };
 
+    // Add click listener to track last click position
+    const handleCanvasClick = (e: MouseEvent) => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+      
+      try {
+        if (!canvas.upperCanvasEl) return;
+        
+        // Calculate click position relative to canvas
+        const rect = canvas.upperCanvasEl.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / canvas.getZoom();
+        const y = (e.clientY - rect.top) / canvas.getZoom();
+        
+        lastClickPosition = new Point(x, y);
+        console.log('Updated last click position:', lastClickPosition);
+      } catch (err) {
+        console.error('Error updating click position:', err);
+      }
+    };
+
     const handleKeyboard = (e: KeyboardEvent) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
@@ -31,26 +54,28 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
           return;
         }
         
-        // Get the last pointer position or default to center
-        let lastClickPosition: Point;
-        
-        try {
-          // Try to get the pointer position from the canvas's internal state
-          if (canvas.getActiveObject()) {
+        // Determine paste position: use last clicked position or fall back
+        let pastePosition: Point;
+        if (lastClickPosition) {
+          pastePosition = lastClickPosition;
+        } else {
+          try {
             // If there's an active object, use its center
-            const activeObj = canvas.getActiveObject();
-            lastClickPosition = new Point(
-              activeObj.left! + (activeObj.width! * activeObj.scaleX!) / 2,
-              activeObj.top! + (activeObj.height! * activeObj.scaleY!) / 2
-            );
-          } else {
-            // Otherwise use the center of the canvas
-            lastClickPosition = new Point(canvas.width! / 2, canvas.height! / 2);
+            if (canvas.getActiveObject()) {
+              const activeObj = canvas.getActiveObject();
+              pastePosition = new Point(
+                activeObj.left! + (activeObj.width! * activeObj.scaleX!) / 2,
+                activeObj.top! + (activeObj.height! * activeObj.scaleY!) / 2
+              );
+            } else {
+              // Otherwise use the center of the canvas
+              pastePosition = new Point(canvas.width! / 2, canvas.height! / 2);
+            }
+          } catch (err) {
+            // Fallback to canvas center
+            console.warn('Using fallback position for paste:', err);
+            pastePosition = new Point(canvas.width! / 2, canvas.height! / 2);
           }
-        } catch (err) {
-          // Fallback to canvas center if we can't get a valid position
-          console.warn('Using fallback position for paste:', err);
-          lastClickPosition = new Point(canvas.width! / 2, canvas.height! / 2);
         }
         
         // Copy (Ctrl/Cmd + C)
@@ -70,7 +95,8 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
         // Paste (Ctrl/Cmd + V)
         if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
           e.preventDefault();
-          pasteToCanvas(canvas, lastClickPosition, boardId);
+          console.log("Pasting at position:", pastePosition);
+          pasteToCanvas(canvas, pastePosition, boardId);
           return;
         }
 
@@ -89,9 +115,30 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
       }
     };
 
+    // Add event listeners
     document.addEventListener('keydown', handleKeyboard);
+    
+    try {
+      // Try to safely get canvas element and add click listener
+      const canvas = fabricRef.current;
+      if (canvas && canvas.upperCanvasEl) {
+        canvas.upperCanvasEl.addEventListener('click', handleCanvasClick);
+      }
+    } catch (err) {
+      console.warn('Could not set up click listener:', err);
+    }
+
     return () => {
       document.removeEventListener('keydown', handleKeyboard);
+      
+      try {
+        const canvas = fabricRef.current;
+        if (canvas && canvas.upperCanvasEl) {
+          canvas.upperCanvasEl.removeEventListener('click', handleCanvasClick);
+        }
+      } catch (err) {
+        console.warn('Could not clean up click listener:', err);
+      }
     };
   }, [fabricRef, copySelectedObjects, pasteToCanvas, activeBoardId]);
 };

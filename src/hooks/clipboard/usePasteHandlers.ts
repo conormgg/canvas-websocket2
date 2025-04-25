@@ -36,11 +36,15 @@ export const useInternalPasteHandler = (canvas: Canvas | null, internalClipboard
       objects.forEach((o: any) => {
         const dx = typeof o.left === "number" ? o.left - minL : 0;
         const dy = typeof o.top === "number" ? o.top - minT : 0;
+        
+        // Explicitly set selectable and evented to true
         o.set({
           left: position.x + dx,
           top: position.y + dy,
+          selectable: true,
           evented: true,
         });
+        
         canvas.add(o);
         if (typeof o.setCoords === "function") o.setCoords();
       });
