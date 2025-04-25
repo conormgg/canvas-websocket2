@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { Canvas, Point } from 'fabric';
 import { useClipboardContext } from '@/context/ClipboardContext';
@@ -15,34 +16,48 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      // Update active canvas reference
-      setActiveCanvas(canvas);
+      try {
+        // Update active canvas reference
+        setActiveCanvas(canvas);
 
-      // Copy (Ctrl/Cmd + C)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-        e.preventDefault();
-        copySelectedObjects(canvas);
-        return;
-      }
-
-      // Paste (Ctrl/Cmd + V)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-        e.preventDefault();
-        // For keyboard events, paste to the last clicked position or center if not available
-        const pastePosition = lastInteractionPosition || new Point(canvas.width! / 2, canvas.height! / 2);
-        pasteToCanvas(canvas, pastePosition);
-        return;
-      }
-
-      // Delete/Backspace
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        const activeObjects = canvas.getActiveObjects();
-        if (activeObjects.length > 0) {
+        // Copy (Ctrl/Cmd + C)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
           e.preventDefault();
-          activeObjects.forEach(obj => canvas.remove(obj));
-          canvas.discardActiveObject();
-          canvas.requestRenderAll();
+          
+          // Check if there are actually selected objects
+          const activeObjects = canvas.getActiveObjects();
+          console.log("Copy attempt with selected objects:", activeObjects.length);
+          
+          // Only copy if there are selected objects
+          if (activeObjects && activeObjects.length > 0) {
+            copySelectedObjects(canvas);
+          } else {
+            console.log("No objects selected for copy");
+          }
+          return;
         }
+
+        // Paste (Ctrl/Cmd + V)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+          e.preventDefault();
+          // For keyboard events, paste to the last clicked position or center if not available
+          const pastePosition = lastInteractionPosition || new Point(canvas.width! / 2, canvas.height! / 2);
+          pasteToCanvas(canvas, pastePosition);
+          return;
+        }
+
+        // Delete/Backspace
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          const activeObjects = canvas.getActiveObjects();
+          if (activeObjects.length > 0) {
+            e.preventDefault();
+            activeObjects.forEach(obj => canvas.remove(obj));
+            canvas.discardActiveObject();
+            canvas.requestRenderAll();
+          }
+        }
+      } catch (err) {
+        console.error("Error in keyboard handler:", err);
       }
     };
 

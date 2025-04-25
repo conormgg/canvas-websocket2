@@ -50,6 +50,26 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     }
   };
 
+  // Ensure drawn paths are selectable when switching to select mode
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    
+    // When switching to select mode, make sure selection is enabled
+    if (activeTool === "select") {
+      console.log("Enabling selection mode");
+      canvas.selection = true;
+      
+      // Make all objects selectable
+      canvas.getObjects().forEach(obj => {
+        obj.selectable = true;
+        obj.evented = true;
+      });
+      
+      canvas.renderAll();
+    }
+  }, [activeTool, fabricRef]);
+
   // Update active state when global active board changes
   useEffect(() => {
     const checkActiveStatus = () => {
@@ -100,7 +120,12 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       util
         .enlivenObjects([e.detail.object])
         .then((objects: FabricObject[]) => {
-          objects.forEach((obj) => canvas.add(obj));
+          objects.forEach((obj) => {
+            // Make sure objects are selectable when added
+            obj.selectable = true;
+            obj.evented = true;
+            canvas.add(obj);
+          });
           canvas.renderAll();
         })
         .catch((err) => {

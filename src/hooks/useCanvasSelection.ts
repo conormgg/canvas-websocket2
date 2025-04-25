@@ -14,6 +14,12 @@ export const useCanvasSelection = (
     const canvas = fabricRef.current;
     if (!canvas || activeTool !== "select") return;
 
+    // Make sure all objects are selectable
+    canvas.getObjects().forEach(obj => {
+      obj.selectable = true;
+      obj.evented = true;
+    });
+
     const pointer = canvas.getPointer(e);
     startPointRef.current = { x: pointer.x, y: pointer.y };
     
@@ -63,12 +69,30 @@ export const useCanvasSelection = (
 
     const selectionRect = selectionRectRef.current;
     
+    // Find all objects that intersect with our selection rectangle
     const objects = canvas.getObjects().filter(obj => {
       if (obj === selectionRect) return false;
+      
+      // For paths and complex objects, ensure we check properly
+      if (obj.path || obj.paths) {
+        // For path objects, check if their bounding box intersects
+        const objBounds = obj.getBoundingRect();
+        const rectBounds = selectionRect.getBoundingRect();
+        
+        return (
+          objBounds.left < rectBounds.left + rectBounds.width &&
+          objBounds.left + objBounds.width > rectBounds.left &&
+          objBounds.top < rectBounds.top + rectBounds.height &&
+          objBounds.top + objBounds.height > rectBounds.top
+        );
+      }
+      
       return selectionRect.intersectsWithObject(obj);
     });
     
     if (objects.length > 0) {
+      console.log(`Selected ${objects.length} objects`);
+      
       if (objects.length === 1) {
         canvas.setActiveObject(objects[0]);
       } else {
