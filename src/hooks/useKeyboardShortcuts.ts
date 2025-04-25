@@ -1,14 +1,15 @@
-
 import { useEffect } from 'react';
 import { Canvas, Point } from 'fabric';
 import { useClipboardContext } from '@/context/ClipboardContext';
 
 export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | null>) => {
-  const { copySelectedObjects, pasteToCanvas, setActiveCanvas, activeCanvas } = useClipboardContext();
+  const { copySelectedObjects, pasteToCanvas, setActiveCanvas } = useClipboardContext();
 
   useEffect(() => {
-    // Track the last clicked position for pasting
-    let lastClickPosition: Point | null = null;
+    // Track the last interaction position for pasting
+    let lastInteractionPosition: Point | null = null;
+    let longPressTimeout: NodeJS.Timeout;
+    const LONG_PRESS_DURATION = 500; // 500ms for long press
 
     const handleKeyboard = (e: KeyboardEvent) => {
       const canvas = fabricRef.current;
@@ -28,7 +29,7 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         e.preventDefault();
         // For keyboard events, paste to the last clicked position or center if not available
-        const pastePosition = lastClickPosition || new Point(canvas.width! / 2, canvas.height! / 2);
+        const pastePosition = lastInteractionPosition || new Point(canvas.width! / 2, canvas.height! / 2);
         pasteToCanvas(canvas, pastePosition);
         return;
       }
@@ -45,16 +46,71 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       }
     };
 
-    // Add a click listener to track where the user last clicked
-    const handleCanvasClick = (e: MouseEvent) => {
+    // Handle touch events for mobile
+    const handleTouchStart = (e: TouchEvent) => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+
+      // Start long press timer
+      longPressTimeout = setTimeout(() => {
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        try {
+          const canvasEl = canvas.getElement();
+          if (!canvasEl) return;
+
+          const rect = canvasEl.getBoundingClientRect();
+          lastInteractionPosition = new Point(
+            (touch.clientX - rect.left) / canvas.getZoom(),
+            (touch.clientY - rect.top) / canvas.getZoom()
+          );
+
+          const activeObjects = canvas.getActiveObjects();
+          if (activeObjects.length > 0) {
+            copySelectedObjects(canvas);
+          }
+        } catch (err) {
+          console.error('Error in touch handler:', err);
+        }
+      }, LONG_PRESS_DURATION);
+    };
+
+    const handleTouchEnd = () => {
+      clearTimeout(longPressTimeout);
+    };
+
+    const handleDoubleTap = (e: TouchEvent) => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      try {
+        const canvasEl = canvas.getElement();
+        if (!canvasEl) return;
+
+        const rect = canvasEl.getBoundingClientRect();
+        const pastePosition = new Point(
+          (touch.clientX - rect.left) / canvas.getZoom(),
+          (touch.clientY - rect.top) / canvas.getZoom()
+        );
+
+        pasteToCanvas(canvas, pastePosition);
+      } catch (err) {
+        console.error('Error in double tap handler:', err);
+      }
+    };
+
+    // Track clicks/touches for paste position
+    const handleInteraction = (e: MouseEvent | TouchEvent) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
       
       try {
-        // Check if canvas is properly initialized
         if (!canvas.lowerCanvasEl || !canvas.upperCanvasEl) return;
         
-        // Try to safely get the canvas element
         let canvasEl: HTMLCanvasElement | null = null;
         try {
           canvasEl = canvas.getElement();
@@ -65,28 +121,25 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
         
         if (!canvasEl) return;
         
-        // Calculate the position relative to the canvas
         const rect = canvasEl.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const clientX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX;
+        const clientY = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY;
         
-        // Store this position for paste operations
-        lastClickPosition = new Point(
-          x / canvas.getZoom(), 
-          y / canvas.getZoom()
+        lastInteractionPosition = new Point(
+          (clientX - rect.left) / canvas.getZoom(),
+          (clientY - rect.top) / canvas.getZoom()
         );
       } catch (err) {
-        console.error('Error in canvas click handler:', err);
+        console.error('Error in interaction handler:', err);
       }
     };
 
     // Add keyboard event listener
     document.addEventListener('keydown', handleKeyboard);
     
-    // Try to safely get canvas element and add click listener if possible
+    // Try to safely get canvas element and add event listeners
     let canvasEl: HTMLCanvasElement | null = null;
     try {
-      // Check if canvas has required properties first
       const canvas = fabricRef.current;
       if (canvas && canvas.lowerCanvasEl && canvas.upperCanvasEl) {
         canvasEl = canvas.getElement();
@@ -95,17 +148,24 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
       console.warn('Could not get canvas element during setup:', err);
     }
     
-    // Only add click listener if the canvas element exists
+    // Only add event listeners if canvas element exists
     if (canvasEl) {
-      canvasEl.addEventListener('click', handleCanvasClick);
+      canvasEl.addEventListener('click', handleInteraction as EventListener);
+      canvasEl.addEventListener('touchstart', handleTouchStart as EventListener);
+      canvasEl.addEventListener('touchend', handleTouchEnd as EventListener);
+      canvasEl.addEventListener('touchstart', handleDoubleTap as EventListener);
     }
 
     // Clean up
     return () => {
       document.removeEventListener('keydown', handleKeyboard);
       if (canvasEl) {
-        canvasEl.removeEventListener('click', handleCanvasClick);
+        canvasEl.removeEventListener('click', handleInteraction as EventListener);
+        canvasEl.removeEventListener('touchstart', handleTouchStart as EventListener);
+        canvasEl.removeEventListener('touchend', handleTouchEnd as EventListener);
+        canvasEl.removeEventListener('touchstart', handleDoubleTap as EventListener);
       }
+      clearTimeout(longPressTimeout);
     };
   }, [fabricRef, copySelectedObjects, pasteToCanvas, setActiveCanvas]);
 };
