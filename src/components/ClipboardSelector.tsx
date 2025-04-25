@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ImageOff, ClipboardPaste, ClipboardSignature } from "lucide-react";
@@ -29,6 +30,9 @@ export const ClipboardSelector = ({
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Choose Clipboard Source</DialogTitle>
+          <DialogDescription>
+            Select whether to paste from your canvas clipboard or your system clipboard.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4 py-4">
           <Button
