@@ -2,6 +2,7 @@
 import { Canvas, Point } from "fabric";
 import { useEffect } from 'react';
 import { useClipboardContext } from '@/context/ClipboardContext';
+import { WhiteboardId } from "@/types/canvas";
 
 export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | null>) => {
   const { copySelectedObjects, pasteToCanvas, setActiveCanvas } = useClipboardContext();
@@ -9,6 +10,19 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
   useEffect(() => {
     // Track the last clicked position for pasting
     let lastClickPosition: Point | null = null;
+    // Get the board ID from the canvas element if available
+    let getBoardId = (): WhiteboardId | undefined => {
+      try {
+        const canvas = fabricRef.current;
+        if (!canvas) return undefined;
+        
+        const element = canvas.getElement();
+        return element?.dataset?.boardId as WhiteboardId | undefined;
+      } catch (err) {
+        console.warn('Could not get board ID:', err);
+        return undefined;
+      }
+    };
 
     // Only set up event handlers if the canvas reference exists
     if (!fabricRef.current) return;
@@ -18,8 +32,11 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
       if (!canvas) return;
       
       try {
+        // Get board ID from canvas element
+        const boardId = getBoardId();
+        
         // Update active canvas on any keyboard interaction
-        setActiveCanvas(canvas);
+        setActiveCanvas(canvas, boardId);
         
         // Copy (Ctrl/Cmd + C)
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
@@ -44,7 +61,7 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
           // For keyboard events, paste to the last clicked position or center if not available
           const pastePosition = lastClickPosition || 
             new Point(canvas.width! / 2, canvas.height! / 2);
-          pasteToCanvas(canvas, pastePosition);
+          pasteToCanvas(canvas, pastePosition, boardId);
           return;
         }
 
@@ -93,6 +110,13 @@ export const useCanvasKeyboard = (fabricRef: React.MutableRefObject<Canvas | nul
           x / canvas.getZoom(), 
           y / canvas.getZoom()
         );
+        
+        // Get and update board ID
+        const boardId = canvasEl.dataset?.boardId as WhiteboardId | undefined;
+        if (boardId) {
+          console.log(`Canvas click on board: ${boardId}`);
+          setActiveCanvas(canvas, boardId);
+        }
       } catch (err) {
         console.error('Error in canvas click handler:', err);
       }

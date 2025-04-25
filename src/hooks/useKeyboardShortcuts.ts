@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { Canvas, Point } from 'fabric';
 import { useClipboardContext } from '@/context/ClipboardContext';
+import { WhiteboardId } from '@/types/canvas';
 
 export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | null>) => {
   const { copySelectedObjects, pasteToCanvas, setActiveCanvas } = useClipboardContext();
@@ -12,13 +13,28 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
     let longPressTimeout: NodeJS.Timeout;
     const LONG_PRESS_DURATION = 500; // 500ms for long press
 
+    // Get the board ID from the canvas element if available
+    let getBoardId = (): WhiteboardId | undefined => {
+      try {
+        const canvas = fabricRef.current;
+        if (!canvas) return undefined;
+        
+        const element = canvas.getElement();
+        return element?.dataset?.boardId as WhiteboardId | undefined;
+      } catch (err) {
+        console.warn('Could not get board ID:', err);
+        return undefined;
+      }
+    };
+
     const handleKeyboard = (e: KeyboardEvent) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
 
       try {
-        // Update active canvas reference
-        setActiveCanvas(canvas);
+        // Get board ID and update active canvas
+        const boardId = getBoardId();
+        setActiveCanvas(canvas, boardId);
 
         // Copy (Ctrl/Cmd + C)
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
@@ -42,7 +58,7 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
           e.preventDefault();
           // For keyboard events, paste to the last clicked position or center if not available
           const pastePosition = lastInteractionPosition || new Point(canvas.width! / 2, canvas.height! / 2);
-          pasteToCanvas(canvas, pastePosition);
+          pasteToCanvas(canvas, pastePosition, boardId);
           return;
         }
 
@@ -81,6 +97,9 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
             (touch.clientY - rect.top) / canvas.getZoom()
           );
 
+          const boardId = canvasEl.dataset?.boardId as WhiteboardId | undefined;
+          setActiveCanvas(canvas, boardId);
+
           const activeObjects = canvas.getActiveObjects();
           if (activeObjects.length > 0) {
             copySelectedObjects(canvas);
@@ -112,7 +131,8 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
           (touch.clientY - rect.top) / canvas.getZoom()
         );
 
-        pasteToCanvas(canvas, pastePosition);
+        const boardId = canvasEl.dataset?.boardId as WhiteboardId | undefined;
+        pasteToCanvas(canvas, pastePosition, boardId);
       } catch (err) {
         console.error('Error in double tap handler:', err);
       }
@@ -144,6 +164,12 @@ export const useKeyboardShortcuts = (fabricRef: React.MutableRefObject<Canvas | 
           (clientX - rect.left) / canvas.getZoom(),
           (clientY - rect.top) / canvas.getZoom()
         );
+        
+        // Update active canvas with board ID on interaction
+        const boardId = canvasEl.dataset?.boardId as WhiteboardId | undefined;
+        if (boardId) {
+          setActiveCanvas(canvas, boardId);
+        }
       } catch (err) {
         console.error('Error in interaction handler:', err);
       }

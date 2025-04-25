@@ -20,7 +20,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
   const [zoom, setZoom] = useState<number>(1);
   const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
-  const { setActiveCanvas } = useClipboardContext();
+  const { setActiveCanvas, activeBoardId } = useClipboardContext();
 
   const { canvasRef, fabricRef } = useCanvas({
     id,
@@ -44,11 +44,16 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     isActiveRef.current = true;
     setIsActive(true);
     
-    // Set this canvas as active in clipboard context
+    // Set this canvas as active in clipboard context, including the board ID
     if (fabricRef.current) {
-      setActiveCanvas(fabricRef.current);
+      setActiveCanvas(fabricRef.current, id);
     }
   };
+
+  // Check if this is the active board based on context
+  useEffect(() => {
+    setIsActive(activeBoardId === id);
+  }, [activeBoardId, id]);
 
   // Ensure drawn paths are selectable when switching to select mode
   useEffect(() => {
@@ -80,7 +85,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       
       // Update active canvas in clipboard context when active status changes
       if (isCurrentlyActive && fabricRef.current) {
-        setActiveCanvas(fabricRef.current);
+        setActiveCanvas(fabricRef.current, id);
       }
     };
 
@@ -172,7 +177,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
           isActiveRef.current = true;
           setIsActive(true);
           if (fabricRef.current) {
-            setActiveCanvas(fabricRef.current);
+            setActiveCanvas(fabricRef.current, id);
           }
           console.log(`Canvas ${id} focused and set as active`);
         }}

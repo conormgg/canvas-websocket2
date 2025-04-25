@@ -6,14 +6,25 @@ import { toast } from "sonner";
 import { ClipboardSelector } from "@/components/ClipboardSelector";
 import { copyToSystemClipboard } from "@/utils/clipboardUtils";
 import { useInternalPasteHandler, useSystemPasteHandler } from "@/hooks/clipboard/usePasteHandlers";
+import { WhiteboardId } from "@/types/canvas";
 
 const ClipboardContext = createContext<ClipboardContextType | undefined>(undefined);
 
 export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeCanvas, setActiveCanvas] = useState<Canvas | null>(null);
+  const [activeBoardId, setActiveBoardId] = useState<WhiteboardId | null>(null);
   const [internalClipboardData, setInternalClipboardData] = useState<any[] | null>(null);
   const [showSelector, setShowSelector] = useState(false);
   const [pendingPastePosition, setPendingPastePosition] = useState<Point | null>(null);
+
+  // Track both the canvas and its ID when setting active
+  const updateActiveCanvas = useCallback((canvas: Canvas | null, boardId?: WhiteboardId | null) => {
+    console.log(`Updating active canvas to boardId: ${boardId || 'unknown'}`);
+    setActiveCanvas(canvas);
+    if (boardId) {
+      setActiveBoardId(boardId);
+    }
+  }, []);
 
   const copySelectedObjects = useCallback((canvas: Canvas) => {
     const activeObjects = canvas.getActiveObjects();
@@ -39,18 +50,25 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const handleInternalPaste = useInternalPasteHandler(activeCanvas, internalClipboardData, pendingPastePosition);
   const handleSystemPaste = useSystemPasteHandler(activeCanvas, pendingPastePosition);
 
-  const pasteToCanvas = useCallback(async (canvas: Canvas, position: Point) => {
-    console.log("Paste requested at position:", position);
+  const pasteToCanvas = useCallback(async (canvas: Canvas, position: Point, boardId?: WhiteboardId) => {
+    console.log(`Paste requested at position: ${JSON.stringify(position)} for board: ${boardId || 'unknown'}`);
+    
+    // Update active canvas and board ID to ensure paste targets the correct board
     setActiveCanvas(canvas);
+    if (boardId) {
+      setActiveBoardId(boardId);
+    }
+    
     setPendingPastePosition(position);
     setShowSelector(true);
   }, []);
 
   const contextValue: ClipboardContextType = {
     activeCanvas,
+    activeBoardId,
     copySelectedObjects,
     pasteToCanvas,
-    setActiveCanvas
+    setActiveCanvas: updateActiveCanvas
   };
 
   return (
