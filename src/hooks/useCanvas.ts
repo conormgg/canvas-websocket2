@@ -1,10 +1,10 @@
-
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps, WhiteboardId } from "@/types/canvas";
 import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
+import { useClipboardContext } from "@/context/ClipboardContext";
 
 export const useCanvas = ({
   id,
@@ -17,6 +17,7 @@ export const useCanvas = ({
 }: UseCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
+  const { activeBoardId } = useClipboardContext();
 
   const { updateCursorAndNotify } = useCanvasTools();
   const {
@@ -30,13 +31,11 @@ export const useCanvas = ({
     onZoomChange || (() => {})
   );
 
-  // Initialize keyboard shortcuts
   useKeyboardShortcuts(fabricRef);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    // Set data attribute on canvas element to identify the board
     canvasRef.current.dataset.boardId = id;
 
     const canvas = new Canvas(canvasRef.current, {
@@ -48,7 +47,6 @@ export const useCanvas = ({
       selection: false,
     });
 
-    // Also set data attribute on fabric-created elements
     if (canvas.lowerCanvasEl) canvas.lowerCanvasEl.dataset.boardId = id;
     if (canvas.upperCanvasEl) canvas.upperCanvasEl.dataset.boardId = id;
 
@@ -58,7 +56,7 @@ export const useCanvas = ({
 
     if (onObjectAdded) {
       canvas.on("object:added", (e) => {
-        if (e.target) {
+        if (e.target && id === activeBoardId) {
           onObjectAdded(e.target);
         }
       });
@@ -97,7 +95,6 @@ export const useCanvas = ({
     };
   }, []);
 
-  // Update drawing mode, brush settings and cursor on tool/color changes
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;

@@ -1,29 +1,18 @@
-
-import { Canvas, Point, util } from "fabric";
+import { Canvas, util, Point, FabricObject } from "fabric";
+import { RefObject } from "react";
 import { toast } from "sonner";
-import { pasteImageBlobToCanvas } from "@/utils/clipboardUtils";
+import { ensureObjectsSelectable } from "@/utils/clipboardUtils";
 
 export const useInternalPasteHandler = (canvas: Canvas | null, internalClipboardData: any[] | null, position: Point | null) => {
   const handleInternalPaste = async () => {
     if (!canvas || !internalClipboardData || !position) {
-      console.log("Cannot paste: missing data", { 
-        hasCanvas: !!canvas, 
-        hasClipboardData: !!internalClipboardData, 
-        pastePosition: position 
-      });
       return;
     }
     
-    console.log("Pasting internal clipboard at position:", position);
-    
     try {
       const objects = await util.enlivenObjects(internalClipboardData);
-      if (!objects.length) {
-        console.log("No objects to paste");
-        return;
-      }
+      if (!objects.length) return;
 
-      // Calculate offsets and add objects
       let minL = Infinity, minT = Infinity;
       objects.forEach((o: any) => {
         if (typeof o.left === "number" && o.left < minL) minL = o.left;
@@ -37,7 +26,6 @@ export const useInternalPasteHandler = (canvas: Canvas | null, internalClipboard
         const dx = typeof o.left === "number" ? o.left - minL : 0;
         const dy = typeof o.top === "number" ? o.top - minT : 0;
         
-        // Explicitly set selectable and evented to true
         o.set({
           left: position.x + dx,
           top: position.y + dy,
@@ -50,10 +38,9 @@ export const useInternalPasteHandler = (canvas: Canvas | null, internalClipboard
       });
       
       canvas.renderAll();
-      toast.success("Pasted from canvas clipboard!");
+      ensureObjectsSelectable(canvas); // Make sure all objects remain selectable
     } catch (err) {
       console.error("Internal paste failed", err);
-      toast.error("Could not paste objects");
     }
   };
 

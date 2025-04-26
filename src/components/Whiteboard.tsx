@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
@@ -7,6 +6,8 @@ import { toast } from "sonner";
 import { util, FabricObject } from "fabric";
 import { useClipboardContext } from "@/context/ClipboardContext";
 import { cn } from "@/lib/utils";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { Button } from "./ui/button";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -20,6 +21,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
   const [zoom, setZoom] = useState<number>(1);
   const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
 
   const { canvasRef, fabricRef } = useCanvas({
@@ -36,7 +38,6 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     return false;
   };
 
-  // Mark this board as active when clicked
   const handleCanvasClick = () => {
     console.log(`Setting ${id} as active board`);
     window.__wbActiveBoard = canvasRef.current;
@@ -44,28 +45,23 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     isActiveRef.current = true;
     setIsActive(true);
     
-    // Set this canvas as active in clipboard context, including the board ID
     if (fabricRef.current) {
       setActiveCanvas(fabricRef.current, id);
     }
   };
 
-  // Check if this is the active board based on context
   useEffect(() => {
     setIsActive(activeBoardId === id);
   }, [activeBoardId, id]);
 
-  // Ensure drawn paths are selectable when switching to select mode
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    // When switching to select mode, make sure selection is enabled
     if (activeTool === "select") {
       console.log("Enabling selection mode");
       canvas.selection = true;
       
-      // Make all objects selectable
       canvas.getObjects().forEach(obj => {
         obj.selectable = true;
         obj.evented = true;
@@ -75,7 +71,6 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     }
   }, [activeTool, fabricRef]);
 
-  // Update active state when global active board changes
   useEffect(() => {
     const checkActiveStatus = () => {
       const isCurrentlyActive = 
@@ -83,16 +78,13 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         window.__wbActiveBoard === canvasRef.current;
       setIsActive(isCurrentlyActive);
       
-      // Update active canvas in clipboard context when active status changes
       if (isCurrentlyActive && fabricRef.current) {
         setActiveCanvas(fabricRef.current, id);
       }
     };
 
-    // Check initially
     checkActiveStatus();
 
-    // Create a MutationObserver to watch for changes to data-board-id
     const observer = new MutationObserver(checkActiveStatus);
     
     if (canvasRef.current) {
@@ -105,17 +97,12 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     return () => observer.disconnect();
   }, [id, setActiveCanvas]);
 
-  // Set data attributes on canvas element when it's created
   useEffect(() => {
     if (canvasRef.current) {
       canvasRef.current.dataset.boardId = id;
     }
   }, [canvasRef, id]);
 
-  /* --------------------------------------------------------------
-   * Cross-whiteboard sync: listen for objects drawn on another
-   * board and "enliven" them locally.
-   * ------------------------------------------------------------ */
   useEffect(() => {
     const handleUpdate = (e: CustomEvent) => {
       if (e.detail.sourceId === id) return;
@@ -126,7 +113,6 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         .enlivenObjects([e.detail.object])
         .then((objects: FabricObject[]) => {
           objects.forEach((obj) => {
-            // Make sure objects are selectable when added
             obj.selectable = true;
             obj.evented = true;
             canvas.add(obj);
@@ -147,12 +133,17 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       );
   }, [fabricRef, id]);
 
+  const toggleMaximize = () => {
+    setIsMaximized(!isMaximized);
+  };
+
   return (
     <div
       className={cn(
-        "w-full h-full relative flex flex-col items-center justify-start",
-        "transition-all duration-200",
-        isActive && "ring-4 ring-sidebar-primary ring-opacity-70 bg-sidebar/5 rounded-lg shadow-xl"
+        "relative flex flex-col items-center justify-start",
+        "transition-all duration-300 ease-in-out",
+        isActive && "ring-2 ring-orange-400/50 bg-orange-50/20 rounded-lg shadow-lg",
+        isMaximized ? "fixed inset-4 z-50" : "w-full h-full",
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
@@ -184,9 +175,19 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         onClick={handleCanvasClick}
       />
       {isActive && (
-        <div className="absolute top-0 left-0 p-2 bg-sidebar-primary text-white rounded-bl-lg font-medium text-xs">
+        <div className="absolute top-0 left-0 p-2 bg-orange-100 text-orange-700 rounded-bl-lg font-medium text-xs">
           Active Board
         </div>
+      )}
+      {(id.startsWith("student") || id === "teacher") && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+          onClick={toggleMaximize}
+        >
+          {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </Button>
       )}
     </div>
   );

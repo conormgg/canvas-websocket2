@@ -1,4 +1,3 @@
-
 import { Canvas, ActiveSelection, Image, Point } from "fabric";
 import { toast } from "sonner";
 
@@ -92,7 +91,6 @@ export const pasteImageBlobToCanvas = (canvas: Canvas, blob: Blob, position: Poi
         canvas.add(fabricImage);
         canvas.setActiveObject(fabricImage);
         canvas.requestRenderAll();
-        toast.success("Image pasted from system clipboard");
         resolve();
       }).catch((err) => {
         console.error("Error loading image:", err);
@@ -103,4 +101,15 @@ export const pasteImageBlobToCanvas = (canvas: Canvas, blob: Blob, position: Poi
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+};
+
+// Helper function to ensure all objects on canvas are selectable
+export const ensureObjectsSelectable = (canvas: Canvas) => {
+  canvas.getObjects().forEach(obj => {
+    obj.set({
+      selectable: true,
+      evented: true
+    });
+  });
+  canvas.requestRenderAll();
 };
