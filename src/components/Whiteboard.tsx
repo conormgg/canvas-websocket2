@@ -12,16 +12,24 @@ import { Button } from "./ui/button";
 interface WhiteboardProps {
   id: WhiteboardId;
   isSplitScreen?: boolean;
+  onCtrlClick?: () => void;
+  isMaximized?: boolean;
 }
 
-export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
+export const Whiteboard = ({ 
+  id, 
+  isSplitScreen = false,
+  onCtrlClick,
+  isMaximized = false 
+}: WhiteboardProps) => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
   const [activeColor, setActiveColor] = useState<string>("#ff0000");
   const [inkThickness, setInkThickness] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
   const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(isMaximized);
+
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
 
   const { canvasRef, fabricRef } = useCanvas({
@@ -38,7 +46,7 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     return false;
   };
 
-  const handleCanvasClick = () => {
+  const handleCanvasClick = (e: React.MouseEvent) => {
     console.log(`Setting ${id} as active board`);
     window.__wbActiveBoard = canvasRef.current;
     window.__wbActiveBoardId = id;
@@ -47,6 +55,10 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
     
     if (fabricRef.current) {
       setActiveCanvas(fabricRef.current, id);
+    }
+
+    if (e.ctrlKey && onCtrlClick) {
+      onCtrlClick();
     }
   };
 
@@ -142,8 +154,8 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
       className={cn(
         "relative flex flex-col items-center justify-start",
         "transition-all duration-300 ease-in-out",
-        isActive && "ring-2 ring-orange-400/50 bg-orange-50/20 rounded-lg shadow-lg",
-        isMaximized ? "fixed inset-4 z-50" : "w-full h-full",
+        isActive && "ring-2 ring-orange-400 bg-orange-50/30 rounded-lg shadow-lg",
+        isMaximized ? "fixed inset-4 z-50 bg-white" : "w-full h-full",
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
@@ -178,16 +190,6 @@ export const Whiteboard = ({ id, isSplitScreen = false }: WhiteboardProps) => {
         <div className="absolute top-0 left-0 p-2 bg-orange-100 text-orange-700 rounded-bl-lg font-medium text-xs">
           Active Board
         </div>
-      )}
-      {(id.startsWith("student") || id === "teacher") && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-          onClick={toggleMaximize}
-        >
-          {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </Button>
       )}
     </div>
   );
