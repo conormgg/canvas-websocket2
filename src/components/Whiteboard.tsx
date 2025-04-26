@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
@@ -12,14 +11,14 @@ interface WhiteboardProps {
   id: WhiteboardId;
   isSplitScreen?: boolean;
   onCtrlClick?: () => void;
-  isMaximized?: boolean; // Fixed: Removed extra 'initialIsMaximized' and made it optional
+  isMaximized?: boolean;
 }
 
 export const Whiteboard = ({ 
   id, 
   isSplitScreen = false,
   onCtrlClick,
-  isMaximized = false // Added default value 
+  isMaximized = false
 }: WhiteboardProps) => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
   const [activeColor, setActiveColor] = useState<string>("#ff0000");
@@ -27,7 +26,7 @@ export const Whiteboard = ({
   const [zoom, setZoom] = useState<number>(1);
   const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
-  const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
+  const [localIsMaximized, setLocalIsMaximized] = useState(isMaximized);
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
 
@@ -183,8 +182,12 @@ export const Whiteboard = ({
       );
   }, [fabricRef, id]);
 
+  useEffect(() => {
+    setLocalIsMaximized(isMaximized);
+  }, [isMaximized]);
+
   const toggleMaximize = () => {
-    setIsMaximized(!isMaximized);
+    setLocalIsMaximized(!localIsMaximized);
   };
 
   return (
@@ -193,7 +196,7 @@ export const Whiteboard = ({
         "relative flex flex-col items-center justify-start",
         "transition-all duration-300 ease-in-out",
         isActive && "ring-2 ring-orange-400 bg-orange-50/30 rounded-lg shadow-lg",
-        isMaximized ? "fixed inset-4 z-50 bg-white" : "w-full h-full",
+        localIsMaximized ? "fixed inset-4 z-50 bg-white" : "w-full h-full",
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
