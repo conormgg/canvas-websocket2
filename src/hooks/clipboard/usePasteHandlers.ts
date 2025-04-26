@@ -1,7 +1,7 @@
 import { Canvas, util, Point, FabricObject } from "fabric";
 import { RefObject } from "react";
 import { toast } from "sonner";
-import { ensureObjectsSelectable } from "@/utils/clipboardUtils";
+import { ensureObjectsSelectable, pasteImageBlobToCanvas } from "@/utils/clipboardUtils";
 
 export const useInternalPasteHandler = (canvas: Canvas | null, internalClipboardData: any[] | null, position: Point | null) => {
   const handleInternalPaste = async () => {
