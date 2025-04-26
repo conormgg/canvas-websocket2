@@ -6,8 +6,6 @@ import { toast } from "sonner";
 import { util, FabricObject } from "fabric";
 import { useClipboardContext } from "@/context/ClipboardContext";
 import { cn } from "@/lib/utils";
-import { Maximize2, Minimize2 } from "lucide-react";
-import { Button } from "./ui/button";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -20,7 +18,7 @@ export const Whiteboard = ({
   id, 
   isSplitScreen = false,
   onCtrlClick,
-  isMaximized = false 
+  isMaximized: initialIsMaximized = false 
 }: WhiteboardProps) => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
   const [activeColor, setActiveColor] = useState<string>("#ff0000");
@@ -28,7 +26,7 @@ export const Whiteboard = ({
   const [zoom, setZoom] = useState<number>(1);
   const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
-  const [isMaximized, setIsMaximized] = useState(isMaximized);
+  const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
 
