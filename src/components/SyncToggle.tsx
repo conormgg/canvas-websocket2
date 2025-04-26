@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useSyncContext } from "@/context/SyncContext";
-import { Link } from "lucide-react";
+import { ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "sonner";
 
 export const SyncToggle = () => {
@@ -14,14 +14,17 @@ export const SyncToggle = () => {
   
   return (
     <Button
-      variant="outline"
-      size="sm"
+      variant={isSyncEnabled ? "default" : "destructive"}
+      size="lg"
       onClick={handleToggle}
-      className="fixed bottom-4 right-4 z-50"
+      className="fixed bottom-8 right-8 z-[100] shadow-lg"
     >
-      <Link className={isSyncEnabled ? "text-green-500" : "text-gray-400"} />
+      {isSyncEnabled ? (
+        <ToggleRight className="text-white mr-2" />
+      ) : (
+        <ToggleLeft className="text-white mr-2" />
+      )}
       {isSyncEnabled ? "Sync On" : "Sync Off"}
     </Button>
   );
 };
-

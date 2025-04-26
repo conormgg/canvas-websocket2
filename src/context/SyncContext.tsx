@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface SyncContextType {
   isSyncEnabled: boolean;
@@ -9,11 +9,18 @@ interface SyncContextType {
 const SyncContext = createContext<SyncContextType | undefined>(undefined);
 
 export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isSyncEnabled, setIsSyncEnabled] = useState(true);
+  // Initialize with sync disabled to ensure boards work independently by default
+  const [isSyncEnabled, setIsSyncEnabled] = useState(false);
 
   const toggleSync = () => {
     setIsSyncEnabled(prev => !prev);
+    console.log("Sync toggled to:", !isSyncEnabled);
   };
+
+  // Log when component mounts
+  useEffect(() => {
+    console.log("SyncProvider mounted, sync is:", isSyncEnabled ? "enabled" : "disabled");
+  }, []);
 
   return (
     <SyncContext.Provider value={{ isSyncEnabled, toggleSync }}>
@@ -29,4 +36,3 @@ export const useSyncContext = () => {
   }
   return context;
 };
-
