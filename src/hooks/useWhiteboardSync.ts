@@ -4,6 +4,7 @@ import { Canvas, util, FabricObject } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
 import { toast } from 'sonner';
 import { useClipboardContext } from '@/context/ClipboardContext';
+import { useSyncContext } from '@/context/SyncContext';
 
 interface UseWhiteboardSyncProps {
   id: WhiteboardId;
@@ -13,6 +14,7 @@ interface UseWhiteboardSyncProps {
 export const useWhiteboardSync = ({ id, fabricRef }: UseWhiteboardSyncProps) => {
   const linkedBoardId = useRef<WhiteboardId | null>(null);
   const { activeBoardId } = useClipboardContext();
+  const { isSyncEnabled } = useSyncContext();
 
   useEffect(() => {
     if (id === "student1") {
@@ -23,6 +25,8 @@ export const useWhiteboardSync = ({ id, fabricRef }: UseWhiteboardSyncProps) => 
   }, [id]);
 
   useEffect(() => {
+    if (!isSyncEnabled) return; // Don't listen for updates if sync is disabled
+
     const handleUpdate = (e: CustomEvent) => {
       const detail = e.detail;
       
@@ -60,9 +64,11 @@ export const useWhiteboardSync = ({ id, fabricRef }: UseWhiteboardSyncProps) => 
         "whiteboard-update",
         handleUpdate as EventListener
       );
-  }, [fabricRef, id]);
+  }, [fabricRef, id, isSyncEnabled]);
 
   const handleObjectAdded = (object: FabricObject) => {
+    if (!isSyncEnabled) return; // Don't sync if disabled
+    
     // Only allow adding objects if this is the active board
     if (activeBoardId !== id) {
       console.log(`Not adding object - board ${id} is not active (active is ${activeBoardId})`);
@@ -84,3 +90,4 @@ export const useWhiteboardSync = ({ id, fabricRef }: UseWhiteboardSyncProps) => 
 
   return { handleObjectAdded };
 };
+
