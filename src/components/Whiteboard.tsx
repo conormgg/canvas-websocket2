@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useWhiteboardActive } from "@/hooks/useWhiteboardActive";
 import { useWhiteboardSync } from "@/hooks/useWhiteboardSync";
 import { useWhiteboardState } from "@/hooks/useWhiteboardState";
+import { useClipboardContext } from "@/context/ClipboardContext";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -23,6 +24,8 @@ export const Whiteboard = ({
 }: WhiteboardProps) => {
   const [localIsMaximized, setLocalIsMaximized] = useState(isMaximized);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fabricRef = useRef(null);
+  const { setActiveCanvas } = useClipboardContext();
 
   // Use our custom hooks
   const {
@@ -36,7 +39,9 @@ export const Whiteboard = ({
     setZoom
   } = useWhiteboardState(fabricRef);
 
-  const { fabricRef } = useCanvas({
+  const { handleObjectAdded } = useWhiteboardSync({ id, fabricRef });
+
+  const { fabricRef: updatedFabricRef } = useCanvas({
     id,
     activeTool,
     activeColor,
@@ -46,7 +51,11 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded
   });
 
-  const { handleObjectAdded } = useWhiteboardSync({ id, fabricRef });
+  // Update fabricRef with the one returned from useCanvas
+  useEffect(() => {
+    fabricRef.current = updatedFabricRef.current;
+  }, [updatedFabricRef.current]);
+
   const { isActive, handleCanvasClick } = useWhiteboardActive({
     id,
     canvasRef,
