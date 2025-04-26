@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
@@ -11,7 +12,7 @@ interface WhiteboardProps {
   id: WhiteboardId;
   isSplitScreen?: boolean;
   onCtrlClick?: () => void;
-  isMaximized?: boolean;
+  isMaximized: initialIsMaximized?: boolean;
 }
 
 export const Whiteboard = ({ 
@@ -30,6 +31,18 @@ export const Whiteboard = ({
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
 
+  // Track the linked board ID
+  const linkedBoardId = useRef<WhiteboardId | null>(null);
+  
+  useEffect(() => {
+    // Set up the linked board relationships
+    if (id === "student1") {
+      linkedBoardId.current = "student1"; // Link to teacher's student1 board
+    } else if (id === "teacher" && window.location.pathname.includes("student")) {
+      // This is the teacher's board in student view - no direct link needed
+    }
+  }, [id]);
+
   const { canvasRef, fabricRef } = useCanvas({
     id,
     activeTool,
@@ -37,6 +50,20 @@ export const Whiteboard = ({
     inkThickness,
     isSplitScreen,
     onZoomChange: setZoom,
+    onObjectAdded: (object) => {
+      // When an object is added to this canvas, broadcast it to linked boards
+      if (linkedBoardId.current) {
+        const event = new CustomEvent("whiteboard-update", {
+          detail: {
+            object: object.toJSON(),
+            sourceId: id,
+            targetId: linkedBoardId.current
+          }
+        });
+        console.log(`Broadcasting from ${id} to ${linkedBoardId.current}`);
+        window.dispatchEvent(event);
+      }
+    }
   });
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -115,12 +142,25 @@ export const Whiteboard = ({
 
   useEffect(() => {
     const handleUpdate = (e: CustomEvent) => {
-      if (e.detail.sourceId === id) return;
+      // Logic for handling whiteboard sync events
+      const detail = e.detail;
+      
+      // Only process events meant for this board or from linked boards
+      const shouldProcess = 
+        detail.targetId === id || 
+        (id === "student1" && detail.sourceId === "student1") ||
+        (id === "student1" && detail.sourceId === "student1");
+      
+      // Skip if we're the source of the event
+      if (detail.sourceId === id || !shouldProcess) return;
+      
+      console.log(`${id} received update from ${detail.sourceId}`);
+      
       const canvas = fabricRef.current;
       if (!canvas) return;
 
       util
-        .enlivenObjects([e.detail.object])
+        .enlivenObjects([detail.object])
         .then((objects: FabricObject[]) => {
           objects.forEach((obj) => {
             obj.selectable = true;
@@ -187,6 +227,11 @@ export const Whiteboard = ({
       {isActive && (
         <div className="absolute top-0 left-0 p-2 bg-orange-100 text-orange-700 rounded-bl-lg font-medium text-xs">
           Active Board
+        </div>
+      )}
+      {id === "student1" && (
+        <div className="absolute bottom-2 right-2 px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium">
+          Live Connected
         </div>
       )}
     </div>

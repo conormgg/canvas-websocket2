@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps, WhiteboardId } from "@/types/canvas";
@@ -56,7 +57,7 @@ export const useCanvas = ({
 
     if (onObjectAdded) {
       canvas.on("object:added", (e) => {
-        if (e.target && id === activeBoardId) {
+        if (e.target) {
           onObjectAdded(e.target);
         }
       });
