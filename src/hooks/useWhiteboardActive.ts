@@ -22,10 +22,13 @@ export const useWhiteboardActive = ({
 
   const handleCanvasClick = (e: React.MouseEvent) => {
     console.log(`Setting ${id} as active board`);
+    
+    // Set global variables
     window.__wbActiveBoard = canvasRef.current;
     window.__wbActiveBoardId = id;
     
     if (fabricRef.current) {
+      // Important: This will update the active board in the context
       setActiveCanvas(fabricRef.current, id);
     }
 

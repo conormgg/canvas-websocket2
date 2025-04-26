@@ -19,20 +19,26 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Track both the canvas and its ID when setting active
   const updateActiveCanvas = useCallback((canvas: Canvas | null, boardId?: WhiteboardId | null) => {
-    console.log(`Updating active canvas to boardId: ${boardId || 'unknown'}`);
-    
-    // Deactivate previous active board
-    if (boardId && boardId !== activeBoardId) {
+    // Only update if there's a change
+    if (canvas !== activeCanvas || (boardId && boardId !== activeBoardId)) {
+      console.log(`Updating active canvas to boardId: ${boardId || 'unknown'}`);
+      
+      // Update state
       setActiveCanvas(canvas);
-      setActiveBoardId(boardId);
+      if (boardId) {
+        setActiveBoardId(boardId);
+      }
       
       // Update global tracking variables
-      window.__wbActiveBoard = canvas?.getElement() || null;
-      window.__wbActiveBoardId = boardId;
-      
-      console.log(`Active board changed from ${activeBoardId} to ${boardId}`);
+      if (canvas) {
+        window.__wbActiveBoard = canvas.getElement();
+        if (boardId) {
+          window.__wbActiveBoardId = boardId;
+          console.log(`Active board changed to ${boardId}`);
+        }
+      }
     }
-  }, [activeBoardId]);
+  }, [activeCanvas, activeBoardId]);
 
   const copySelectedObjects = useCallback((canvas: Canvas) => {
     const activeObjects = canvas.getActiveObjects();
@@ -62,18 +68,11 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     console.log(`Paste requested at position: ${JSON.stringify(position)} for board: ${boardId || 'unknown'}`);
     
     // Update active canvas and board ID to ensure paste targets the correct board
-    setActiveCanvas(canvas);
-    if (boardId) {
-      setActiveBoardId(boardId);
-      
-      // Update global tracking variables
-      window.__wbActiveBoard = canvas.getElement();
-      window.__wbActiveBoardId = boardId;
-    }
+    updateActiveCanvas(canvas, boardId);
     
     setPendingPastePosition(position);
     setShowSelector(true);
-  }, []);
+  }, [updateActiveCanvas]);
 
   const contextValue: ClipboardContextType = {
     activeCanvas,

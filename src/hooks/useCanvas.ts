@@ -6,6 +6,8 @@ import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 import { useClipboardContext } from "@/context/ClipboardContext";
+import { useCanvasKeyboard } from "./useCanvasKeyboard";
+import { useTouchHandlers } from "./touch/useTouchHandlers";
 
 export const useCanvas = ({
   id,
@@ -32,7 +34,10 @@ export const useCanvas = ({
     onZoomChange || (() => {})
   );
 
+  // Adding keyboard and touch handlers to ensure they work
   useKeyboardShortcuts(fabricRef);
+  useCanvasKeyboard(fabricRef);
+  useTouchHandlers(fabricRef);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -43,7 +48,7 @@ export const useCanvas = ({
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: "#ffffff",
-      isDrawingMode: activeTool === "draw" || activeTool === "eraser",
+      isDrawingMode: false, // Start with drawing mode disabled
       preserveObjectStacking: true,
       selection: false,
     });
@@ -89,6 +94,7 @@ export const useCanvas = ({
 
     window.addEventListener("resize", handleResize);
 
+    // Initial cursor setup
     updateCursorAndNotify(canvas, activeTool, inkThickness);
 
     return () => {
@@ -101,23 +107,29 @@ export const useCanvas = ({
     const canvas = fabricRef.current;
     if (!canvas) return;
 
-    // Only enable drawing mode if this is the active board
-    if (id === activeBoardId) {
-      if (activeTool === "draw" || activeTool === "eraser") {
-        canvas.isDrawingMode = true;
-        if (canvas.freeDrawingBrush) {
-          canvas.freeDrawingBrush.width = inkThickness;
-          canvas.freeDrawingBrush.color =
-            activeTool === "draw" ? activeColor : "#ffffff";
-        }
-      } else {
-        canvas.isDrawingMode = false;
+    // Critical fix: Only enable drawing mode if this is the active board
+    const isActiveBoard = id === activeBoardId;
+    
+    console.log(`Canvas ${id} - Active: ${isActiveBoard}, Tool: ${activeTool}`);
+
+    // Set drawing mode based on active status and tool
+    if (isActiveBoard) {
+      canvas.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
+      
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.width = inkThickness;
+        canvas.freeDrawingBrush.color = 
+          activeTool === "draw" ? activeColor : "#ffffff";
       }
+      
+      // Update cursor
       updateCursorAndNotify(canvas, activeTool, inkThickness);
     } else {
       // If not active board, disable drawing mode
       canvas.isDrawingMode = false;
     }
+    
+    canvas.renderAll();
   }, [activeTool, activeColor, inkThickness, activeBoardId, id]);
 
   return { canvasRef, fabricRef };

@@ -78,18 +78,14 @@ export const Whiteboard = ({
     setLocalIsMaximized(isMaximized);
   }, [isMaximized]);
 
-  const toggleMaximize = () => {
-    setLocalIsMaximized(!localIsMaximized);
-  };
-
   // Handle canvas focus
   const handleCanvasFocus = () => {
-    window.__wbActiveBoard = canvasRef.current;
-    window.__wbActiveBoardId = id;
     if (fabricRef.current) {
+      console.log(`Canvas ${id} focused and set as active`);
+      window.__wbActiveBoard = canvasRef.current;
+      window.__wbActiveBoardId = id;
       setActiveCanvas(fabricRef.current, id);
     }
-    console.log(`Canvas ${id} focused and set as active`);
   };
 
   return (
