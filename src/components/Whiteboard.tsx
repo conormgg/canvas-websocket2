@@ -8,6 +8,7 @@ import { useWhiteboardActive } from "@/hooks/useWhiteboardActive";
 import { useWhiteboardSync } from "@/hooks/useWhiteboardSync";
 import { useWhiteboardState } from "@/hooks/useWhiteboardState";
 import { useClipboardContext } from "@/context/ClipboardContext";
+import { Canvas } from "fabric";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -22,9 +23,11 @@ export const Whiteboard = ({
   onCtrlClick,
   isMaximized = false
 }: WhiteboardProps) => {
-  const [localIsMaximized, setLocalIsMaximized] = useState(isMaximized);
+  // Set up refs early to avoid order-of-declaration issues
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricRef = useRef(null);
+  const fabricRef = useRef<Canvas | null>(null);
+  
+  const [localIsMaximized, setLocalIsMaximized] = useState(isMaximized);
   const { setActiveCanvas } = useClipboardContext();
 
   // Use our custom hooks
@@ -53,7 +56,9 @@ export const Whiteboard = ({
 
   // Update fabricRef with the one returned from useCanvas
   useEffect(() => {
-    fabricRef.current = updatedFabricRef.current;
+    if (updatedFabricRef.current) {
+      fabricRef.current = updatedFabricRef.current;
+    }
   }, [updatedFabricRef.current]);
 
   const { isActive, handleCanvasClick } = useWhiteboardActive({
@@ -87,6 +92,22 @@ export const Whiteboard = ({
       setActiveCanvas(fabricRef.current, id);
     }
   };
+
+  // Ensure cursor is properly updated when tool changes
+  useEffect(() => {
+    if (isActive && fabricRef.current) {
+      // Force cursor update when tool changes
+      const canvas = fabricRef.current;
+      canvas.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
+      
+      // This will trigger the useEffect in useCanvas that updates cursors
+      if (canvas.freeDrawingBrush) {
+        canvas.freeDrawingBrush.width = inkThickness;
+        canvas.freeDrawingBrush.color = activeTool === "draw" ? activeColor : "#ffffff";
+        canvas.renderAll();
+      }
+    }
+  }, [activeTool, activeColor, inkThickness, isActive]);
 
   return (
     <div

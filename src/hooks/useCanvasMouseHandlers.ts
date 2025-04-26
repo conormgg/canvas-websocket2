@@ -4,6 +4,7 @@ import { Canvas, TPointerEvent, TPointerEventInfo } from 'fabric';
 import { useCanvasKeyboard } from './useCanvasKeyboard';
 import { useCanvasZoomPan } from './useCanvasZoomPan';
 import { useCanvasSelection } from './useCanvasSelection';
+import { applyCursorToCanvas } from '@/utils/cursorUtils';
 
 export const useCanvasMouseHandlers = (
   fabricRef: React.MutableRefObject<Canvas | null>,
@@ -30,7 +31,7 @@ export const useCanvasMouseHandlers = (
   };
 
   const enablePanningMode = (canvas: Canvas) => {
-    canvas.defaultCursor = 'grabbing';
+    applyCursorToCanvas(canvas, 'grabbing');
     canvas.selection = false;
     canvas.discardActiveObject();
     canvas.renderAll();
@@ -61,7 +62,7 @@ export const useCanvasMouseHandlers = (
     
     if (activeTool === "select") {
       handleSelectionEnd();
-      canvas.defaultCursor = 'default';
+      applyCursorToCanvas(canvas, 'default');
     }
 
     canvas.setViewportTransform(canvas.viewportTransform!);
@@ -70,8 +71,6 @@ export const useCanvasMouseHandlers = (
     setIsDrawing(false);
   };
 
-  // Since useCanvasKeyboard no longer returns handleKeyDown,
-  // we don't need to pass it to the return object
   return {
     isDrawing,
     handleMouseWheel,

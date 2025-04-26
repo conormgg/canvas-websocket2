@@ -2,6 +2,7 @@
 import { Canvas, Point, TPointerEventInfo, TPointerEvent } from 'fabric';
 import { useRef } from 'react';
 import { CanvasPosition } from '@/types/canvas';
+import { applyCursorToCanvas } from '@/utils/cursorUtils';
 
 export const useCanvasZoomPan = (
   fabricRef: React.MutableRefObject<Canvas | null>,
@@ -32,7 +33,7 @@ export const useCanvasZoomPan = (
     if (!canvas) return;
 
     if (e.buttons === 2) {
-      canvas.setCursor('grabbing');
+      applyCursorToCanvas(canvas, 'grabbing');
       
       if (lastPosRef.current.x === 0) lastPosRef.current.x = e.clientX;
       if (lastPosRef.current.y === 0) lastPosRef.current.y = e.clientY;

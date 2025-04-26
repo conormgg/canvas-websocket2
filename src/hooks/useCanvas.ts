@@ -8,6 +8,7 @@ import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 import { useClipboardContext } from "@/context/ClipboardContext";
 import { useCanvasKeyboard } from "./useCanvasKeyboard";
 import { useTouchHandlers } from "./touch/useTouchHandlers";
+import { applyCursorToCanvas } from "@/utils/cursorUtils";
 
 export const useCanvas = ({
   id,
@@ -122,11 +123,13 @@ export const useCanvas = ({
           activeTool === "draw" ? activeColor : "#ffffff";
       }
       
-      // Update cursor
+      // Update cursor - force update with each tool change
       updateCursorAndNotify(canvas, activeTool, inkThickness);
     } else {
       // If not active board, disable drawing mode
       canvas.isDrawingMode = false;
+      // Set default cursor for inactive boards
+      applyCursorToCanvas(canvas, 'default');
     }
     
     canvas.renderAll();

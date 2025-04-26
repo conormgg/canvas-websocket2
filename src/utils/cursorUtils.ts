@@ -23,3 +23,17 @@ export const createCustomCursor = ({ size, color = 'black', isEraser = false }: 
   return `url(${url}) ${cursorHotspot} ${cursorHotspot}, auto`;
 };
 
+// Helper function to directly apply cursor to canvas
+export const applyCursorToCanvas = (canvas: Canvas | null, cursor: string) => {
+  if (!canvas) return;
+  
+  // Apply to all relevant canvas properties
+  canvas.defaultCursor = cursor;
+  canvas.freeDrawingCursor = cursor;
+  
+  // Directly apply to canvas DOM elements for more reliable cursor changes
+  if (canvas.wrapperEl) canvas.wrapperEl.style.cursor = cursor;
+  if (canvas.upperCanvasEl) canvas.upperCanvasEl.style.cursor = cursor;
+  if (canvas.lowerCanvasEl) canvas.lowerCanvasEl.style.cursor = cursor;
+};
+
