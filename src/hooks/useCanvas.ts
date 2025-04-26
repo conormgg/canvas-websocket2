@@ -51,7 +51,7 @@ export const useCanvas = ({
       backgroundColor: "#ffffff",
       isDrawingMode: false, // Start with drawing mode disabled
       preserveObjectStacking: true,
-      selection: false,
+      selection: true,
     });
 
     if (canvas.lowerCanvasEl) canvas.lowerCanvasEl.dataset.boardId = id;
@@ -94,6 +94,7 @@ export const useCanvas = ({
     };
 
     window.addEventListener("resize", handleResize);
+    handleResize();
 
     // Initial cursor setup
     updateCursorAndNotify(canvas, activeTool, inkThickness);
@@ -111,7 +112,7 @@ export const useCanvas = ({
     // Critical fix: Only enable drawing mode if this is the active board
     const isActiveBoard = id === activeBoardId;
     
-    console.log(`Canvas ${id} - Active: ${isActiveBoard}, Tool: ${activeTool}`);
+    console.log(`Canvas ${id} - Active: ${isActiveBoard}, Tool: ${activeTool}, ActiveBoardId: ${activeBoardId}`);
 
     // Set drawing mode based on active status and tool
     if (isActiveBoard) {

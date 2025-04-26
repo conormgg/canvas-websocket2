@@ -23,11 +23,14 @@ export const useWhiteboardActive = ({
   const handleCanvasClick = (e: React.MouseEvent) => {
     console.log(`Setting ${id} as active board`);
     
-    // Set global variables
+    // Set global variables - critical for interaction
     window.__wbActiveBoard = canvasRef.current;
     window.__wbActiveBoardId = id;
     
     if (fabricRef.current) {
+      // Focus the canvas element to ensure keyboard events work
+      canvasRef.current?.focus();
+      
       // Important: This will update the active board in the context
       setActiveCanvas(fabricRef.current, id);
     }
@@ -41,6 +44,11 @@ export const useWhiteboardActive = ({
   useEffect(() => {
     const isCurrentlyActive = activeBoardId === id;
     setIsActive(isCurrentlyActive);
+    
+    // If this board just became active, focus it
+    if (isCurrentlyActive && canvasRef.current) {
+      canvasRef.current.focus();
+    }
   }, [activeBoardId, id]);
 
   return { isActive, handleCanvasClick };

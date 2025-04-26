@@ -27,6 +27,8 @@ export const createCustomCursor = ({ size, color = 'black', isEraser = false }: 
 export const applyCursorToCanvas = (canvas: Canvas | null, cursor: string) => {
   if (!canvas) return;
   
+  console.log(`Applying cursor: ${cursor.substring(0, 50)}...`);
+  
   // Apply to all relevant canvas properties
   canvas.defaultCursor = cursor;
   canvas.freeDrawingCursor = cursor;
@@ -36,4 +38,3 @@ export const applyCursorToCanvas = (canvas: Canvas | null, cursor: string) => {
   if (canvas.upperCanvasEl) canvas.upperCanvasEl.style.cursor = cursor;
   if (canvas.lowerCanvasEl) canvas.lowerCanvasEl.style.cursor = cursor;
 };
-

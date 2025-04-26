@@ -28,7 +28,7 @@ export const Whiteboard = ({
   const fabricRef = useRef<Canvas | null>(null);
   
   const [localIsMaximized, setLocalIsMaximized] = useState(isMaximized);
-  const { setActiveCanvas } = useClipboardContext();
+  const { setActiveCanvas, activeBoardId } = useClipboardContext();
 
   // Use our custom hooks
   const {
@@ -58,8 +58,14 @@ export const Whiteboard = ({
   useEffect(() => {
     if (updatedFabricRef.current) {
       fabricRef.current = updatedFabricRef.current;
+      
+      // If this is the first board, make it active by default
+      if ((activeBoardId === null || activeBoardId === undefined) && id === "teacher") {
+        console.log(`Making ${id} the default active board`);
+        setActiveCanvas(updatedFabricRef.current, id);
+      }
     }
-  }, [updatedFabricRef.current]);
+  }, [updatedFabricRef.current, id, activeBoardId, setActiveCanvas]);
 
   const { isActive, handleCanvasClick } = useWhiteboardActive({
     id,
@@ -82,8 +88,8 @@ export const Whiteboard = ({
   useEffect(() => {
     setLocalIsMaximized(isMaximized);
   }, [isMaximized]);
-
-  // Handle canvas focus
+  
+  // Handle canvas focus - crucial for tool operation
   const handleCanvasFocus = () => {
     if (fabricRef.current) {
       console.log(`Canvas ${id} focused and set as active`);
@@ -92,6 +98,16 @@ export const Whiteboard = ({
       setActiveCanvas(fabricRef.current, id);
     }
   };
+
+  // When component mounts, focus this board if it's in a maximized state
+  useEffect(() => {
+    if (isMaximized && fabricRef.current) {
+      console.log(`Auto-focusing ${id} board because it's maximized`);
+      window.__wbActiveBoard = canvasRef.current;
+      window.__wbActiveBoardId = id;
+      setActiveCanvas(fabricRef.current, id);
+    }
+  }, [isMaximized, id, setActiveCanvas]);
 
   // Ensure cursor is properly updated when tool changes
   useEffect(() => {
@@ -135,7 +151,6 @@ export const Whiteboard = ({
         tabIndex={0}
         data-board-id={id}
         onFocus={handleCanvasFocus}
-        onClick={handleCanvasClick}
       />
       {isActive && (
         <div className="absolute top-0 left-0 p-2 bg-orange-100 text-orange-700 rounded-bl-lg font-medium text-xs">
