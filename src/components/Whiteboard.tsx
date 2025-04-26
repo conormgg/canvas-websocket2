@@ -12,14 +12,14 @@ interface WhiteboardProps {
   id: WhiteboardId;
   isSplitScreen?: boolean;
   onCtrlClick?: () => void;
-  isMaximized: initialIsMaximized?: boolean;
+  isMaximized?: boolean; // Fixed: Removed extra 'initialIsMaximized' and made it optional
 }
 
 export const Whiteboard = ({ 
   id, 
   isSplitScreen = false,
   onCtrlClick,
-  isMaximized: initialIsMaximized = false 
+  isMaximized = false // Added default value 
 }: WhiteboardProps) => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
   const [activeColor, setActiveColor] = useState<string>("#ff0000");
