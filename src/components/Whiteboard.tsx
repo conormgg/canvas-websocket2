@@ -1,14 +1,11 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
-import { cn } from "@/lib/utils";
-import { useWhiteboardActive } from "@/hooks/useWhiteboardActive";
-import { useWhiteboardSync } from "@/hooks/useWhiteboardSync";
-import { useWhiteboardState } from "@/hooks/useWhiteboardState";
+import { toast } from "sonner";
+import { util, FabricObject } from "fabric";
 import { useClipboardContext } from "@/context/ClipboardContext";
-import { Canvas } from "fabric";
+import { cn } from "@/lib/utils";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -21,63 +18,94 @@ export const Whiteboard = ({
   id, 
   isSplitScreen = false,
   onCtrlClick,
-  isMaximized = false
+  isMaximized: initialIsMaximized = false 
 }: WhiteboardProps) => {
-  // Set up refs early to avoid order-of-declaration issues
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricRef = useRef<Canvas | null>(null);
-  
-  const [localIsMaximized, setLocalIsMaximized] = useState(isMaximized);
+  const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
+  const [activeColor, setActiveColor] = useState<string>("#ff0000");
+  const [inkThickness, setInkThickness] = useState<number>(2);
+  const [zoom, setZoom] = useState<number>(1);
+  const [isActive, setIsActive] = useState(false);
+  const isActiveRef = useRef(false);
+  const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
+
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
 
-  // Use our custom hooks
-  const {
-    activeTool,
-    setActiveTool,
-    activeColor,
-    setActiveColor,
-    inkThickness,
-    setInkThickness,
-    zoom,
-    setZoom
-  } = useWhiteboardState(fabricRef);
-
-  const { handleObjectAdded } = useWhiteboardSync({ id, fabricRef });
-
-  const { fabricRef: updatedFabricRef } = useCanvas({
+  const { canvasRef, fabricRef } = useCanvas({
     id,
     activeTool,
     activeColor,
     inkThickness,
     isSplitScreen,
     onZoomChange: setZoom,
-    onObjectAdded: handleObjectAdded
-  });
-
-  // Update fabricRef with the one returned from useCanvas
-  useEffect(() => {
-    if (updatedFabricRef.current) {
-      fabricRef.current = updatedFabricRef.current;
-      
-      // If this is the first board, make it active by default
-      if ((activeBoardId === null || activeBoardId === undefined) && id === "teacher") {
-        console.log(`Making ${id} the default active board`);
-        setActiveCanvas(updatedFabricRef.current, id);
-      }
-    }
-  }, [updatedFabricRef.current, id, activeBoardId, setActiveCanvas]);
-
-  const { isActive, handleCanvasClick } = useWhiteboardActive({
-    id,
-    canvasRef,
-    fabricRef,
-    onCtrlClick
   });
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     return false;
   };
+
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    console.log(`Setting ${id} as active board`);
+    window.__wbActiveBoard = canvasRef.current;
+    window.__wbActiveBoardId = id;
+    isActiveRef.current = true;
+    setIsActive(true);
+    
+    if (fabricRef.current) {
+      setActiveCanvas(fabricRef.current, id);
+    }
+
+    if (e.ctrlKey && onCtrlClick) {
+      onCtrlClick();
+    }
+  };
+
+  useEffect(() => {
+    setIsActive(activeBoardId === id);
+  }, [activeBoardId, id]);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    
+    if (activeTool === "select") {
+      console.log("Enabling selection mode");
+      canvas.selection = true;
+      
+      canvas.getObjects().forEach(obj => {
+        obj.selectable = true;
+        obj.evented = true;
+      });
+      
+      canvas.renderAll();
+    }
+  }, [activeTool, fabricRef]);
+
+  useEffect(() => {
+    const checkActiveStatus = () => {
+      const isCurrentlyActive = 
+        window.__wbActiveBoardId === id || 
+        window.__wbActiveBoard === canvasRef.current;
+      setIsActive(isCurrentlyActive);
+      
+      if (isCurrentlyActive && fabricRef.current) {
+        setActiveCanvas(fabricRef.current, id);
+      }
+    };
+
+    checkActiveStatus();
+
+    const observer = new MutationObserver(checkActiveStatus);
+    
+    if (canvasRef.current) {
+      observer.observe(canvasRef.current, {
+        attributes: true,
+        attributeFilter: ['data-board-id']
+      });
+    }
+
+    return () => observer.disconnect();
+  }, [id, setActiveCanvas]);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -86,44 +114,38 @@ export const Whiteboard = ({
   }, [canvasRef, id]);
 
   useEffect(() => {
-    setLocalIsMaximized(isMaximized);
-  }, [isMaximized]);
-  
-  // Handle canvas focus - crucial for tool operation
-  const handleCanvasFocus = () => {
-    if (fabricRef.current) {
-      console.log(`Canvas ${id} focused and set as active`);
-      window.__wbActiveBoard = canvasRef.current;
-      window.__wbActiveBoardId = id;
-      setActiveCanvas(fabricRef.current, id);
-    }
-  };
-
-  // When component mounts, focus this board if it's in a maximized state
-  useEffect(() => {
-    if (isMaximized && fabricRef.current) {
-      console.log(`Auto-focusing ${id} board because it's maximized`);
-      window.__wbActiveBoard = canvasRef.current;
-      window.__wbActiveBoardId = id;
-      setActiveCanvas(fabricRef.current, id);
-    }
-  }, [isMaximized, id, setActiveCanvas]);
-
-  // Ensure cursor is properly updated when tool changes
-  useEffect(() => {
-    if (isActive && fabricRef.current) {
-      // Force cursor update when tool changes
+    const handleUpdate = (e: CustomEvent) => {
+      if (e.detail.sourceId === id) return;
       const canvas = fabricRef.current;
-      canvas.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
-      
-      // This will trigger the useEffect in useCanvas that updates cursors
-      if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.width = inkThickness;
-        canvas.freeDrawingBrush.color = activeTool === "draw" ? activeColor : "#ffffff";
-        canvas.renderAll();
-      }
-    }
-  }, [activeTool, activeColor, inkThickness, isActive]);
+      if (!canvas) return;
+
+      util
+        .enlivenObjects([e.detail.object])
+        .then((objects: FabricObject[]) => {
+          objects.forEach((obj) => {
+            obj.selectable = true;
+            obj.evented = true;
+            canvas.add(obj);
+          });
+          canvas.renderAll();
+        })
+        .catch((err) => {
+          console.error("Failed to enliven object", err);
+          toast.error("Could not sync object to this board.");
+        });
+    };
+
+    window.addEventListener("whiteboard-update", handleUpdate as EventListener);
+    return () =>
+      window.removeEventListener(
+        "whiteboard-update",
+        handleUpdate as EventListener
+      );
+  }, [fabricRef, id]);
+
+  const toggleMaximize = () => {
+    setIsMaximized(!isMaximized);
+  };
 
   return (
     <div
@@ -131,7 +153,7 @@ export const Whiteboard = ({
         "relative flex flex-col items-center justify-start",
         "transition-all duration-300 ease-in-out",
         isActive && "ring-2 ring-orange-400 bg-orange-50/30 rounded-lg shadow-lg",
-        localIsMaximized ? "fixed inset-4 z-50 bg-white" : "w-full h-full",
+        isMaximized ? "fixed inset-4 z-50 bg-white" : "w-full h-full",
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
@@ -150,16 +172,21 @@ export const Whiteboard = ({
         className="w-full h-full z-0" 
         tabIndex={0}
         data-board-id={id}
-        onFocus={handleCanvasFocus}
+        onFocus={() => {
+          window.__wbActiveBoard = canvasRef.current;
+          window.__wbActiveBoardId = id;
+          isActiveRef.current = true;
+          setIsActive(true);
+          if (fabricRef.current) {
+            setActiveCanvas(fabricRef.current, id);
+          }
+          console.log(`Canvas ${id} focused and set as active`);
+        }}
+        onClick={handleCanvasClick}
       />
       {isActive && (
         <div className="absolute top-0 left-0 p-2 bg-orange-100 text-orange-700 rounded-bl-lg font-medium text-xs">
           Active Board
-        </div>
-      )}
-      {id === "student1" && (
-        <div className="absolute bottom-2 right-2 px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium">
-          Live Connected
         </div>
       )}
     </div>

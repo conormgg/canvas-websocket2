@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps, WhiteboardId } from "@/types/canvas";
@@ -6,9 +5,6 @@ import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 import { useClipboardContext } from "@/context/ClipboardContext";
-import { useCanvasKeyboard } from "./useCanvasKeyboard";
-import { useTouchHandlers } from "./touch/useTouchHandlers";
-import { applyCursorToCanvas } from "@/utils/cursorUtils";
 
 export const useCanvas = ({
   id,
@@ -35,10 +31,7 @@ export const useCanvas = ({
     onZoomChange || (() => {})
   );
 
-  // Adding keyboard and touch handlers to ensure they work
   useKeyboardShortcuts(fabricRef);
-  useCanvasKeyboard(fabricRef);
-  useTouchHandlers(fabricRef);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -49,9 +42,9 @@ export const useCanvas = ({
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: "#ffffff",
-      isDrawingMode: false, // Start with drawing mode disabled
+      isDrawingMode: activeTool === "draw" || activeTool === "eraser",
       preserveObjectStacking: true,
-      selection: true,
+      selection: false,
     });
 
     if (canvas.lowerCanvasEl) canvas.lowerCanvasEl.dataset.boardId = id;
@@ -63,8 +56,7 @@ export const useCanvas = ({
 
     if (onObjectAdded) {
       canvas.on("object:added", (e) => {
-        // Only proceed if this is the active board
-        if (activeBoardId === id && e.target) {
+        if (e.target && id === activeBoardId) {
           onObjectAdded(e.target);
         }
       });
@@ -94,9 +86,7 @@ export const useCanvas = ({
     };
 
     window.addEventListener("resize", handleResize);
-    handleResize();
 
-    // Initial cursor setup
     updateCursorAndNotify(canvas, activeTool, inkThickness);
 
     return () => {
@@ -108,33 +98,18 @@ export const useCanvas = ({
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-
-    // Critical fix: Only enable drawing mode if this is the active board
-    const isActiveBoard = id === activeBoardId;
-    
-    console.log(`Canvas ${id} - Active: ${isActiveBoard}, Tool: ${activeTool}, ActiveBoardId: ${activeBoardId}`);
-
-    // Set drawing mode based on active status and tool
-    if (isActiveBoard) {
-      canvas.isDrawingMode = activeTool === "draw" || activeTool === "eraser";
-      
+    if (activeTool === "draw" || activeTool === "eraser") {
+      canvas.isDrawingMode = true;
       if (canvas.freeDrawingBrush) {
         canvas.freeDrawingBrush.width = inkThickness;
-        canvas.freeDrawingBrush.color = 
+        canvas.freeDrawingBrush.color =
           activeTool === "draw" ? activeColor : "#ffffff";
       }
-      
-      // Update cursor - force update with each tool change
-      updateCursorAndNotify(canvas, activeTool, inkThickness);
     } else {
-      // If not active board, disable drawing mode
       canvas.isDrawingMode = false;
-      // Set default cursor for inactive boards
-      applyCursorToCanvas(canvas, 'default');
     }
-    
-    canvas.renderAll();
-  }, [activeTool, activeColor, inkThickness, activeBoardId, id]);
+    updateCursorAndNotify(canvas, activeTool, inkThickness);
+  }, [activeTool, activeColor, inkThickness]);
 
   return { canvasRef, fabricRef };
 };

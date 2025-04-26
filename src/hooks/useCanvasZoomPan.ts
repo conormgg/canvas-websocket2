@@ -2,26 +2,17 @@
 import { Canvas, Point, TPointerEventInfo, TPointerEvent } from 'fabric';
 import { useRef } from 'react';
 import { CanvasPosition } from '@/types/canvas';
-import { applyCursorToCanvas } from '@/utils/cursorUtils';
-import { useClipboardContext } from '@/context/ClipboardContext';
 
 export const useCanvasZoomPan = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   onZoomChange: (zoom: number) => void
 ) => {
   const lastPosRef = useRef<CanvasPosition>({ x: 0, y: 0 });
-  const { activeBoardId } = useClipboardContext();
 
   const handleMouseWheel = (opt: TPointerEventInfo<WheelEvent>) => {
     const e = opt.e;
     const canvas = fabricRef.current;
     if (!canvas) return;
-    
-    // Check if this is the active board
-    const boardId = canvas.lowerCanvasEl?.dataset?.boardId;
-    if (boardId !== activeBoardId) {
-      return;
-    }
 
     const delta = e.deltaY;
     let zoom = canvas.getZoom();
@@ -39,15 +30,9 @@ export const useCanvasZoomPan = (
   const handlePanning = (e: MouseEvent) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    
-    // Check if this is the active board
-    const boardId = canvas.lowerCanvasEl?.dataset?.boardId;
-    if (boardId !== activeBoardId) {
-      return;
-    }
 
     if (e.buttons === 2) {
-      applyCursorToCanvas(canvas, 'grabbing');
+      canvas.setCursor('grabbing');
       
       if (lastPosRef.current.x === 0) lastPosRef.current.x = e.clientX;
       if (lastPosRef.current.y === 0) lastPosRef.current.y = e.clientY;
