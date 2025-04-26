@@ -3,6 +3,7 @@ import { useRef, useEffect } from 'react';
 import { Canvas, util, FabricObject } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
 import { toast } from 'sonner';
+import { useClipboardContext } from '@/context/ClipboardContext';
 
 interface UseWhiteboardSyncProps {
   id: WhiteboardId;
@@ -11,6 +12,7 @@ interface UseWhiteboardSyncProps {
 
 export const useWhiteboardSync = ({ id, fabricRef }: UseWhiteboardSyncProps) => {
   const linkedBoardId = useRef<WhiteboardId | null>(null);
+  const { activeBoardId } = useClipboardContext();
 
   useEffect(() => {
     if (id === "student1") {
@@ -61,6 +63,12 @@ export const useWhiteboardSync = ({ id, fabricRef }: UseWhiteboardSyncProps) => 
   }, [fabricRef, id]);
 
   const handleObjectAdded = (object: FabricObject) => {
+    // Only allow adding objects if this is the active board
+    if (activeBoardId !== id) {
+      console.log(`Not adding object - board ${id} is not active (active is ${activeBoardId})`);
+      return;
+    }
+    
     if (linkedBoardId.current) {
       const event = new CustomEvent("whiteboard-update", {
         detail: {

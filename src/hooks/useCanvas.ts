@@ -57,7 +57,8 @@ export const useCanvas = ({
 
     if (onObjectAdded) {
       canvas.on("object:added", (e) => {
-        if (e.target) {
+        // Only proceed if this is the active board
+        if (activeBoardId === id && e.target) {
           onObjectAdded(e.target);
         }
       });
@@ -99,18 +100,25 @@ export const useCanvas = ({
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    if (activeTool === "draw" || activeTool === "eraser") {
-      canvas.isDrawingMode = true;
-      if (canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush.width = inkThickness;
-        canvas.freeDrawingBrush.color =
-          activeTool === "draw" ? activeColor : "#ffffff";
+
+    // Only enable drawing mode if this is the active board
+    if (id === activeBoardId) {
+      if (activeTool === "draw" || activeTool === "eraser") {
+        canvas.isDrawingMode = true;
+        if (canvas.freeDrawingBrush) {
+          canvas.freeDrawingBrush.width = inkThickness;
+          canvas.freeDrawingBrush.color =
+            activeTool === "draw" ? activeColor : "#ffffff";
+        }
+      } else {
+        canvas.isDrawingMode = false;
       }
+      updateCursorAndNotify(canvas, activeTool, inkThickness);
     } else {
+      // If not active board, disable drawing mode
       canvas.isDrawingMode = false;
     }
-    updateCursorAndNotify(canvas, activeTool, inkThickness);
-  }, [activeTool, activeColor, inkThickness]);
+  }, [activeTool, activeColor, inkThickness, activeBoardId, id]);
 
   return { canvasRef, fabricRef };
 };

@@ -18,15 +18,12 @@ export const useWhiteboardActive = ({
   onCtrlClick 
 }: UseWhiteboardActiveProps) => {
   const [isActive, setIsActive] = useState(false);
-  const isActiveRef = useRef(false);
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
 
   const handleCanvasClick = (e: React.MouseEvent) => {
     console.log(`Setting ${id} as active board`);
     window.__wbActiveBoard = canvasRef.current;
     window.__wbActiveBoardId = id;
-    isActiveRef.current = true;
-    setIsActive(true);
     
     if (fabricRef.current) {
       setActiveCanvas(fabricRef.current, id);
@@ -37,35 +34,11 @@ export const useWhiteboardActive = ({
     }
   };
 
+  // This effect will run when the activeBoardId changes in the ClipboardContext
   useEffect(() => {
-    setIsActive(activeBoardId === id);
+    const isCurrentlyActive = activeBoardId === id;
+    setIsActive(isCurrentlyActive);
   }, [activeBoardId, id]);
-
-  useEffect(() => {
-    const checkActiveStatus = () => {
-      const isCurrentlyActive = 
-        window.__wbActiveBoardId === id || 
-        window.__wbActiveBoard === canvasRef.current;
-      setIsActive(isCurrentlyActive);
-      
-      if (isCurrentlyActive && fabricRef.current) {
-        setActiveCanvas(fabricRef.current, id);
-      }
-    };
-
-    checkActiveStatus();
-
-    const observer = new MutationObserver(checkActiveStatus);
-    
-    if (canvasRef.current) {
-      observer.observe(canvasRef.current, {
-        attributes: true,
-        attributeFilter: ['data-board-id']
-      });
-    }
-
-    return () => observer.disconnect();
-  }, [id, setActiveCanvas]);
 
   return { isActive, handleCanvasClick };
 };

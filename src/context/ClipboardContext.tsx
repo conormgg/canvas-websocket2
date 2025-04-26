@@ -20,11 +20,19 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Track both the canvas and its ID when setting active
   const updateActiveCanvas = useCallback((canvas: Canvas | null, boardId?: WhiteboardId | null) => {
     console.log(`Updating active canvas to boardId: ${boardId || 'unknown'}`);
-    setActiveCanvas(canvas);
-    if (boardId) {
+    
+    // Deactivate previous active board
+    if (boardId && boardId !== activeBoardId) {
+      setActiveCanvas(canvas);
       setActiveBoardId(boardId);
+      
+      // Update global tracking variables
+      window.__wbActiveBoard = canvas?.getElement() || null;
+      window.__wbActiveBoardId = boardId;
+      
+      console.log(`Active board changed from ${activeBoardId} to ${boardId}`);
     }
-  }, []);
+  }, [activeBoardId]);
 
   const copySelectedObjects = useCallback((canvas: Canvas) => {
     const activeObjects = canvas.getActiveObjects();
@@ -57,6 +65,10 @@ export const ClipboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setActiveCanvas(canvas);
     if (boardId) {
       setActiveBoardId(boardId);
+      
+      // Update global tracking variables
+      window.__wbActiveBoard = canvas.getElement();
+      window.__wbActiveBoardId = boardId;
     }
     
     setPendingPastePosition(position);

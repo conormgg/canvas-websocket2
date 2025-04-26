@@ -82,6 +82,16 @@ export const Whiteboard = ({
     setLocalIsMaximized(!localIsMaximized);
   };
 
+  // Handle canvas focus
+  const handleCanvasFocus = () => {
+    window.__wbActiveBoard = canvasRef.current;
+    window.__wbActiveBoardId = id;
+    if (fabricRef.current) {
+      setActiveCanvas(fabricRef.current, id);
+    }
+    console.log(`Canvas ${id} focused and set as active`);
+  };
+
   return (
     <div
       className={cn(
@@ -107,14 +117,7 @@ export const Whiteboard = ({
         className="w-full h-full z-0" 
         tabIndex={0}
         data-board-id={id}
-        onFocus={() => {
-          window.__wbActiveBoard = canvasRef.current;
-          window.__wbActiveBoardId = id;
-          if (fabricRef.current) {
-            setActiveCanvas(fabricRef.current, id);
-          }
-          console.log(`Canvas ${id} focused and set as active`);
-        }}
+        onFocus={handleCanvasFocus}
         onClick={handleCanvasClick}
       />
       {isActive && (
