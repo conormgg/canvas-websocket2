@@ -1,20 +1,15 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
-import { toast } from "sonner";
-import { util, FabricObject } from "fabric";
 import { useClipboardContext } from "@/context/ClipboardContext";
-import { cn } from "@/lib/utils";
 import { useSyncContext } from "@/context/SyncContext";
-
-interface WhiteboardProps {
-  id: WhiteboardId;
-  isSplitScreen?: boolean;
-  onCtrlClick?: () => void;
-  isMaximized?: boolean;
-}
+import { cn } from "@/lib/utils";
+import { Toolbar } from "./Toolbar";
+import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
+import { useTeacherUpdates } from "@/hooks/useTeacherUpdates";
+import { useBoardUpdates } from "@/hooks/useBoardUpdates";
+import { WhiteboardProps } from "@/types/whiteboard";
 
 export const Whiteboard = ({ 
   id, 
@@ -34,7 +29,6 @@ export const Whiteboard = ({
   const { sendObjectToStudents, isSyncEnabled } = useSyncContext();
 
   const handleObjectAdded = (object: FabricObject) => {
-    // Only sync objects added to the teacher's board to student boards
     if (id === "teacher" && isSyncEnabled) {
       console.log("Teacher added object, sending to students:", object);
       const objectData = object.toJSON();
@@ -51,6 +45,10 @@ export const Whiteboard = ({
     onZoomChange: setZoom,
     onObjectAdded: handleObjectAdded,
   });
+
+  // Use custom hooks for updates
+  useTeacherUpdates(id, fabricRef, isSyncEnabled);
+  useBoardUpdates(id, fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -126,78 +124,6 @@ export const Whiteboard = ({
     }
   }, [canvasRef, id]);
 
-  // Listen for update events from the teacher's whiteboard
-  useEffect(() => {
-    // Only student boards should listen for updates from teacher
-    if (id !== "student1") return;
-
-    const handleTeacherUpdate = (e: CustomEvent) => {
-      if (!isSyncEnabled) return;
-
-      const canvas = fabricRef.current;
-      if (!canvas) return;
-
-      console.log(`Student board ${id} received update:`, e.detail);
-
-      util
-        .enlivenObjects([e.detail.object])
-        .then((objects: FabricObject[]) => {
-          objects.forEach((obj) => {
-            // Ensure objects from teacher are still interactive
-            obj.selectable = true;
-            obj.evented = true;
-            canvas.add(obj);
-            canvas.renderAll();
-          });
-        })
-        .catch((err) => {
-          console.error("Failed to enliven object", err);
-          toast.error("Could not sync object to this board.");
-        });
-    };
-
-    window.addEventListener("teacher-update", handleTeacherUpdate as EventListener);
-    return () =>
-      window.removeEventListener(
-        "teacher-update",
-        handleTeacherUpdate as EventListener
-      );
-  }, [fabricRef, id, isSyncEnabled]);
-
-  useEffect(() => {
-    const handleUpdate = (e: CustomEvent) => {
-      if (e.detail.sourceId === id) return;
-      const canvas = fabricRef.current;
-      if (!canvas) return;
-
-      util
-        .enlivenObjects([e.detail.object])
-        .then((objects: FabricObject[]) => {
-          objects.forEach((obj) => {
-            obj.selectable = true;
-            obj.evented = true;
-            canvas.add(obj);
-          });
-          canvas.renderAll();
-        })
-        .catch((err) => {
-          console.error("Failed to enliven object", err);
-          toast.error("Could not sync object to this board.");
-        });
-    };
-
-    window.addEventListener("whiteboard-update", handleUpdate as EventListener);
-    return () =>
-      window.removeEventListener(
-        "whiteboard-update",
-        handleUpdate as EventListener
-      );
-  }, [fabricRef, id]);
-
-  const toggleMaximize = () => {
-    setIsMaximized(!isMaximized);
-  };
-
   return (
     <div
       className={cn(
@@ -236,11 +162,7 @@ export const Whiteboard = ({
         }}
         onClick={handleCanvasClick}
       />
-      {isActive && (
-        <div className="absolute top-0 left-0 p-2 bg-orange-100 text-orange-700 rounded-bl-lg font-medium text-xs">
-          Active Board
-        </div>
-      )}
+      <ActiveBoardIndicator isActive={isActive} />
     </div>
   );
 };
