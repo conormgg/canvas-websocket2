@@ -1,7 +1,7 @@
 
 import { Toggle } from "@/components/ui/toggle";
 import { useSyncContext } from "@/context/SyncContext";
-import { SyncIcon } from "lucide-react";
+import { Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SyncToggleProps {
@@ -26,7 +26,7 @@ export const SyncToggle = ({ isSplitScreen = false }: SyncToggleProps) => {
       )}
       aria-label="Toggle whiteboard sync"
     >
-      <SyncIcon className={cn("h-4 w-4 mr-1", isSyncEnabled ? "text-green-500" : "")} />
+      <Repeat className={cn("h-4 w-4 mr-1", isSyncEnabled ? "text-green-500" : "")} />
       Sync {isSyncEnabled ? "ON" : "OFF"}
     </Toggle>
   );
