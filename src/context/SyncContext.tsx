@@ -9,8 +9,10 @@ interface SyncContextProps {
   sendObjectToStudents: (objectData: any) => void;
 }
 
+// Use localStorage to persist sync state across views
 const SYNC_STORAGE_KEY = "whiteboard-sync-enabled";
 
+// Create a context for sync functionality
 const SyncContext = createContext<SyncContextProps | undefined>(undefined);
 
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
@@ -37,15 +39,17 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const sendObjectToStudents = (objectData: any) => {
     if (!isSyncEnabled) return;
     
-    // Create a custom event to broadcast the object to student boards
-    const updateEvent = new CustomEvent("teacher-update", {
+    // Create a custom event to broadcast the object data to student boards
+    const syncEvent = new CustomEvent("teacher-update", {
       detail: {
         object: objectData,
-        sourceId: "teacher"
+        sourceId: "teacher",
+        timestamp: Date.now() // Add timestamp for ordering events
       }
     });
     
-    window.dispatchEvent(updateEvent);
+    // Dispatch the event for student boards to listen for
+    window.dispatchEvent(syncEvent);
     console.log("Object sent to students:", objectData);
   };
 

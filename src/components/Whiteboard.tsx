@@ -128,8 +128,8 @@ export const Whiteboard = ({
 
   // Listen for update events from the teacher's whiteboard
   useEffect(() => {
-    // Only student boards should listen for updates
-    if (id === "teacher") return;
+    // Only student boards should listen for updates from teacher
+    if (id !== "student1") return;
 
     const handleTeacherUpdate = (e: CustomEvent) => {
       if (!isSyncEnabled) return;
@@ -147,8 +147,8 @@ export const Whiteboard = ({
             obj.selectable = true;
             obj.evented = true;
             canvas.add(obj);
+            canvas.renderAll();
           });
-          canvas.renderAll();
         })
         .catch((err) => {
           console.error("Failed to enliven object", err);
