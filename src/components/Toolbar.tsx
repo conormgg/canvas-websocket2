@@ -1,3 +1,4 @@
+
 import { MousePointer, Pencil, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "./ColorPicker";
@@ -8,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SyncToggle } from "./SyncToggle";
+import { WhiteboardId } from "@/types/canvas";
 
 interface ToolbarProps {
   activeTool: "select" | "draw" | "eraser";
@@ -17,6 +20,7 @@ interface ToolbarProps {
   inkThickness: number;
   onInkThicknessChange: (thickness: number) => void;
   isSplitScreen?: boolean;
+  boardId?: WhiteboardId;
 }
 
 export const Toolbar = ({
@@ -27,10 +31,14 @@ export const Toolbar = ({
   inkThickness,
   onInkThicknessChange,
   isSplitScreen = false,
+  boardId,
 }: ToolbarProps) => {
   const containerClass = isSplitScreen
     ? "bg-[#221F26] rounded-md shadow-md p-1 flex items-center justify-center gap-1 scale-90 max-w-xs"
     : "bg-[#221F26] rounded-lg shadow-lg p-2 flex items-center gap-2";
+
+  // Only show sync toggle on teacher's board
+  const showSyncToggle = boardId === "teacher";
 
   return (
     <div className={containerClass}>
@@ -86,6 +94,7 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
+          {showSyncToggle && <SyncToggle isSplitScreen={true} />}
         </>
       ) : (
         <>
@@ -108,8 +117,10 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
+          {showSyncToggle && <SyncToggle />}
         </>
       )}
     </div>
   );
 };
+

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Toolbar } from "./Toolbar";
 import { useCanvas } from "@/hooks/useCanvas";
@@ -6,6 +7,7 @@ import { toast } from "sonner";
 import { util, FabricObject } from "fabric";
 import { useClipboardContext } from "@/context/ClipboardContext";
 import { cn } from "@/lib/utils";
+import { useSyncContext } from "@/context/SyncContext";
 
 interface WhiteboardProps {
   id: WhiteboardId;
@@ -29,6 +31,16 @@ export const Whiteboard = ({
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
+  const { sendObjectToStudents, isSyncEnabled } = useSyncContext();
+
+  const handleObjectAdded = (object: FabricObject) => {
+    // Only sync objects added to the teacher's board to student boards
+    if (id === "teacher" && isSyncEnabled) {
+      console.log("Teacher added object, sending to students:", object);
+      const objectData = object.toJSON();
+      sendObjectToStudents(objectData);
+    }
+  };
 
   const { canvasRef, fabricRef } = useCanvas({
     id,
@@ -37,6 +49,7 @@ export const Whiteboard = ({
     inkThickness,
     isSplitScreen,
     onZoomChange: setZoom,
+    onObjectAdded: handleObjectAdded,
   });
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -113,6 +126,44 @@ export const Whiteboard = ({
     }
   }, [canvasRef, id]);
 
+  // Listen for update events from the teacher's whiteboard
+  useEffect(() => {
+    // Only student boards should listen for updates
+    if (id === "teacher") return;
+
+    const handleTeacherUpdate = (e: CustomEvent) => {
+      if (!isSyncEnabled) return;
+
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+
+      console.log(`Student board ${id} received update:`, e.detail);
+
+      util
+        .enlivenObjects([e.detail.object])
+        .then((objects: FabricObject[]) => {
+          objects.forEach((obj) => {
+            // Ensure objects from teacher are still interactive
+            obj.selectable = true;
+            obj.evented = true;
+            canvas.add(obj);
+          });
+          canvas.renderAll();
+        })
+        .catch((err) => {
+          console.error("Failed to enliven object", err);
+          toast.error("Could not sync object to this board.");
+        });
+    };
+
+    window.addEventListener("teacher-update", handleTeacherUpdate as EventListener);
+    return () =>
+      window.removeEventListener(
+        "teacher-update",
+        handleTeacherUpdate as EventListener
+      );
+  }, [fabricRef, id, isSyncEnabled]);
+
   useEffect(() => {
     const handleUpdate = (e: CustomEvent) => {
       if (e.detail.sourceId === id) return;
@@ -166,6 +217,7 @@ export const Whiteboard = ({
         inkThickness={inkThickness}
         onInkThicknessChange={setInkThickness}
         isSplitScreen={isSplitScreen}
+        boardId={id}
       />
       <canvas 
         ref={canvasRef} 
