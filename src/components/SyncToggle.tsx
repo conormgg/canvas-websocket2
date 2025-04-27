@@ -1,19 +1,46 @@
 
 import { Toggle } from "@/components/ui/toggle";
 import { useSyncContext } from "@/context/SyncContext";
-import { Repeat } from "lucide-react";
+import { Link, LinkOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { WhiteboardId } from "@/types/canvas";
 
 interface SyncToggleProps {
   isSplitScreen?: boolean;
+  boardId?: WhiteboardId;
+  isLinked?: boolean;
 }
 
-export const SyncToggle = ({ isSplitScreen = false }: SyncToggleProps) => {
+export const SyncToggle = ({ 
+  isSplitScreen = false,
+  boardId,
+  isLinked = false
+}: SyncToggleProps) => {
   const { isSyncEnabled, toggleSync } = useSyncContext();
+  
+  // Only enable toggle on teacher's board
+  const isTeacherBoard = boardId === "teacher";
+  const showToggle = isTeacherBoard;
   
   const containerClass = isSplitScreen
     ? "scale-90"
     : "";
+  
+  if (!showToggle && !isLinked) return null;
+  
+  // If it's a linked board but not the teacher board, show indicator only
+  if (isLinked && !isTeacherBoard) {
+    return (
+      <div className={cn(
+        "flex items-center gap-1 bg-sidebar-primary px-2 py-1 rounded-md text-xs text-white",
+        "border-2 border-green-500",
+        containerClass
+      )}>
+        <Link className="h-3 w-3 text-green-500" />
+        <span>Linked</span>
+      </div>
+    );
+  }
   
   return (
     <Toggle 
@@ -25,8 +52,13 @@ export const SyncToggle = ({ isSplitScreen = false }: SyncToggleProps) => {
         containerClass
       )}
       aria-label="Toggle whiteboard sync"
+      disabled={!isTeacherBoard}
     >
-      <Repeat className={cn("h-4 w-4 mr-1", isSyncEnabled ? "text-green-500" : "")} />
+      {isSyncEnabled ? (
+        <Link className="h-4 w-4 mr-1 text-green-500" />
+      ) : (
+        <LinkOff className="h-4 w-4 mr-1" />
+      )}
       Sync {isSyncEnabled ? "ON" : "OFF"}
     </Toggle>
   );
