@@ -1,7 +1,7 @@
 
 import { Toggle } from "@/components/ui/toggle";
 import { useSyncContext } from "@/context/SyncContext";
-import { SplitIcon } from "lucide-react";
+import { SyncIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SyncToggleProps {
@@ -21,11 +21,12 @@ export const SyncToggle = ({ isSplitScreen = false }: SyncToggleProps) => {
       onPressedChange={toggleSync}
       className={cn(
         "bg-sidebar-primary hover:bg-sidebar-accent text-white rounded-md",
+        isSyncEnabled ? "border-2 border-green-500" : "border border-gray-600",
         containerClass
       )}
       aria-label="Toggle whiteboard sync"
     >
-      <SplitIcon className="h-4 w-4 mr-1" />
+      <SyncIcon className={cn("h-4 w-4 mr-1", isSyncEnabled ? "text-green-500" : "")} />
       Sync {isSyncEnabled ? "ON" : "OFF"}
     </Toggle>
   );
