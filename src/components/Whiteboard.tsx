@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -9,15 +8,15 @@ import { Toolbar } from "./Toolbar";
 import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
 import { useTeacherUpdates } from "@/hooks/useTeacherUpdates";
 import { useBoardUpdates } from "@/hooks/useBoardUpdates";
-import { WhiteboardProps } from "@/types/whiteboard";
 import { Object as FabricObject } from "fabric";
+import { WhiteboardProps } from "@/types/whiteboard";
 
 export const Whiteboard = ({ 
   id, 
   isSplitScreen = false,
   onCtrlClick,
   isMaximized: initialIsMaximized = false,
-  toolbarProps = {}
+  isCircular = false
 }: WhiteboardProps) => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
   const [activeColor, setActiveColor] = useState<string>("#ff0000");
@@ -30,7 +29,6 @@ export const Whiteboard = ({
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
   const { sendObjectToStudents, isSyncEnabled, isSync2Enabled, isSync3Enabled, isSync4Enabled, isSync5Enabled } = useSyncContext();
 
-  // Determine which sync state to use based on board ID
   const syncStateMap = {
     "teacher": isSyncEnabled,
     "teacher2": isSync2Enabled,
@@ -42,12 +40,10 @@ export const Whiteboard = ({
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
   const handleObjectAdded = (object: FabricObject) => {
-    // Determine if we're in the teacher view (main view, not student or split mode)
     const isTeacherView = window.location.pathname.includes('/teacher') || 
                           window.location.pathname === '/' ||
                           window.location.pathname.includes('/split-mode');
     
-    // Only sync objects from teacher boards when in appropriate view and sync is enabled
     if ((id.startsWith("teacher")) && isTeacherView) {
       console.log(`${id} added object, sending to corresponding student board:`, object);
       const objectData = object.toJSON();
@@ -65,7 +61,6 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
 
-  // Use the board-specific sync state
   useTeacherUpdates(id, fabricRef, currentSyncState);
   useBoardUpdates(id, fabricRef);
 
@@ -148,8 +143,9 @@ export const Whiteboard = ({
       className={cn(
         "relative flex flex-col items-center justify-start",
         "transition-all duration-300 ease-in-out",
-        isActive && "ring-2 ring-orange-400 bg-orange-50/30 rounded-lg shadow-lg",
+        isActive && "ring-2 ring-orange-400 bg-orange-50/30 shadow-lg",
         isMaximized ? "fixed inset-4 z-50 bg-white" : "w-full h-full",
+        isCircular ? "rounded-full aspect-square" : "rounded-lg",
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
@@ -163,11 +159,13 @@ export const Whiteboard = ({
         onInkThicknessChange={setInkThickness}
         isSplitScreen={isSplitScreen}
         boardId={id}
-        backgroundColor={toolbarProps.backgroundColor}
       />
       <canvas 
         ref={canvasRef} 
-        className="w-full h-full z-0" 
+        className={cn(
+          "w-full h-full z-0",
+          isCircular && "rounded-full"
+        )}
         tabIndex={0}
         data-board-id={id}
         onFocus={() => {
