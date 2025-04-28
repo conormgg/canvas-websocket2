@@ -10,6 +10,7 @@ import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
 import { useTeacherUpdates } from "@/hooks/useTeacherUpdates";
 import { useBoardUpdates } from "@/hooks/useBoardUpdates";
 import { WhiteboardProps } from "@/types/whiteboard";
+import { Object as FabricObject } from "fabric";
 
 export const Whiteboard = ({ 
   id, 
