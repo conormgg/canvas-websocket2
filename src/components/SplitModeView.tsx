@@ -11,25 +11,46 @@ export const SplitModeView = () => {
       <div className="flex items-center justify-between p-2">
         <div className="text-lg font-medium">
           {isSyncEnabled ? (
-            <span className="text-green-600">Sync Active: Teacher's Board → Student's Teacher Board</span>
+            <div className="flex flex-col">
+              <span className="text-green-600">Sync Active: Teacher's View 1 → Student's View 1</span>
+              <span className="text-green-600">Sync Active: Teacher's View 2 → Student's View 2</span>
+            </div>
           ) : (
             <span className="text-gray-600">Sync Disabled</span>
           )}
         </div>
         <SyncToggle />
       </div>
-      <div className="flex gap-4 flex-1">
-        <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="absolute top-2 left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
-            Teacher View's Board
+      <div className="flex flex-col gap-4 flex-1">
+        {/* Top row - Teacher's View 1 and Student's View 1 */}
+        <div className="flex gap-4 flex-1">
+          <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="absolute top-2 left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
+              Teacher's View 1
+            </div>
+            <Whiteboard id="teacher" isSplitScreen={true} />
           </div>
-          <Whiteboard id="teacher" isSplitScreen={true} />
+          <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="absolute top-2 left-[calc(50%+0.5rem)] px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
+              Student's View 1
+            </div>
+            <Whiteboard id="student1" isSplitScreen={true} />
+          </div>
         </div>
-        <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="absolute top-2 left-[calc(50%+0.5rem)] px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
-            Student View's "Teacher's Board"
+        {/* Bottom row - Teacher's View 2 and Student's View 2 */}
+        <div className="flex gap-4 flex-1">
+          <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="absolute top-[calc(50%+1rem)] left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
+              Teacher's View 2
+            </div>
+            <Whiteboard id="teacher2" isSplitScreen={true} />
           </div>
-          <Whiteboard id="teacher" isSplitScreen={true} />
+          <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="absolute top-[calc(50%+1rem)] left-[calc(50%+0.5rem)] px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
+              Student's View 2
+            </div>
+            <Whiteboard id="student2" isSplitScreen={true} />
+          </div>
         </div>
       </div>
     </div>

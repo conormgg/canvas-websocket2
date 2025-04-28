@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -29,13 +30,16 @@ export const Whiteboard = ({
   const { sendObjectToStudents, isSyncEnabled } = useSyncContext();
 
   const handleObjectAdded = (object: FabricObject) => {
+    // Determine if we're in the teacher view (main view, not student or split mode)
     const isTeacherView = window.location.pathname.includes('/teacher') || 
                          window.location.pathname === '/';
     
+    // Only sync objects from teacher's view 1 (id="teacher")
+    // This corresponds to teacher's view 1 in the naming convention
     if (id === "teacher" && isSyncEnabled && isTeacherView) {
-      console.log("Teacher added object in teacher view, sending to students:", object);
+      console.log("Teacher's view 1 added object, sending to student's view 1:", object);
       const objectData = object.toJSON();
-      sendObjectToStudents(objectData);
+      sendObjectToStudents(objectData, id);
     }
   };
 
