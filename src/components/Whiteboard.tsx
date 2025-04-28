@@ -57,8 +57,8 @@ export const Whiteboard = ({
     instanceId: instanceIdRef.current
   });
 
-  // Listen for updates to teacher boards
-  useTeacherBoardUpdates(id, fabricRef, isSyncEnabled);
+  // Fix: Remove the third argument (isSyncEnabled) as it's not expected by the hook
+  useTeacherBoardUpdates(id, fabricRef);
   useBoardUpdates(id, fabricRef);
 
   // Set canvas instance ID when canvas is created
