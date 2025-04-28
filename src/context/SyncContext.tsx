@@ -1,8 +1,15 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+
+interface WhiteboardObject {
+  board_id: string;
+  object_data: any;
+  created_at?: string;
+  updated_at?: string;
+  id?: string;
+}
 
 interface SyncContextProps {
   isSyncEnabled: boolean;
@@ -133,12 +140,12 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const { error } = await supabase
-        .from('whiteboard_objects')
+      const { error } = await (supabase
+        .from('whiteboard_objects') as any)
         .insert({
           board_id: syncConfig.targetId,
           object_data: objectData
-        });
+        } as WhiteboardObject);
 
       if (error) throw error;
       

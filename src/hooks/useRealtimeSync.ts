@@ -6,6 +6,15 @@ import { Canvas } from 'fabric';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
 
+// Define the table structure since we can't modify the auto-generated types
+interface WhiteboardObject {
+  board_id: string;
+  object_data: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  id: string;
+}
+
 export const useRealtimeSync = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   boardId: WhiteboardId,
@@ -21,8 +30,8 @@ export const useRealtimeSync = (
       try {
         console.log(`Loading existing content for board: ${boardId}`);
         
-        const { data, error } = await supabase
-          .from('whiteboard_objects')
+        const { data, error } = await (supabase
+          .from('whiteboard_objects') as any)
           .select('object_data')
           .eq('board_id', boardId)
           .order('created_at', { ascending: false })
@@ -35,7 +44,6 @@ export const useRealtimeSync = (
         
         if (data && data.length > 0) {
           console.log(`Found existing content for board ${boardId}`);
-          // Properly handle the Json type by converting to a string if needed
           const objectData = data[0].object_data;
           
           // Add a small delay to ensure canvas is fully initialized
@@ -70,7 +78,7 @@ export const useRealtimeSync = (
           table: 'whiteboard_objects',
           filter: `board_id=eq.${boardId}`
         },
-        (payload) => {
+        (payload: { new: WhiteboardObject }) => {
           if (payload.new && 'object_data' in payload.new) {
             console.log(`Received realtime update for board ${boardId}`);
             const objectData = payload.new.object_data;

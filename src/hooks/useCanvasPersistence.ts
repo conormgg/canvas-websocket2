@@ -1,9 +1,16 @@
-
 import { useRef, useEffect } from 'react';
 import { Canvas, FabricObject } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+interface WhiteboardObject {
+  board_id: string;
+  object_data: any;
+  created_at?: string;
+  updated_at?: string;
+  id?: string;
+}
 
 export const useCanvasPersistence = (
   fabricRef: React.MutableRefObject<Canvas | null>,
@@ -19,12 +26,12 @@ export const useCanvasPersistence = (
       console.log(`Saving canvas state for ${boardId}`);
       const canvasData = canvas.toJSON();
       
-      const { error } = await supabase
-        .from('whiteboard_objects')
+      const { error } = await (supabase
+        .from('whiteboard_objects') as any)
         .insert({
           board_id: boardId,
           object_data: canvasData
-        });
+        } as WhiteboardObject);
         
       if (error) {
         console.error('Error saving canvas state:', error);
