@@ -7,7 +7,7 @@ import { useSyncContext } from "@/context/SyncContext";
 
 export const StudentView = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
-  const { isSyncEnabled, isSync2Enabled } = useSyncContext();
+  const { isSyncEnabled } = useSyncContext();
 
   const toggle = (id: WhiteboardId) => {
     setEnlarged(enlarged === id ? null : id);

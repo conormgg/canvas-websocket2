@@ -11,34 +11,40 @@ interface SyncToggleProps {
 }
 
 export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher1" }: SyncToggleProps) => {
-  const { isSyncEnabled, isSync2Enabled, toggleSync, toggleSync2 } = useSyncContext();
+  const { 
+    isSyncEnabled, 
+    isSync2Enabled, 
+    isSync3Enabled, 
+    isSync4Enabled, 
+    isSync5Enabled, 
+    toggleSync, 
+    toggleSync2, 
+    toggleSync3, 
+    toggleSync4, 
+    toggleSync5 
+  } = useSyncContext();
   
   // Map each board ID to its corresponding sync state
   const syncStateMap = {
     "teacher1": isSyncEnabled,
     "teacher2": isSync2Enabled,
-    "teacher3": false,
-    "teacher4": false,
-    "teacher5": false
+    "teacher3": isSync3Enabled,
+    "teacher4": isSync4Enabled,
+    "teacher5": isSync5Enabled
   };
   
   // Map each board ID to its corresponding toggle function
   const toggleFunctionMap = {
     "teacher1": toggleSync,
     "teacher2": toggleSync2,
-    "teacher3": () => {},
-    "teacher4": () => {},
-    "teacher5": () => {}
+    "teacher3": toggleSync3,
+    "teacher4": toggleSync4,
+    "teacher5": toggleSync5
   };
   
   // Get the correct sync state and toggle function for this board
   const isEnabled = syncStateMap[boardId as keyof typeof syncStateMap] || false;
   const toggleFunction = toggleFunctionMap[boardId as keyof typeof toggleFunctionMap] || toggleSync;
-  
-  // Only show the toggle for teacher1 and teacher2 which can actually sync
-  if (boardId !== "teacher1" && boardId !== "teacher2") {
-    return null;
-  }
   
   const containerClass = isSplitScreen
     ? "scale-90"

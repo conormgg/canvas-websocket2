@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { useClipboardContext } from "@/context/ClipboardContext";
 import { cn } from "@/lib/utils";
@@ -21,33 +21,25 @@ export const Whiteboard = ({
 }: WhiteboardProps) => {
   const { state, updateState } = useWhiteboardState(initialIsMaximized);
   const isActiveRef = useRef(false);
-  const prevSyncState = useRef(false);
 
   const { activeBoardId } = useClipboardContext();
-  const syncContext = useSyncContext();
+  const { 
+    isSyncEnabled, 
+    isSync2Enabled, 
+    isSync3Enabled, 
+    isSync4Enabled, 
+    isSync5Enabled 
+  } = useSyncContext();
+
+  const syncStateMap = {
+    "teacher1": isSyncEnabled,
+    "teacher2": isSync2Enabled,
+    "teacher3": isSync3Enabled,
+    "teacher4": isSync4Enabled,
+    "teacher5": isSync5Enabled
+  };
   
-  // Use useMemo to prevent unnecessary re-calculations
-  const currentSyncState = useMemo(() => {
-    const syncStateMap = {
-      "teacher1": syncContext.isSyncEnabled,
-      "teacher2": syncContext.isSync2Enabled,
-      "teacher3": false,
-      "teacher4": false,
-      "teacher5": false
-    };
-    return syncStateMap[id as keyof typeof syncStateMap] || false;
-  }, [id, syncContext.isSyncEnabled, syncContext.isSync2Enabled]);
-
-  // Only update prevSyncState when currentSyncState changes
-  useEffect(() => {
-    prevSyncState.current = currentSyncState;
-  }, [currentSyncState]);
-
-  // Handle object added for sync purposes - simplified and memoized
-  const handleObjectAdded = useMemo(() => (obj: any) => {
-    console.log(`Object added to ${id}, checking if we need to sync`);
-    // Actual sync logic is now handled in useCanvas
-  }, [id]);
+  const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
   const { canvasRef, fabricRef } = useCanvas({
     id,
@@ -56,7 +48,6 @@ export const Whiteboard = ({
     inkThickness: state.inkThickness,
     isSplitScreen,
     onZoomChange: (zoom) => updateState({ zoom }),
-    onObjectAdded: handleObjectAdded,
   });
 
   useTeacherUpdates(id, fabricRef, currentSyncState);
@@ -72,7 +63,7 @@ export const Whiteboard = ({
 
   useEffect(() => {
     updateState({ isActive: activeBoardId === id });
-  }, [activeBoardId, id, updateState]);
+  }, [activeBoardId, id]);
 
   return (
     <div

@@ -1,10 +1,16 @@
 
-import { WhiteboardId } from "@/types/canvas";
-import { ToolButtons } from "./toolbar/ToolButtons";
+import { MousePointer, Pencil, Eraser } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ColorPicker } from "./ColorPicker";
-import { InkThicknessSelector } from "./toolbar/InkThicknessSelector";
-import { CompactColorSelector } from "./toolbar/CompactColorSelector";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SyncToggle } from "./SyncToggle";
+import { WhiteboardId } from "@/types/canvas";
 
 interface ToolbarProps {
   activeTool: "select" | "draw" | "eraser";
@@ -31,23 +37,63 @@ export const Toolbar = ({
     ? "bg-[#221F26] rounded-md shadow-md p-1 flex items-center justify-center gap-1 scale-90 max-w-xs"
     : "bg-[#221F26] rounded-lg shadow-lg p-2 flex items-center gap-2";
 
+  // Only show sync toggle on teacher's board in teacher view (not in split mode)
   const showSyncToggle = boardId === "teacher1" && !isSplitScreen;
 
   return (
     <div className={containerClass}>
-      <ToolButtons 
-        activeTool={activeTool}
-        onToolChange={onToolChange}
-      />
+      <Button
+        variant={activeTool === "select" ? "secondary" : "ghost"}
+        size="icon"
+        onClick={() => onToolChange("select")}
+        className="text-white hover:text-white"
+      >
+        <MousePointer className="h-5 w-5" />
+      </Button>
+      <Button
+        variant={activeTool === "draw" ? "secondary" : "ghost"}
+        size="icon"
+        onClick={() => onToolChange("draw")}
+        className="text-white hover:text-white"
+      >
+        <Pencil className="h-5 w-5" />
+      </Button>
+      <Button
+        variant={activeTool === "eraser" ? "secondary" : "ghost"}
+        size="icon"
+        onClick={() => onToolChange("eraser")}
+        className="text-white hover:text-white"
+      >
+        <Eraser className="h-5 w-5" />
+      </Button>
 
       {isSplitScreen ? (
         <>
-          <CompactColorSelector onColorChange={onColorChange} />
-          <InkThicknessSelector
-            inkThickness={inkThickness}
-            onInkThicknessChange={onInkThicknessChange}
-            isSplitScreen={true}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onColorChange("red")}
+            className="bg-red-600 w-6 h-6 rounded-full"
           />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onColorChange("blue")}
+            className="bg-blue-600 w-6 h-6 rounded-full"
+          />
+          <Select
+            onValueChange={(value) => onInkThicknessChange(Number(value))}
+            defaultValue={inkThickness.toString()}
+          >
+            <SelectTrigger className="w-[60px] h-[28px] text-xs text-white border border-gray-600 bg-transparent">
+              <SelectValue placeholder="Size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">Thin</SelectItem>
+              <SelectItem value="4">Medium</SelectItem>
+              <SelectItem value="6">Thick</SelectItem>
+            </SelectContent>
+          </Select>
           {showSyncToggle && <SyncToggle isSplitScreen={true} boardId={boardId} />}
         </>
       ) : (
@@ -58,10 +104,19 @@ export const Toolbar = ({
             onColorChange={onColorChange}
           />
           <div className="w-px h-8 bg-gray-600 mx-2" />
-          <InkThicknessSelector
-            inkThickness={inkThickness}
-            onInkThicknessChange={onInkThicknessChange}
-          />
+          <Select
+            value={inkThickness.toString()}
+            onValueChange={(value) => onInkThicknessChange(Number(value))}
+          >
+            <SelectTrigger className="w-24 bg-transparent text-white border-gray-600">
+              <SelectValue placeholder="Size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">Thin</SelectItem>
+              <SelectItem value="4">Medium</SelectItem>
+              <SelectItem value="6">Thick</SelectItem>
+            </SelectContent>
+          </Select>
           {showSyncToggle && <SyncToggle boardId={boardId} />}
         </>
       )}

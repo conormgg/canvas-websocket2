@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
@@ -7,7 +6,7 @@ import { WhiteboardId, TeacherId } from "@/types/canvas";
 export const SplitWhiteboard = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
   
-  // All secondary teacher boards
+  // The secondary boards
   const secondaryBoards: TeacherId[] = [
     "teacher2",
     "teacher3",
@@ -49,10 +48,10 @@ export const SplitWhiteboard = () => {
       ? "fixed inset-4 z-50"
       : enlarged
       ? "w-1/5"
-      : "w-1/3";
+      : "w-1/2";
 
   const secondaryBoardsContainerCls =
-    enlarged === "teacher1" ? "w-0 opacity-0" : enlarged ? "w-full" : "w-2/3";
+    enlarged === "teacher1" ? "w-0 opacity-0" : enlarged ? "w-full" : "w-1/2";
 
   const secondaryBoardCls = (id: TeacherId) => {
     if (enlarged === id) return "fixed inset-4 z-50";

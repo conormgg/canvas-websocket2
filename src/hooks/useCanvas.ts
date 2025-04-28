@@ -6,7 +6,6 @@ import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 import { useClipboardContext } from "@/context/ClipboardContext";
-import { useSyncContext } from "@/context/SyncContext";
 import { createGrid } from "@/utils/gridUtils";
 
 export const useCanvas = ({
@@ -22,8 +21,6 @@ export const useCanvas = ({
   const fabricRef = useRef<Canvas | null>(null);
   const { activeBoardId } = useClipboardContext();
   const isDrawingRef = useRef<boolean>(false);
-  const { sendObjectToStudents } = useSyncContext();
-  const isInitializedRef = useRef<boolean>(false);
 
   const { updateCursorAndNotify } = useCanvasTools();
   const {
@@ -39,9 +36,8 @@ export const useCanvas = ({
 
   useKeyboardShortcuts(fabricRef);
 
-  // Split initialization and event handling to prevent re-renders
   useEffect(() => {
-    if (!canvasRef.current || isInitializedRef.current) return;
+    if (!canvasRef.current) return;
 
     canvasRef.current.dataset.boardId = id;
 
@@ -64,6 +60,42 @@ export const useCanvas = ({
     if (id === "teacher1") {
       createGrid(canvas);
     }
+
+    if (onObjectAdded) {
+      // Listen for path creation (when drawing ends)
+      canvas.on("path:created", (e) => {
+        if (e.path && id === activeBoardId) {
+          console.log(`${id} created a path, notifying onObjectAdded`);
+          onObjectAdded(e.path);
+        }
+      });
+      
+      // Listen for objects being added from other sources
+      canvas.on("object:added", (e) => {
+        // Only notify if this isn't from a path:created event (which we already handle above)
+        // and if this is the active board (to prevent duplicate notifications)
+        if (e.target && id === activeBoardId && !isDrawingRef.current) {
+          console.log(`${id} added an object (not from drawing), notifying onObjectAdded`);
+          onObjectAdded(e.target);
+        }
+      });
+    }
+
+    canvas.on("mouse:wheel", handleMouseWheel);
+    canvas.on("mouse:down", handleMouseDown);
+    canvas.on("mouse:move", handleMouseMove);
+    canvas.on("mouse:up", handleMouseUp);
+    
+    // Track drawing state
+    canvas.on("path:created", () => {
+      isDrawingRef.current = false;
+    });
+    
+    canvas.on("mouse:down", () => {
+      if (activeTool === "draw" || activeTool === "eraser") {
+        isDrawingRef.current = true;
+      }
+    });
 
     fabricRef.current = canvas;
 
@@ -88,98 +120,18 @@ export const useCanvas = ({
     };
 
     window.addEventListener("resize", handleResize);
-    isInitializedRef.current = true;
 
     updateCursorAndNotify(canvas, activeTool, inkThickness);
 
     return () => {
+      canvas.dispose();
       window.removeEventListener("resize", handleResize);
     };
-  }, [id, activeTool, activeColor, inkThickness, updateCursorAndNotify]);
+  }, []);
 
-  // Separate effect for event handlers to avoid re-registering often
   useEffect(() => {
     const canvas = fabricRef.current;
-    if (!canvas || !isInitializedRef.current) return;
-
-    // Handle path creation and syncing
-    const handlePathCreated = (e: any) => {
-      if (e.path) {
-        console.log(`${id} created a path`);
-        isDrawingRef.current = false;
-        
-        // If this is a teacher board, send to students
-        if (id.startsWith("teacher")) {
-          try {
-            console.log(`Sending path from ${id} to corresponding student board`);
-            const serializedPath = e.path.toObject();
-            sendObjectToStudents(serializedPath, id);
-          } catch (err) {
-            console.error(`Error sending path from ${id}:`, err);
-          }
-        }
-        
-        // Also notify onObjectAdded if provided
-        if (onObjectAdded) {
-          onObjectAdded(e.path);
-        }
-      }
-    };
-    
-    // Listen for objects being added from other sources
-    const handleObjectAdded = (e: any) => {
-      // Avoid duplicate notifications for path:created events
-      if (e.target && !isDrawingRef.current) {
-        console.log(`${id} added an object (not from drawing)`);
-        
-        // If this is a teacher board and not from drawing, sync it
-        if (id.startsWith("teacher") && !isDrawingRef.current) {
-          try {
-            console.log(`Sending object from ${id} to corresponding student board`);
-            const serializedObject = e.target.toObject();
-            sendObjectToStudents(serializedObject, id);
-          } catch (err) {
-            console.error(`Error sending object from ${id}:`, err);
-          }
-        }
-        
-        // Also notify onObjectAdded if provided
-        if (onObjectAdded) {
-          onObjectAdded(e.target);
-        }
-      }
-    };
-
-    const handleMouseDown = () => {
-      if (activeTool === "draw" || activeTool === "eraser") {
-        isDrawingRef.current = true;
-      }
-    };
-
-    canvas.on("path:created", handlePathCreated);
-    canvas.on("object:added", handleObjectAdded);
-    canvas.on("mouse:wheel", handleMouseWheel);
-    canvas.on("mouse:down", handleMouseDown);
-    canvas.on("mouse:move", handleMouseMove);
-    canvas.on("mouse:up", handleMouseUp);
-    canvas.on("mouse:down", handleMouseDown);
-
-    return () => {
-      canvas.off("path:created", handlePathCreated);
-      canvas.off("object:added", handleObjectAdded);
-      canvas.off("mouse:wheel", handleMouseWheel);
-      canvas.off("mouse:down", handleMouseDown);
-      canvas.off("mouse:move", handleMouseMove);
-      canvas.off("mouse:up", handleMouseUp);
-      canvas.off("mouse:down", handleMouseDown);
-    };
-  }, [id, fabricRef.current, sendObjectToStudents, onObjectAdded, handleMouseWheel, handleMouseDown, handleMouseMove, handleMouseUp, activeTool]);
-
-  // Separate effect for tool changes
-  useEffect(() => {
-    const canvas = fabricRef.current;
-    if (!canvas || !isInitializedRef.current) return;
-    
+    if (!canvas) return;
     if (activeTool === "draw" || activeTool === "eraser") {
       canvas.isDrawingMode = true;
       if (canvas.freeDrawingBrush) {
@@ -191,17 +143,7 @@ export const useCanvas = ({
       canvas.isDrawingMode = false;
     }
     updateCursorAndNotify(canvas, activeTool, inkThickness);
-  }, [activeTool, activeColor, inkThickness, updateCursorAndNotify]);
-
-  // Clean up canvas on component unmount
-  useEffect(() => {
-    return () => {
-      if (isInitializedRef.current && fabricRef.current) {
-        fabricRef.current.dispose();
-        isInitializedRef.current = false;
-      }
-    };
-  }, []);
+  }, [activeTool, activeColor, inkThickness]);
 
   return { canvasRef, fabricRef };
 };

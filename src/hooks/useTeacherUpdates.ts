@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Canvas, FabricObject, util } from "fabric";
 import { toast } from "sonner";
 import { WhiteboardId } from "@/types/canvas";
@@ -9,14 +9,10 @@ export const useTeacherUpdates = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   isSyncEnabled: boolean
 ) => {
-  // Use ref to track event handler registration
-  const eventHandlerRegisteredRef = useRef(false);
-  
   const shouldShowToastForBoard = (boardId: string) => {
     const activeBoard = window.__wbActiveBoardId;
     return activeBoard === boardId || 
-           boardId === "student1" || 
-           boardId === "student2";
+           boardId === "student1";
   };
 
   useEffect(() => {
@@ -25,33 +21,20 @@ export const useTeacherUpdates = (
       return;
     }
 
-    // Prevent duplicate event handler registration
-    if (eventHandlerRegisteredRef.current) {
-      return;
-    }
-
     const handleTeacherUpdate = (e: CustomEvent) => {
-      console.log(`${id} received update, sync enabled: ${isSyncEnabled}`, e.detail);
-      
       if (!isSyncEnabled) {
         console.log(`Update received for ${id} but sync is disabled, ignoring`);
         return;
       }
 
       const canvas = fabricRef.current;
-      if (!canvas) {
-        console.error(`Canvas ref is null for ${id}`);
-        return;
-      }
+      if (!canvas) return;
 
       // Make sure we're in the student or split-mode view
       const isValidView = window.location.pathname.includes('/student') || 
                          window.location.pathname.includes('/split-mode');
       
-      if (!isValidView) {
-        console.log(`Not in student or split-mode view, ignoring update for ${id}`);
-        return;
-      }
+      if (!isValidView) return;
 
       // Verify this update is meant for this specific board
       if (e.detail.targetId !== id) {
@@ -59,7 +42,7 @@ export const useTeacherUpdates = (
         return;
       }
 
-      console.log(`${id} processing update from teacher board (sync enabled: ${isSyncEnabled})`, e.detail);
+      console.log(`${id} received update from teacher board (sync enabled: ${isSyncEnabled})`, e.detail);
 
       try {
         util
@@ -87,17 +70,11 @@ export const useTeacherUpdates = (
       }
     };
 
-    console.log(`${id} is listening for teacher-update events (sync: ${isSyncEnabled})`);
     window.addEventListener("teacher-update", handleTeacherUpdate as EventListener);
-    eventHandlerRegisteredRef.current = true;
-    
-    return () => {
+    return () =>
       window.removeEventListener(
         "teacher-update",
         handleTeacherUpdate as EventListener
       );
-      eventHandlerRegisteredRef.current = false;
-      console.log(`${id} stopped listening for teacher-update events`);
-    };
-  }, [fabricRef, id]);  // Remove isSyncEnabled from dependencies - check it inside handler instead
+  }, [fabricRef, id, isSyncEnabled]);
 };

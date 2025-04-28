@@ -1,4 +1,3 @@
-
 import { Canvas } from 'fabric';
 import { toast } from 'sonner';
 import { createCustomCursor } from '@/utils/cursorUtils';
