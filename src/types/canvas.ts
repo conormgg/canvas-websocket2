@@ -1,4 +1,6 @@
 
+import { Object as FabricObject } from "fabric";
+
 export interface UseCanvasProps {
   id?: WhiteboardId;
   activeTool: "select" | "draw" | "eraser";
@@ -16,4 +18,3 @@ export interface CanvasPosition {
 
 export type WhiteboardId = "teacher" | "teacher2" | "student1" | "student2";
 export type StudentId = "student1" | "student2";
-
