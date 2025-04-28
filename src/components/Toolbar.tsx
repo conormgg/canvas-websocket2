@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SyncToggle } from "./SyncToggle";
+import { SyncModeToggle } from "./SyncModeToggle";
 import { WhiteboardId } from "@/types/canvas";
 
 interface ToolbarProps {
@@ -96,7 +97,8 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
-          <SyncToggle isSplitScreen={true} boardId={boardId} isLinked={isLinked} />
+          {showSyncToggle && <SyncModeToggle isSplitScreen={true} />}
+          {!showSyncToggle && isLinked && <SyncToggle isSplitScreen={true} boardId={boardId} isLinked={isLinked} />}
         </>
       ) : (
         <>
@@ -119,7 +121,8 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
-          <SyncToggle boardId={boardId} isLinked={isLinked} />
+          {showSyncToggle && <SyncModeToggle />}
+          {!showSyncToggle && isLinked && <SyncToggle boardId={boardId} isLinked={isLinked} />}
         </>
       )}
     </div>
