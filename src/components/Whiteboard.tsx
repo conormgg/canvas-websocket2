@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -30,8 +29,11 @@ export const Whiteboard = ({
   const { sendObjectToStudents, isSyncEnabled } = useSyncContext();
 
   const handleObjectAdded = (object: FabricObject) => {
-    if (id === "teacher" && isSyncEnabled) {
-      console.log("Teacher added object, sending to students:", object);
+    const isTeacherView = window.location.pathname.includes('/teacher') || 
+                         window.location.pathname === '/';
+    
+    if (id === "teacher" && isSyncEnabled && isTeacherView) {
+      console.log("Teacher added object in teacher view, sending to students:", object);
       const objectData = object.toJSON();
       sendObjectToStudents(objectData);
     }
@@ -47,7 +49,6 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
 
-  // Use custom hooks for updates
   useTeacherUpdates(id, fabricRef, isSyncEnabled);
   useBoardUpdates(id, fabricRef);
 

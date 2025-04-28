@@ -10,8 +10,8 @@ export const useTeacherUpdates = (
   isSyncEnabled: boolean
 ) => {
   useEffect(() => {
-    // Only student boards should listen for updates from teacher
-    if (id !== "student1") return;
+    // Only update the "teacher" board in the student view (not student1)
+    if (id !== "teacher") return;
 
     const handleTeacherUpdate = (e: CustomEvent) => {
       if (!isSyncEnabled) return;
@@ -19,7 +19,13 @@ export const useTeacherUpdates = (
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      console.log(`Student board ${id} received update:`, e.detail);
+      // Make sure we're in the student view by checking URL
+      const isStudentView = window.location.pathname.includes('/student') || 
+                          window.location.pathname.includes('/split-mode');
+      
+      if (!isStudentView) return;
+
+      console.log(`Student view: Teacher board received update:`, e.detail);
 
       util
         .enlivenObjects([e.detail.object])

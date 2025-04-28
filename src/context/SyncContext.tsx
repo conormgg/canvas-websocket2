@@ -44,7 +44,8 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       detail: {
         object: objectData,
         sourceId: "teacher",
-        timestamp: Date.now() // Add timestamp for ordering events
+        timestamp: Date.now(), // Add timestamp for ordering events
+        targetId: "teacher" // This specifies which board in the student view should receive updates
       }
     });
     
