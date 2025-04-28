@@ -11,11 +11,38 @@ interface SyncToggleProps {
 }
 
 export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher" }: SyncToggleProps) => {
-  const { isSyncEnabled, isSync2Enabled, toggleSync, toggleSync2 } = useSyncContext();
+  const { 
+    isSyncEnabled, 
+    isSync2Enabled, 
+    isSync3Enabled, 
+    isSync4Enabled, 
+    isSync5Enabled, 
+    toggleSync, 
+    toggleSync2, 
+    toggleSync3, 
+    toggleSync4, 
+    toggleSync5 
+  } = useSyncContext();
   
   // Determine which sync state and toggle function to use based on the board ID
-  const isEnabled = boardId === "teacher" ? isSyncEnabled : boardId === "teacher2" ? isSync2Enabled : false;
-  const toggleFunction = boardId === "teacher" ? toggleSync : boardId === "teacher2" ? toggleSync2 : toggleSync;
+  const syncStateMap = {
+    "teacher": isSyncEnabled,
+    "teacher2": isSync2Enabled,
+    "teacher3": isSync3Enabled,
+    "teacher4": isSync4Enabled,
+    "teacher5": isSync5Enabled
+  };
+  
+  const toggleFunctionMap = {
+    "teacher": toggleSync,
+    "teacher2": toggleSync2,
+    "teacher3": toggleSync3,
+    "teacher4": toggleSync4,
+    "teacher5": toggleSync5
+  };
+  
+  const isEnabled = syncStateMap[boardId as keyof typeof syncStateMap] || false;
+  const toggleFunction = toggleFunctionMap[boardId as keyof typeof toggleFunctionMap] || toggleSync;
   
   const containerClass = isSplitScreen
     ? "scale-90"
