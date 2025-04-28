@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Canvas, FabricObject, util } from "fabric";
 import { toast } from "sonner";
 import { WhiteboardId } from "@/types/canvas";
@@ -10,7 +10,13 @@ export const useBoardUpdates = (
   id: WhiteboardId,
   fabricRef: React.MutableRefObject<Canvas | null>
 ) => {
+  // Use a ref to prevent unnecessary re-renders
+  const handlerRegisteredRef = useRef(false);
+
   useEffect(() => {
+    // Only add event listener once
+    if (handlerRegisteredRef.current) return;
+    
     const handleUpdate = (e: CustomEvent) => {
       if (e.detail.sourceId === id) return;
       
@@ -39,10 +45,14 @@ export const useBoardUpdates = (
     };
 
     window.addEventListener("whiteboard-update", handleUpdate as EventListener);
-    return () =>
+    handlerRegisteredRef.current = true;
+    
+    return () => {
       window.removeEventListener(
         "whiteboard-update",
         handleUpdate as EventListener
       );
+      handlerRegisteredRef.current = false;
+    };
   }, [fabricRef, id]);
 };

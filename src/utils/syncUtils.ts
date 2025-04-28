@@ -3,6 +3,21 @@ import { WhiteboardId, TeacherId } from "@/types/canvas";
 import { syncPairsConfig } from "@/config/syncConfig";
 import { toast } from "sonner";
 
+// Debounce utility to prevent rapid event firing
+const debounceMap = new Map<string, NodeJS.Timeout>();
+const debounce = (fn: Function, id: string, delay: number = 100) => {
+  if (debounceMap.has(id)) {
+    clearTimeout(debounceMap.get(id));
+  }
+  
+  const timeout = setTimeout(() => {
+    fn();
+    debounceMap.delete(id);
+  }, delay);
+  
+  debounceMap.set(id, timeout);
+};
+
 export const shouldShowToastForBoard = (boardId: string): boolean => {
   const activeBoard = window.__wbActiveBoardId;
   return activeBoard === boardId || 
@@ -48,30 +63,33 @@ export const sendObjectToStudents = (
   
   console.log(`Preparing to sync object from ${sourceId} to ${syncPair.studentId}`, objectData);
   
-  try {
-    const syncEvent = new CustomEvent("teacher-update", {
-      detail: {
-        object: objectData,
-        sourceId,
-        timestamp: Date.now(),
-        targetId: syncPair.studentId
-      }
-    });
-    
-    window.dispatchEvent(syncEvent);
-    console.log(`Object sent from ${sourceId} to ${syncPair.studentId}`);
-    
-    // Show visual confirmation for teacher board
-    if (shouldShowToastForBoard(sourceId)) {
-      toast.success(`Synced to student board ${syncPair.studentId}`, { 
-        duration: 1000,
-        position: 'bottom-right'
+  // Use debounce to prevent multiple events in quick succession
+  debounce(() => {
+    try {
+      const syncEvent = new CustomEvent("teacher-update", {
+        detail: {
+          object: objectData,
+          sourceId,
+          timestamp: Date.now(),
+          targetId: syncPair.studentId
+        }
       });
+      
+      window.dispatchEvent(syncEvent);
+      console.log(`Object sent from ${sourceId} to ${syncPair.studentId}`);
+      
+      // Show visual confirmation for teacher board - but limit frequency
+      if (shouldShowToastForBoard(sourceId)) {
+        toast.success(`Synced to student board ${syncPair.studentId}`, { 
+          duration: 1000,
+          position: 'bottom-right'
+        });
+      }
+    } catch (err) {
+      console.error(`Error dispatching sync event from ${sourceId}:`, err);
+      if (shouldShowToastForBoard(sourceId)) {
+        toast.error("Failed to sync with student board");
+      }
     }
-  } catch (err) {
-    console.error(`Error dispatching sync event from ${sourceId}:`, err);
-    if (shouldShowToastForBoard(sourceId)) {
-      toast.error("Failed to sync with student board");
-    }
-  }
+  }, `${sourceId}-${Date.now()}`);
 };

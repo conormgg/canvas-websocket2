@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Canvas, FabricObject, util } from "fabric";
 import { toast } from "sonner";
 import { WhiteboardId } from "@/types/canvas";
@@ -9,6 +9,9 @@ export const useTeacherUpdates = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   isSyncEnabled: boolean
 ) => {
+  // Use ref to track event handler registration
+  const eventHandlerRegisteredRef = useRef(false);
+  
   const shouldShowToastForBoard = (boardId: string) => {
     const activeBoard = window.__wbActiveBoardId;
     return activeBoard === boardId || 
@@ -19,6 +22,11 @@ export const useTeacherUpdates = (
   useEffect(() => {
     // Only update boards that should receive synced updates
     if (!id.startsWith("student")) {
+      return;
+    }
+
+    // Prevent duplicate event handler registration
+    if (eventHandlerRegisteredRef.current) {
       return;
     }
 
@@ -81,13 +89,15 @@ export const useTeacherUpdates = (
 
     console.log(`${id} is listening for teacher-update events (sync: ${isSyncEnabled})`);
     window.addEventListener("teacher-update", handleTeacherUpdate as EventListener);
+    eventHandlerRegisteredRef.current = true;
     
     return () => {
       window.removeEventListener(
         "teacher-update",
         handleTeacherUpdate as EventListener
       );
+      eventHandlerRegisteredRef.current = false;
       console.log(`${id} stopped listening for teacher-update events`);
     };
-  }, [fabricRef, id, isSyncEnabled]);
+  }, [fabricRef, id]);  // Remove isSyncEnabled from dependencies - check it inside handler instead
 };
