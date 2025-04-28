@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
@@ -118,11 +117,8 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
 
   const sendObjectToStudents = (objectData: any, sourceId: WhiteboardId) => {
     const syncPairs = {
-      'teacher': { targetId: 'student1', enabled: isSyncEnabled },
-      'teacher2': { targetId: 'student2', enabled: isSync2Enabled },
-      'teacher3': { targetId: 'student3', enabled: isSync3Enabled },
-      'teacher4': { targetId: 'student4', enabled: isSync4Enabled },
-      'teacher5': { targetId: 'student5', enabled: isSync5Enabled }
+      'teacher1': { targetId: 'student1', enabled: isSyncEnabled },
+      'teacher2': { targetId: 'student2', enabled: isSync2Enabled }
     };
     
     const syncConfig = syncPairs[sourceId as keyof typeof syncPairs];

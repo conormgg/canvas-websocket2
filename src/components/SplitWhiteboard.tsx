@@ -17,7 +17,6 @@ export const SplitWhiteboard = () => {
   
   // Initialize active board tracking when component mounts
   useEffect(() => {
-    // Initialize global tracking variables if they don't exist
     if (typeof window.__wbActiveBoard === 'undefined') {
       window.__wbActiveBoard = null;
     }
@@ -25,7 +24,6 @@ export const SplitWhiteboard = () => {
       window.__wbActiveBoardId = null;
     }
     
-    // Clean up
     return () => {
       window.__wbActiveBoard = null;
       window.__wbActiveBoardId = null;
@@ -33,7 +31,6 @@ export const SplitWhiteboard = () => {
   }, []);
 
   const toggle = (id: WhiteboardId, e: React.MouseEvent) => {
-    // Update active board tracking
     if (e.target instanceof HTMLCanvasElement) {
       window.__wbActiveBoard = e.target;
       window.__wbActiveBoardId = id;
@@ -45,18 +42,18 @@ export const SplitWhiteboard = () => {
   };
 
   const teacherCls =
-    enlarged === "teacher"
+    enlarged === "teacher1"
       ? "fixed inset-4 z-50"
       : enlarged
       ? "w-1/5"
       : "w-1/2";
 
   const secondaryBoardsContainerCls =
-    enlarged === "teacher" ? "w-0 opacity-0" : enlarged ? "w-full" : "w-1/2";
+    enlarged === "teacher1" ? "w-0 opacity-0" : enlarged ? "w-full" : "w-1/2";
 
   const secondaryBoardCls = (id: TeacherId) => {
     if (enlarged === id) return "fixed inset-4 z-50";
-    if (enlarged === "teacher") return "w-0 opacity-0";
+    if (enlarged === "teacher1") return "w-0 opacity-0";
     return "";
   };
 
@@ -67,10 +64,10 @@ export const SplitWhiteboard = () => {
           "transition-all duration-300 ease-in-out h-full relative",
           teacherCls
         )}
-        onClick={(e) => toggle("teacher", e)}
+        onClick={(e) => toggle("teacher1", e)}
       >
         <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden">
-          <Whiteboard id="teacher" isSplitScreen={!enlarged} />
+          <Whiteboard id="teacher1" isSplitScreen={!enlarged} />
         </div>
       </div>
 
