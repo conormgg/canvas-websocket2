@@ -2,13 +2,17 @@
 import { useState, useEffect } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
-import { WhiteboardId, StudentId } from "@/types/canvas";
+import { WhiteboardId, TeacherId } from "@/types/canvas";
 
 export const SplitWhiteboard = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
-  const studentIds: StudentId[] = [
-    "student1",
-    "student2"
+  
+  // The secondary boards
+  const secondaryBoards: TeacherId[] = [
+    "teacher2",
+    "teacher3",
+    "teacher4",
+    "teacher5"
   ];
   
   // Initialize active board tracking when component mounts
@@ -47,10 +51,10 @@ export const SplitWhiteboard = () => {
       ? "w-1/5"
       : "w-1/2";
 
-  const studentGridCls =
+  const secondaryBoardsContainerCls =
     enlarged === "teacher" ? "w-0 opacity-0" : enlarged ? "w-full" : "w-1/2";
 
-  const studentCls = (id: StudentId) => {
+  const secondaryBoardCls = (id: TeacherId) => {
     if (enlarged === id) return "fixed inset-4 z-50";
     if (enlarged === "teacher") return "w-0 opacity-0";
     return "";
@@ -73,15 +77,15 @@ export const SplitWhiteboard = () => {
       <div
         className={cn(
           "transition-all duration-300 ease-in-out h-full grid grid-cols-2 gap-4",
-          studentGridCls
+          secondaryBoardsContainerCls
         )}
       >
-        {studentIds.map((id) => (
+        {secondaryBoards.map((id) => (
           <div
             key={id}
             className={cn(
               "relative bg-white rounded-xl shadow-lg overflow-hidden",
-              studentCls(id)
+              secondaryBoardCls(id)
             )}
             onClick={(e) => toggle(id, e)}
           >

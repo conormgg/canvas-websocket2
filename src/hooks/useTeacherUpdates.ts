@@ -11,7 +11,7 @@ export const useTeacherUpdates = (
 ) => {
   useEffect(() => {
     // Only update boards that should receive synced updates
-    if (id !== "student1" && id !== "student2") {
+    if (!id.startsWith("student")) {
       return;
     }
 

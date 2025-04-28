@@ -27,11 +27,18 @@ export const Whiteboard = ({
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
-  const { sendObjectToStudents, isSyncEnabled, isSync2Enabled } = useSyncContext();
+  const { sendObjectToStudents, isSyncEnabled, isSync2Enabled, isSync3Enabled, isSync4Enabled, isSync5Enabled } = useSyncContext();
 
   // Determine which sync state to use based on board ID
-  const currentSyncState = id === "teacher" ? isSyncEnabled : 
-                          id === "teacher2" ? isSync2Enabled : false;
+  const syncStateMap = {
+    "teacher": isSyncEnabled,
+    "teacher2": isSync2Enabled,
+    "teacher3": isSync3Enabled,
+    "teacher4": isSync4Enabled,
+    "teacher5": isSync5Enabled
+  };
+  
+  const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
   const handleObjectAdded = (object: FabricObject) => {
     // Determine if we're in the teacher view (main view, not student or split mode)
@@ -40,7 +47,7 @@ export const Whiteboard = ({
                           window.location.pathname.includes('/split-mode');
     
     // Only sync objects from teacher boards when in appropriate view and sync is enabled
-    if ((id === "teacher" || id === "teacher2") && isTeacherView) {
+    if ((id.startsWith("teacher")) && isTeacherView) {
       console.log(`${id} added object, sending to corresponding student board:`, object);
       const objectData = object.toJSON();
       sendObjectToStudents(objectData, id);
