@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -26,8 +27,16 @@ export const Whiteboard = ({
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
-  const { sendObjectToStudents, isSyncEnabled, isSync2Enabled, isSync3Enabled, isSync4Enabled, isSync5Enabled } = useSyncContext();
+  const { 
+    sendObjectToStudents, 
+    isSyncEnabled, 
+    isSync2Enabled, 
+    isSync3Enabled, 
+    isSync4Enabled, 
+    isSync5Enabled 
+  } = useSyncContext();
 
+  // Map board IDs to their respective sync states
   const syncStateMap = {
     "teacher1": isSyncEnabled,
     "teacher2": isSync2Enabled,
@@ -36,6 +45,7 @@ export const Whiteboard = ({
     "teacher5": isSync5Enabled
   };
   
+  // Get the current sync state for this specific board
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
   const handleObjectAdded = (object: FabricObject) => {
@@ -43,11 +53,12 @@ export const Whiteboard = ({
                           window.location.pathname === '/' ||
                           window.location.pathname.includes('/split-mode');
     
-    if ((id.startsWith("teacher")) && isTeacherView && currentSyncState) {
-      console.log(`${id} added object and sync is enabled (${currentSyncState}), sending to corresponding student board:`, object);
+    // Only send objects to students if this is a teacher board, we're in teacher view, and sync is enabled
+    if (id.startsWith("teacher") && isTeacherView && currentSyncState) {
+      console.log(`${id} added object and sync is enabled (${currentSyncState}), sending to student board`);
       const objectData = object.toJSON();
       sendObjectToStudents(objectData, id);
-    } else if ((id.startsWith("teacher")) && isTeacherView && !currentSyncState) {
+    } else if (id.startsWith("teacher") && isTeacherView && !currentSyncState) {
       console.log(`${id} added object but sync is disabled (${currentSyncState}), not sending to student board`);
     }
   };
@@ -62,6 +73,7 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
 
+  // Pass the correct sync state to useTeacherUpdates
   useTeacherUpdates(id, fabricRef, currentSyncState);
   useBoardUpdates(id, fabricRef);
 

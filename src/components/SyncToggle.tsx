@@ -24,7 +24,7 @@ export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher1" }: Sync
     toggleSync5 
   } = useSyncContext();
   
-  // Determine which sync state and toggle function to use based on the board ID
+  // Map each board ID to its corresponding sync state
   const syncStateMap = {
     "teacher1": isSyncEnabled,
     "teacher2": isSync2Enabled,
@@ -33,6 +33,7 @@ export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher1" }: Sync
     "teacher5": isSync5Enabled
   };
   
+  // Map each board ID to its corresponding toggle function
   const toggleFunctionMap = {
     "teacher1": toggleSync,
     "teacher2": toggleSync2,
@@ -41,6 +42,7 @@ export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher1" }: Sync
     "teacher5": toggleSync5
   };
   
+  // Get the correct sync state and toggle function for this board
   const isEnabled = syncStateMap[boardId as keyof typeof syncStateMap] || false;
   const toggleFunction = toggleFunctionMap[boardId as keyof typeof toggleFunctionMap] || toggleSync;
   

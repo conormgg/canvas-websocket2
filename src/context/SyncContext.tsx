@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { WhiteboardId } from "@/types/canvas";
+import { WhiteboardId, TeacherId, StudentId } from "@/types/canvas";
 import { toast } from "sonner";
 
 interface SyncContextProps {
@@ -17,15 +17,32 @@ interface SyncContextProps {
   sendObjectToStudents: (objectData: any, sourceId: WhiteboardId) => void;
 }
 
+// Define storage keys for each sync state
 const SYNC_STORAGE_KEY = "whiteboard-sync-enabled";
 const SYNC2_STORAGE_KEY = "whiteboard-sync2-enabled";
 const SYNC3_STORAGE_KEY = "whiteboard-sync3-enabled";
 const SYNC4_STORAGE_KEY = "whiteboard-sync4-enabled";
 const SYNC5_STORAGE_KEY = "whiteboard-sync5-enabled";
 
+// Define teacher-to-student board mapping
+interface SyncPair {
+  teacherId: TeacherId;
+  studentId: StudentId;
+  storageKey: string;
+}
+
+const syncPairsConfig: SyncPair[] = [
+  { teacherId: "teacher1", studentId: "student1", storageKey: SYNC_STORAGE_KEY },
+  { teacherId: "teacher2", studentId: "student2", storageKey: SYNC2_STORAGE_KEY },
+  { teacherId: "teacher3", studentId: "student1", storageKey: SYNC3_STORAGE_KEY },
+  { teacherId: "teacher4", studentId: "student2", storageKey: SYNC4_STORAGE_KEY },
+  { teacherId: "teacher5", studentId: "student1", storageKey: SYNC5_STORAGE_KEY },
+];
+
 const SyncContext = createContext<SyncContextProps | undefined>(undefined);
 
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
+  // Initialize sync states from local storage
   const [isSyncEnabled, setIsSyncEnabled] = useState<boolean>(() => {
     const savedSync = localStorage.getItem(SYNC_STORAGE_KEY);
     return savedSync ? JSON.parse(savedSync) : false;
@@ -51,6 +68,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     return savedSync ? JSON.parse(savedSync) : false;
   });
 
+  // Save sync states to local storage when they change
   useEffect(() => {
     localStorage.setItem(SYNC_STORAGE_KEY, JSON.stringify(isSyncEnabled));
     console.log(`Sync 1 ${isSyncEnabled ? "enabled" : "disabled"}`);
@@ -76,6 +94,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     console.log(`Sync 5 ${isSync5Enabled ? "enabled" : "disabled"}`);
   }, [isSync5Enabled]);
 
+  // Toggle functions for each sync state
   const toggleSync = () => {
     setIsSyncEnabled((prev) => {
       const newState = !prev;
@@ -116,32 +135,55 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const sendObjectToStudents = (objectData: any, sourceId: WhiteboardId) => {
-    const syncPairs = {
-      'teacher1': { targetId: 'student1', enabled: isSyncEnabled },
-      'teacher2': { targetId: 'student2', enabled: isSync2Enabled },
-      'teacher3': { targetId: 'student1', enabled: isSync3Enabled },
-      'teacher4': { targetId: 'student2', enabled: isSync4Enabled },
-      'teacher5': { targetId: 'student1', enabled: isSync5Enabled }
+  // Get the current sync state for a specific teacher board
+  const getBoardSyncState = (boardId: TeacherId): boolean => {
+    const syncStates = {
+      'teacher1': isSyncEnabled,
+      'teacher2': isSync2Enabled,
+      'teacher3': isSync3Enabled,
+      'teacher4': isSync4Enabled,
+      'teacher5': isSync5Enabled
     };
     
-    const syncConfig = syncPairs[sourceId as keyof typeof syncPairs];
-    if (!syncConfig || !syncConfig.enabled) {
-      console.log(`Object from ${sourceId} not synced - either not a teacher board or sync disabled`);
+    return syncStates[boardId] || false;
+  };
+
+  // Send object from teacher board to student board
+  const sendObjectToStudents = (objectData: any, sourceId: WhiteboardId) => {
+    // Only process if it's a teacher board
+    if (!sourceId.startsWith('teacher')) {
+      console.log(`Object from ${sourceId} not synced - not a teacher board`);
       return;
     }
     
+    // Find the matching sync pair configuration
+    const syncPair = syncPairsConfig.find(pair => pair.teacherId === sourceId);
+    
+    if (!syncPair) {
+      console.log(`No sync configuration found for ${sourceId}`);
+      return;
+    }
+    
+    // Check if sync is enabled for this teacher board
+    const isSyncEnabledForBoard = getBoardSyncState(sourceId as TeacherId);
+    
+    if (!isSyncEnabledForBoard) {
+      console.log(`Sync is disabled for ${sourceId}, not sending update`);
+      return;
+    }
+    
+    // Create and dispatch the sync event
     const syncEvent = new CustomEvent("teacher-update", {
       detail: {
         object: objectData,
         sourceId,
         timestamp: Date.now(),
-        targetId: syncConfig.targetId
+        targetId: syncPair.studentId
       }
     });
     
     window.dispatchEvent(syncEvent);
-    console.log(`Object sent from ${sourceId} to ${syncConfig.targetId}:`, objectData);
+    console.log(`Object sent from ${sourceId} to ${syncPair.studentId}:`, objectData);
   };
 
   return (
