@@ -1,29 +1,27 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { DEFAULT_COLORS } from "@/config/colorConfig";
+import { ColorPickerProps } from "@/types/color";
 
-const COLORS = [
-  { value: "#000000e6", label: "Black" },
-  { value: "#ea384c", label: "Red" },
-  { value: "#1EAEDB", label: "Blue" },
-  { value: "#2E7D32", label: "Green" },
-];
-
-interface ColorPickerProps {
-  activeColor: string;
-  onColorChange: (color: string) => void;
-}
-
-export const ColorPicker = ({ activeColor, onColorChange }: ColorPickerProps) => {
+export const ColorPicker = ({ 
+  activeColor, 
+  onColorChange,
+  size = 'default',
+  variant = 'full'
+}: ColorPickerProps) => {
+  const buttonSize = size === 'sm' ? 'w-6 h-6' : 'w-8 h-8';
+  
   return (
     <div className="flex items-center gap-1">
-      {COLORS.map((color) => (
+      {DEFAULT_COLORS.map((color) => (
         <Button
           key={color.value}
           variant="ghost"
           size="icon"
           className={cn(
-            "w-8 h-8 rounded-full p-1",
+            buttonSize,
+            "rounded-full p-1",
             activeColor === color.value && "ring-2 ring-white"
           )}
           onClick={() => onColorChange(color.value)}
