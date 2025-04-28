@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
@@ -9,20 +8,16 @@ interface SyncContextProps {
   sendObjectToStudents: (objectData: any, sourceId: WhiteboardId) => void;
 }
 
-// Use localStorage to persist sync state across views
 const SYNC_STORAGE_KEY = "whiteboard-sync-enabled";
 
-// Create a context for sync functionality
 const SyncContext = createContext<SyncContextProps | undefined>(undefined);
 
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
-  // Initialize from localStorage if available, otherwise default to false
   const [isSyncEnabled, setIsSyncEnabled] = useState<boolean>(() => {
     const savedSync = localStorage.getItem(SYNC_STORAGE_KEY);
     return savedSync ? JSON.parse(savedSync) : false;
   });
 
-  // Save to localStorage when sync state changes
   useEffect(() => {
     localStorage.setItem(SYNC_STORAGE_KEY, JSON.stringify(isSyncEnabled));
     console.log(`Sync ${isSyncEnabled ? "enabled" : "disabled"}`);
@@ -39,25 +34,28 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const sendObjectToStudents = (objectData: any, sourceId: WhiteboardId) => {
     if (!isSyncEnabled) return;
     
-    // Only sync from teacher's view 1 (id="teacher") to student's view 1 (id="teacher")
-    if (sourceId !== "teacher") {
-      console.log(`Object from ${sourceId} not synced - only sync from 'teacher' board`);
+    const syncPairs = {
+      'teacher': 'student1',
+      'teacher2': 'student2'
+    };
+    
+    const targetId = syncPairs[sourceId as keyof typeof syncPairs];
+    if (!targetId) {
+      console.log(`Object from ${sourceId} not synced - not a teacher board`);
       return;
     }
     
-    // Create a custom event to broadcast the object data to student boards
     const syncEvent = new CustomEvent("teacher-update", {
       detail: {
         object: objectData,
-        sourceId: "teacher", // This identifies the source as teacher's view 1
-        timestamp: Date.now(), // Add timestamp for ordering events
-        targetId: "teacher" // This specifies the student's view 1 board should receive updates
+        sourceId,
+        timestamp: Date.now(),
+        targetId
       }
     });
     
-    // Dispatch the event for student boards to listen for
     window.dispatchEvent(syncEvent);
-    console.log("Object sent from teacher's view 1 to student's view 1:", objectData);
+    console.log(`Object sent from ${sourceId} to ${targetId}:`, objectData);
   };
 
   return (

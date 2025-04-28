@@ -10,9 +10,8 @@ export const useTeacherUpdates = (
   isSyncEnabled: boolean
 ) => {
   useEffect(() => {
-    // Only update the board with id="teacher" in the student view
-    // This corresponds to student's view 1 in the naming convention
-    if (id !== "teacher") {
+    // Only update boards that should receive synced updates
+    if (id !== "student1" && id !== "student2") {
       return;
     }
 
@@ -22,14 +21,11 @@ export const useTeacherUpdates = (
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      // Make sure we're in the student view by checking URL
+      // Make sure we're in the student or split-mode view
       const isStudentView = window.location.pathname.includes('/student') || 
-                          window.location.pathname.includes('/split-mode');
+                           window.location.pathname.includes('/split-mode');
       
-      if (!isStudentView) {
-        // Don't process updates if we're in teacher view
-        return;
-      }
+      if (!isStudentView) return;
 
       // Verify this update is meant for this specific board
       if (e.detail.targetId !== id) {
@@ -37,7 +33,7 @@ export const useTeacherUpdates = (
         return;
       }
 
-      console.log(`Student view 1 (teacher board) received update:`, e.detail);
+      console.log(`${id} received update from corresponding teacher board`);
 
       util
         .enlivenObjects([e.detail.object])

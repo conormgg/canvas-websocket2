@@ -1,8 +1,6 @@
 
-import { Object as FabricObject } from 'fabric';
-
 export interface UseCanvasProps {
-  id?: "teacher" | "student1" | "student2" | "student3" | "student4";
+  id?: WhiteboardId;
   activeTool: "select" | "draw" | "eraser";
   activeColor: string;
   inkThickness: number;
@@ -16,5 +14,6 @@ export interface CanvasPosition {
   y: number;
 }
 
-export type WhiteboardId = "teacher" | "student1" | "student2" | "student3" | "student4";
-export type StudentId = Exclude<WhiteboardId, "teacher">;
+export type WhiteboardId = "teacher" | "teacher2" | "student1" | "student2";
+export type StudentId = "student1" | "student2";
+
