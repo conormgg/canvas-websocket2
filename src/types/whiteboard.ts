@@ -6,6 +6,7 @@ export interface WhiteboardProps {
   isSplitScreen?: boolean;
   onCtrlClick?: () => void;
   isMaximized?: boolean;
+  isCircular?: boolean;
 }
 
 export interface WhiteboardState {

@@ -8,16 +8,8 @@ import { Toolbar } from "./Toolbar";
 import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
 import { useTeacherUpdates } from "@/hooks/useTeacherUpdates";
 import { useBoardUpdates } from "@/hooks/useBoardUpdates";
-import { WhiteboardProps } from "@/types/whiteboard";
 import { Object as FabricObject } from "fabric";
-
-interface WhiteboardProps {
-  id: WhiteboardId;
-  isSplitScreen?: boolean;
-  onCtrlClick?: () => void;
-  isMaximized?: boolean;
-  isCircular?: boolean;
-}
+import { WhiteboardProps } from "@/types/whiteboard";
 
 export const Whiteboard = ({ 
   id, 
