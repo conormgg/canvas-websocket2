@@ -47,6 +47,16 @@ export const useRealtimeSync = (
           // Add a small delay to ensure canvas is fully initialized
           setTimeout(() => {
             canvas.loadFromJSON(objectData as Record<string, any>, () => {
+              // Ensure all objects are selectable and interactive after loading
+              canvas.getObjects().forEach(obj => {
+                obj.set({
+                  selectable: true,
+                  evented: true,
+                  hasControls: true,
+                  hasBorders: true
+                });
+              });
+              
               canvas.renderAll();
               console.log('Loaded existing content for board:', boardId);
             });
@@ -107,5 +117,5 @@ export const useRealtimeSync = (
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fabricRef, boardId]); // Removed isEnabled dependency to ensure real-time updates happen always
+  }, [fabricRef, boardId]); // We only depend on fabricRef and boardId to ensure persistent sync
 };

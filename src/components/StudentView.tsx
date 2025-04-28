@@ -1,11 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
 import { WhiteboardId } from "@/types/canvas";
 
 export const StudentView = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
+  const [activeBoardIndex, setActiveBoardIndex] = useState(0);
 
   const toggle = (id: WhiteboardId) => {
     setEnlarged(enlarged === id ? null : id);
@@ -13,6 +14,18 @@ export const StudentView = () => {
 
   const teacherCls = enlarged === "student1" ? "fixed inset-4 z-50" : "w-1/2";
   const studentCls = enlarged === "student2" ? "fixed inset-4 z-50" : "w-1/2";
+  
+  // Rotate active boards to ensure they all receive updates
+  useEffect(() => {
+    const boards = ["student1", "student2"];
+    const interval = setInterval(() => {
+      // Just trigger a re-render by rotating the active index
+      // This ensures each board gets refreshed periodically
+      setActiveBoardIndex(prevIndex => (prevIndex + 1) % boards.length);
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#E8EDF5] p-4 flex gap-4 relative">

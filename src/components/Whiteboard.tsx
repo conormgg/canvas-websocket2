@@ -53,18 +53,30 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
   
-  // Always enable real-time sync with true parameter
+  // Always enable real-time sync
   useRealtimeSync(fabricRef, id, true);
 
   useEffect(() => {
-    // Set this board as active as soon as it's mounted
+    // Set this board as active as soon as it's mounted - this ensures it's always active
     if (fabricRef.current) {
-      console.log(`Setting ${id} as active board on mount`);
+      console.log(`Setting ${id} as active board on mount and keeping it active`);
       window.__wbActiveBoard = canvasRef.current;
       window.__wbActiveBoardId = id;
       setActiveCanvas(fabricRef.current, id);
     }
   }, [id, canvasRef, fabricRef, setActiveCanvas]);
+  
+  // Additional effect to periodically check and refresh the canvas if needed
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      if (fabricRef.current && canvasRef.current) {
+        // Re-render the canvas to ensure content is displayed
+        fabricRef.current.renderAll();
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(checkInterval);
+  }, [fabricRef, canvasRef]);
   
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
