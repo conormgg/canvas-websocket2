@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
@@ -23,6 +22,9 @@ export const SplitWhiteboard = () => {
     if (typeof window.__wbActiveBoardId === 'undefined') {
       window.__wbActiveBoardId = null;
     }
+    
+    // Set teacher1 as the initial active board for consistent behavior
+    window.__wbActiveBoardId = "teacher1";
     
     return () => {
       window.__wbActiveBoard = null;
