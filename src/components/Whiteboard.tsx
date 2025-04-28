@@ -29,6 +29,10 @@ export const Whiteboard = ({
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
   const { sendObjectToStudents, isSyncEnabled, isSync2Enabled } = useSyncContext();
 
+  // Determine which sync state to use based on board ID
+  const currentSyncState = id === "teacher" ? isSyncEnabled : 
+                          id === "teacher2" ? isSync2Enabled : false;
+
   const handleObjectAdded = (object: FabricObject) => {
     // Determine if we're in the teacher view (main view, not student or split mode)
     const isTeacherView = window.location.pathname.includes('/teacher') || 
@@ -53,7 +57,8 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
 
-  useTeacherUpdates(id, fabricRef, isSyncEnabled);
+  // Use the board-specific sync state
+  useTeacherUpdates(id, fabricRef, currentSyncState);
   useBoardUpdates(id, fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {

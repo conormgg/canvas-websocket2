@@ -42,6 +42,7 @@ export const useTeacherUpdates = (
             canvas.add(obj);
             canvas.renderAll();
           });
+          console.log(`Object successfully added to ${id} from teacher update`);
         })
         .catch((err) => {
           console.error("Failed to enliven object", err);

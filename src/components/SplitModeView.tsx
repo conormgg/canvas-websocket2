@@ -18,9 +18,9 @@ export const SplitModeView = () => {
           </span>
         </div>
       </div>
-      <div className="flex flex-col gap-4 flex-1">
+      <div className="flex flex-col gap-4 h-[calc(100vh-100px)]"> {/* Added fixed height */}
         {/* Top row - Teacher's View 1 and Student's View 1 */}
-        <div className="flex gap-4 flex-1">
+        <div className="flex gap-4 h-1/2"> {/* Changed to h-1/2 */}
           <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden relative">
             <div className="absolute top-2 left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
               Teacher's View 1
@@ -38,7 +38,7 @@ export const SplitModeView = () => {
           </div>
         </div>
         {/* Bottom row - Teacher's View 2 and Student's View 2 */}
-        <div className="flex gap-4 flex-1">
+        <div className="flex gap-4 h-1/2"> {/* Changed to h-1/2 */}
           <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden relative">
             <div className="absolute top-2 left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
               Teacher's View 2
