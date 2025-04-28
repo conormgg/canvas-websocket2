@@ -34,13 +34,17 @@ export const useRealtimeSync = (
         }
         
         if (data && data.length > 0) {
-          console.log(`Found existing content for board ${boardId}:`, data[0]);
+          console.log(`Found existing content for board ${boardId}`);
           // Properly handle the Json type by converting to a string if needed
           const objectData = data[0].object_data;
-          canvas.loadFromJSON(objectData as Record<string, any>, () => {
-            canvas.renderAll();
-            console.log('Loaded existing content for board:', boardId);
-          });
+          
+          // Add a small delay to ensure canvas is fully initialized
+          setTimeout(() => {
+            canvas.loadFromJSON(objectData as Record<string, any>, () => {
+              canvas.renderAll();
+              console.log('Loaded existing content for board:', boardId);
+            });
+          }, 100);
         } else {
           console.log(`No existing content found for board: ${boardId}`);
         }
@@ -68,7 +72,7 @@ export const useRealtimeSync = (
         },
         (payload) => {
           if (payload.new && 'object_data' in payload.new) {
-            console.log(`Received realtime update for board ${boardId}:`, payload);
+            console.log(`Received realtime update for board ${boardId}`);
             const objectData = payload.new.object_data;
             canvas.loadFromJSON(objectData as Record<string, any>, () => {
               canvas.renderAll();
