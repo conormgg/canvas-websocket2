@@ -16,8 +16,6 @@ export const useTeacherUpdates = (
     }
 
     const handleTeacherUpdate = (e: CustomEvent) => {
-      if (!isSyncEnabled) return;
-
       const canvas = fabricRef.current;
       if (!canvas) return;
 
