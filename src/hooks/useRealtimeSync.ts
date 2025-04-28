@@ -62,7 +62,7 @@ export const useRealtimeSync = (
     // Load existing content on initial mount
     loadExistingContent();
 
-    // Fix for TypeScript error - properly define the channel with correct types
+    // Create a properly typed channel subscription
     const channel = supabase
       .channel(`whiteboard-sync-${boardId}`)
       .on(
@@ -101,9 +101,7 @@ export const useRealtimeSync = (
           }
         }
       )
-      .subscribe((status) => {
-        console.log(`Realtime subscription status for ${boardId}: ${status}`);
-      });
+      .subscribe();
 
     // Cleanup subscription
     return () => {
