@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { WhiteboardId } from '@/types/canvas';
 import { Canvas } from 'fabric';
 import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
 
 export const useRealtimeSync = (
   fabricRef: React.MutableRefObject<Canvas | null>,
@@ -34,7 +35,9 @@ export const useRealtimeSync = (
         }
         
         if (data && data.length > 0) {
-          canvas.loadFromJSON(data[0].object_data, () => {
+          // Properly handle the Json type by converting to a string if needed
+          const objectData = data[0].object_data;
+          canvas.loadFromJSON(objectData as Record<string, any>, () => {
             canvas.renderAll();
             console.log('Loaded existing content for board:', boardId);
           });
@@ -61,7 +64,7 @@ export const useRealtimeSync = (
         (payload) => {
           if (payload.new && 'object_data' in payload.new) {
             const objectData = payload.new.object_data;
-            canvas.loadFromJSON(objectData, () => {
+            canvas.loadFromJSON(objectData as Record<string, any>, () => {
               canvas.renderAll();
               console.log('Canvas updated from realtime event:', payload);
             });

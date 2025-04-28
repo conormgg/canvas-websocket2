@@ -29,6 +29,18 @@ export const Whiteboard = ({
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
   const { sendObjectToStudents, isSyncEnabled, isSync2Enabled, isSync3Enabled, isSync4Enabled, isSync5Enabled } = useSyncContext();
 
+  const { canvasRef, fabricRef } = useCanvas({
+    id,
+    activeTool,
+    activeColor,
+    inkThickness,
+    isSplitScreen,
+    onZoomChange: setZoom,
+    onObjectAdded: handleObjectAdded,
+  });
+  
+  useRealtimeSync(fabricRef, id, id.startsWith('student'));
+
   const saveCanvasState = async (canvas: fabric.Canvas, boardId: WhiteboardId) => {
     if (!canvas) return;
     
@@ -53,7 +65,7 @@ export const Whiteboard = ({
     }
   };
 
-  const handleObjectAdded = (object: FabricObject) => {
+  function handleObjectAdded(object: FabricObject) {
     const isTeacherView = window.location.pathname.includes('/teacher') || 
                          window.location.pathname === '/' ||
                          window.location.pathname.includes('/split-mode');
@@ -65,21 +77,11 @@ export const Whiteboard = ({
     
     if ((id.startsWith("teacher")) && isTeacherView) {
       console.log(`${id} added object, sending to corresponding student board:`, object);
-      const studentBoardId = id.replace('teacher', 'student');
+      const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
       
       saveCanvasState(canvas, studentBoardId);
     }
-  };
-
-  const { canvasRef, fabricRef } = useCanvas({
-    id,
-    activeTool,
-    activeColor,
-    inkThickness,
-    isSplitScreen,
-    onZoomChange: setZoom,
-    onObjectAdded: handleObjectAdded,
-  });
+  }
 
   const syncStateMap = {
     "teacher1": isSyncEnabled,
@@ -90,8 +92,6 @@ export const Whiteboard = ({
   };
   
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
-
-  useRealtimeSync(fabricRef, id, id.startsWith('student'));
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
