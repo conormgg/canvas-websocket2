@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -10,6 +9,8 @@ import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
 import { WhiteboardProps } from "@/types/whiteboard";
 import { Object as FabricObject } from "fabric";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Whiteboard = ({ 
   id, 
@@ -28,15 +29,45 @@ export const Whiteboard = ({
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
   const { sendObjectToStudents, isSyncEnabled, isSync2Enabled, isSync3Enabled, isSync4Enabled, isSync5Enabled } = useSyncContext();
 
+  const saveCanvasState = async (canvas: fabric.Canvas, boardId: WhiteboardId) => {
+    if (!canvas) return;
+    
+    try {
+      const canvasData = canvas.toJSON();
+      
+      const { error } = await supabase
+        .from('whiteboard_objects')
+        .insert({
+          board_id: boardId,
+          object_data: canvasData
+        });
+        
+      if (error) {
+        console.error('Error saving canvas state:', error);
+        toast.error('Failed to save whiteboard state');
+      } else {
+        console.log(`Canvas state saved for ${boardId}`);
+      }
+    } catch (err) {
+      console.error('Failed to save canvas state:', err);
+    }
+  };
+
   const handleObjectAdded = (object: FabricObject) => {
     const isTeacherView = window.location.pathname.includes('/teacher') || 
                          window.location.pathname === '/' ||
                          window.location.pathname.includes('/split-mode');
     
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    
+    saveCanvasState(canvas, id);
+    
     if ((id.startsWith("teacher")) && isTeacherView) {
       console.log(`${id} added object, sending to corresponding student board:`, object);
-      const objectData = object.toJSON();
-      sendObjectToStudents(objectData, id);
+      const studentBoardId = id.replace('teacher', 'student');
+      
+      saveCanvasState(canvas, studentBoardId);
     }
   };
 
@@ -50,9 +81,8 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
 
-  // Determine which sync state to use based on board ID
   const syncStateMap = {
-    "teacher": isSyncEnabled,
+    "teacher1": isSyncEnabled,
     "teacher2": isSync2Enabled,
     "teacher3": isSync3Enabled,
     "teacher4": isSync4Enabled,
@@ -61,7 +91,6 @@ export const Whiteboard = ({
   
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
-  // Add realtime sync for student boards
   useRealtimeSync(fabricRef, id, id.startsWith('student'));
 
   const handleContextMenu = (e: React.MouseEvent) => {
