@@ -1,3 +1,4 @@
+
 import { useRef, useEffect } from 'react';
 import { Canvas, FabricObject } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
@@ -70,19 +71,7 @@ export const useCanvasPersistence = (
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-
-    const handleObjectRemoved = async (e: any) => {
-      if (id.startsWith('teacher') && isTeacherView) {
-        try {
-          await saveCanvasState(canvas, id);
-          const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
-          await saveCanvasState(canvas, studentBoardId);
-        } catch (err) {
-          console.error('Error saving canvas state after deletion:', err);
-        }
-      }
-    };
-
+    
     const handleCanvasModified = () => {
       console.log(`Canvas ${id} modified, saving state`);
       debouncedSave(canvas, id);
@@ -93,7 +82,7 @@ export const useCanvasPersistence = (
       }
     };
 
-    const handlePathCreated = () => {
+    const handlePathCreated = (e: any) => {
       console.log(`Path created on canvas ${id}, saving state`);
       debouncedSave(canvas, id);
       
@@ -105,7 +94,6 @@ export const useCanvasPersistence = (
     
     canvas.on('object:modified', handleCanvasModified);
     canvas.on('path:created', handlePathCreated);
-    canvas.on('object:removed', handleObjectRemoved);
     canvas.on('mouse:up', () => {
       if (canvas.isDrawingMode) {
         debouncedSave(canvas, id);
@@ -120,7 +108,9 @@ export const useCanvasPersistence = (
     return () => {
       canvas.off('object:modified', handleCanvasModified);
       canvas.off('path:created', handlePathCreated);
-      canvas.off('object:removed', handleObjectRemoved);
+      if (saveTimeoutRef.current) {
+        window.clearTimeout(saveTimeoutRef.current);
+      }
     };
   }, [id, fabricRef, isTeacherView]);
 

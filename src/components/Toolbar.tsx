@@ -1,5 +1,4 @@
-
-import { MousePointer, Pencil, Eraser, Undo2, Redo2 } from "lucide-react";
+import { MousePointer, Pencil, Eraser, Undo2, Redo2, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "./ColorPicker";
 import {
@@ -9,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SyncToggle } from "./SyncToggle";
 import { WhiteboardId } from "@/types/canvas";
 
 interface ToolbarProps {
@@ -33,12 +33,16 @@ export const Toolbar = ({
   inkThickness,
   onInkThicknessChange,
   isSplitScreen = false,
+  boardId,
   onUndo,
   onRedo,
+  onSelectAll,
 }: ToolbarProps) => {
   const containerClass = isSplitScreen
     ? "bg-[#221F26] rounded-md shadow-md p-1 flex items-center justify-center gap-1 scale-90 max-w-xs"
     : "bg-[#221F26] rounded-lg shadow-lg p-2 flex items-center gap-2";
+
+  const showSyncToggle = boardId === "teacher1" && !isSplitScreen;
 
   return (
     <div className={containerClass}>
@@ -85,6 +89,15 @@ export const Toolbar = ({
       >
         <Redo2 className="h-5 w-5" />
       </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onSelectAll}
+        className="text-white hover:text-white"
+        title="Select All (Ctrl+A)"
+      >
+        <CheckSquare className="h-5 w-5" />
+      </Button>
 
       {isSplitScreen ? (
         <>
@@ -113,6 +126,7 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
+          {showSyncToggle && <SyncToggle isSplitScreen={true} boardId={boardId} />}
         </>
       ) : (
         <>
@@ -135,6 +149,7 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
+          {showSyncToggle && <SyncToggle boardId={boardId} />}
         </>
       )}
     </div>
