@@ -49,16 +49,22 @@ export const Whiteboard = ({
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
   const handleObjectAdded = (object: FabricObject) => {
-    const isTeacherView = window.location.pathname.includes('/teacher') || 
+    // Check if we're in a view where syncing is relevant
+    const isRelevantView = window.location.pathname.includes('/teacher') || 
                           window.location.pathname === '/' ||
                           window.location.pathname.includes('/split-mode');
     
-    // Only send objects to students if this is a teacher board, we're in teacher view, and sync is enabled
-    if (id.startsWith("teacher") && isTeacherView && currentSyncState) {
+    // Only send objects to students if this is a teacher board and sync is enabled
+    if (id.startsWith("teacher") && isRelevantView && currentSyncState) {
       console.log(`${id} added object and sync is enabled (${currentSyncState}), sending to student board`);
-      const objectData = object.toJSON();
-      sendObjectToStudents(objectData, id);
-    } else if (id.startsWith("teacher") && isTeacherView && !currentSyncState) {
+      try {
+        const objectData = object.toJSON();
+        console.log("Sending object data:", objectData);
+        sendObjectToStudents(objectData, id);
+      } catch (error) {
+        console.error("Error serializing object for sync:", error);
+      }
+    } else if (id.startsWith("teacher") && isRelevantView && !currentSyncState) {
       console.log(`${id} added object but sync is disabled (${currentSyncState}), not sending to student board`);
     }
   };

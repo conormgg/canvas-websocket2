@@ -26,10 +26,10 @@ export const useTeacherUpdates = (
       if (!canvas) return;
 
       // Make sure we're in the student or split-mode view
-      const isStudentView = window.location.pathname.includes('/student') || 
-                           window.location.pathname.includes('/split-mode');
+      const isValidView = window.location.pathname.includes('/student') || 
+                         window.location.pathname.includes('/split-mode');
       
-      if (!isStudentView) return;
+      if (!isValidView) return;
 
       // Verify this update is meant for this specific board
       if (e.detail.targetId !== id) {
@@ -37,23 +37,28 @@ export const useTeacherUpdates = (
         return;
       }
 
-      console.log(`${id} received update from corresponding teacher board (sync enabled: ${isSyncEnabled})`);
+      console.log(`${id} received update from teacher board (sync enabled: ${isSyncEnabled})`, e.detail);
 
-      util
-        .enlivenObjects([e.detail.object])
-        .then((objects: FabricObject[]) => {
-          objects.forEach((obj) => {
-            obj.selectable = true;
-            obj.evented = true;
-            canvas.add(obj);
-            canvas.renderAll();
+      try {
+        util
+          .enlivenObjects([e.detail.object])
+          .then((objects: FabricObject[]) => {
+            objects.forEach((obj) => {
+              obj.selectable = true;
+              obj.evented = true;
+              canvas.add(obj);
+              canvas.renderAll();
+            });
+            console.log(`Object successfully added to ${id} from teacher update`);
+          })
+          .catch((err) => {
+            console.error("Failed to enliven object", err);
+            toast.error("Could not sync object to this board.");
           });
-          console.log(`Object successfully added to ${id} from teacher update`);
-        })
-        .catch((err) => {
-          console.error("Failed to enliven object", err);
-          toast.error("Could not sync object to this board.");
-        });
+      } catch (error) {
+        console.error("Error processing teacher update:", error);
+        toast.error("Error syncing content from teacher's board");
+      }
     };
 
     window.addEventListener("teacher-update", handleTeacherUpdate as EventListener);

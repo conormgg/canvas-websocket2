@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { WhiteboardId, TeacherId, StudentId } from "@/types/canvas";
 import { toast } from "sonner";
+import { FabricObject } from "fabric";
 
 interface SyncContextProps {
   isSyncEnabled: boolean;
@@ -171,6 +172,9 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       console.log(`Sync is disabled for ${sourceId}, not sending update`);
       return;
     }
+    
+    // Debug the object being sent
+    console.log(`Preparing to sync object from ${sourceId} to ${syncPair.studentId}`, objectData);
     
     // Create and dispatch the sync event
     const syncEvent = new CustomEvent("teacher-update", {

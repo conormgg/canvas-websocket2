@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps } from "@/types/canvas";
@@ -19,6 +20,7 @@ export const useCanvas = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
   const { activeBoardId } = useClipboardContext();
+  const isDrawingRef = useRef<boolean>(false);
 
   const { updateCursorAndNotify } = useCanvasTools();
   const {
@@ -60,8 +62,20 @@ export const useCanvas = ({
     }
 
     if (onObjectAdded) {
+      // Listen for path creation (when drawing ends)
+      canvas.on("path:created", (e) => {
+        if (e.path && id === activeBoardId) {
+          console.log(`${id} created a path, notifying onObjectAdded`);
+          onObjectAdded(e.path);
+        }
+      });
+      
+      // Listen for objects being added from other sources
       canvas.on("object:added", (e) => {
-        if (e.target && id === activeBoardId) {
+        // Only notify if this isn't from a path:created event (which we already handle above)
+        // and if this is the active board (to prevent duplicate notifications)
+        if (e.target && id === activeBoardId && !isDrawingRef.current) {
+          console.log(`${id} added an object (not from drawing), notifying onObjectAdded`);
           onObjectAdded(e.target);
         }
       });
@@ -71,6 +85,17 @@ export const useCanvas = ({
     canvas.on("mouse:down", handleMouseDown);
     canvas.on("mouse:move", handleMouseMove);
     canvas.on("mouse:up", handleMouseUp);
+    
+    // Track drawing state
+    canvas.on("path:created", () => {
+      isDrawingRef.current = false;
+    });
+    
+    canvas.on("mouse:down", () => {
+      if (activeTool === "draw" || activeTool === "eraser") {
+        isDrawingRef.current = true;
+      }
+    });
 
     fabricRef.current = canvas;
 
