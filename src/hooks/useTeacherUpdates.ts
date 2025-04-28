@@ -12,7 +12,8 @@ export const useTeacherUpdates = (
   const shouldShowToastForBoard = (boardId: string) => {
     const activeBoard = window.__wbActiveBoardId;
     return activeBoard === boardId || 
-           boardId === "student1";
+           boardId === "student1" || 
+           boardId === "student2";
   };
 
   useEffect(() => {
@@ -22,19 +23,27 @@ export const useTeacherUpdates = (
     }
 
     const handleTeacherUpdate = (e: CustomEvent) => {
+      console.log(`${id} received update, sync enabled: ${isSyncEnabled}`, e.detail);
+      
       if (!isSyncEnabled) {
         console.log(`Update received for ${id} but sync is disabled, ignoring`);
         return;
       }
 
       const canvas = fabricRef.current;
-      if (!canvas) return;
+      if (!canvas) {
+        console.error(`Canvas ref is null for ${id}`);
+        return;
+      }
 
       // Make sure we're in the student or split-mode view
       const isValidView = window.location.pathname.includes('/student') || 
                          window.location.pathname.includes('/split-mode');
       
-      if (!isValidView) return;
+      if (!isValidView) {
+        console.log(`Not in student or split-mode view, ignoring update for ${id}`);
+        return;
+      }
 
       // Verify this update is meant for this specific board
       if (e.detail.targetId !== id) {
@@ -42,7 +51,7 @@ export const useTeacherUpdates = (
         return;
       }
 
-      console.log(`${id} received update from teacher board (sync enabled: ${isSyncEnabled})`, e.detail);
+      console.log(`${id} processing update from teacher board (sync enabled: ${isSyncEnabled})`, e.detail);
 
       try {
         util
@@ -70,11 +79,15 @@ export const useTeacherUpdates = (
       }
     };
 
+    console.log(`${id} is listening for teacher-update events (sync: ${isSyncEnabled})`);
     window.addEventListener("teacher-update", handleTeacherUpdate as EventListener);
-    return () =>
+    
+    return () => {
       window.removeEventListener(
         "teacher-update",
         handleTeacherUpdate as EventListener
       );
+      console.log(`${id} stopped listening for teacher-update events`);
+    };
   }, [fabricRef, id, isSyncEnabled]);
 };

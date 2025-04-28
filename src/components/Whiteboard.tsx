@@ -23,7 +23,8 @@ export const Whiteboard = ({
   const isActiveRef = useRef(false);
 
   const { activeBoardId } = useClipboardContext();
-  const { isSyncEnabled, isSync2Enabled } = useSyncContext();
+  const syncContext = useSyncContext();
+  const { isSyncEnabled, isSync2Enabled } = syncContext;
 
   const syncStateMap = {
     "teacher1": isSyncEnabled,
@@ -35,6 +36,15 @@ export const Whiteboard = ({
   
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
+  // Handle object added for sync purposes
+  const handleObjectAdded = (obj: any) => {
+    console.log(`Object added to ${id}, checking if we need to sync`);
+    if (id.startsWith("teacher")) {
+      console.log(`${id} is a teacher board, may need to sync`);
+      // The actual sync will be handled in useCanvas now
+    }
+  };
+
   const { canvasRef, fabricRef } = useCanvas({
     id,
     activeTool: state.activeTool,
@@ -42,6 +52,7 @@ export const Whiteboard = ({
     inkThickness: state.inkThickness,
     isSplitScreen,
     onZoomChange: (zoom) => updateState({ zoom }),
+    onObjectAdded: handleObjectAdded,
   });
 
   useTeacherUpdates(id, fabricRef, currentSyncState);
@@ -57,7 +68,7 @@ export const Whiteboard = ({
 
   useEffect(() => {
     updateState({ isActive: activeBoardId === id });
-  }, [activeBoardId, id]);
+  }, [activeBoardId, id, updateState]);
 
   return (
     <div

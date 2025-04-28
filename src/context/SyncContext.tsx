@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { createContext, useContext, ReactNode, useEffect } from "react";
 import { WhiteboardId, TeacherId } from "@/types/canvas";
 import { toast } from "sonner";
 import { useSyncState, getBoardSyncState } from "@/hooks/useSyncState";
@@ -7,6 +7,7 @@ import { shouldShowToastForBoard, sendObjectToStudents } from "@/utils/syncUtils
 import {
   SYNC_STORAGE_KEY,
   SYNC2_STORAGE_KEY,
+  syncPairsConfig
 } from "@/config/syncConfig";
 
 interface SyncContextProps {
@@ -23,12 +24,33 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const [isSyncEnabled, setIsSyncEnabled] = useSyncState({ storageKey: SYNC_STORAGE_KEY });
   const [isSync2Enabled, setIsSync2Enabled] = useSyncState({ storageKey: SYNC2_STORAGE_KEY });
 
+  // Debug sync states on provider initialization
+  useEffect(() => {
+    console.log("SyncProvider initialized with sync states:", {
+      "teacher1->student1": isSyncEnabled,
+      "teacher2->student2": isSync2Enabled
+    });
+    
+    // Check localStorage directly to verify
+    try {
+      const sync1State = localStorage.getItem(SYNC_STORAGE_KEY);
+      const sync2State = localStorage.getItem(SYNC2_STORAGE_KEY);
+      console.log("localStorage sync states:", {
+        [SYNC_STORAGE_KEY]: sync1State ? JSON.parse(sync1State) : false,
+        [SYNC2_STORAGE_KEY]: sync2State ? JSON.parse(sync2State) : false
+      });
+    } catch (err) {
+      console.error("Error reading sync states from localStorage:", err);
+    }
+  }, [isSyncEnabled, isSync2Enabled]);
+
   const toggleSync = () => {
     setIsSyncEnabled((prev) => {
       const newState = !prev;
       if (shouldShowToastForBoard("teacher1")) {
         toast(newState ? "Sync 1 enabled" : "Sync 1 disabled");
       }
+      console.log(`Sync 1 (teacher1->student1) ${newState ? 'enabled' : 'disabled'}`);
       return newState;
     });
   };
@@ -39,6 +61,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       if (shouldShowToastForBoard("teacher2")) {
         toast(newState ? "Sync 2 enabled" : "Sync 2 disabled");
       }
+      console.log(`Sync 2 (teacher2->student2) ${newState ? 'enabled' : 'disabled'}`);
       return newState;
     });
   };
@@ -54,6 +77,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     };
     
     const isSyncEnabledForBoard = getBoardSyncState(sourceId as TeacherId, syncStates);
+    console.log(`Sending object from ${sourceId}, sync enabled: ${isSyncEnabledForBoard}`);
     sendObjectToStudents(objectData, sourceId, isSyncEnabledForBoard);
   };
 
