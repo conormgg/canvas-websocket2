@@ -14,11 +14,16 @@ export const useCanvasSelection = (
     const canvas = fabricRef.current;
     if (!canvas || activeTool !== "select") return;
 
-    // Make sure all objects are selectable
+    // Make sure all objects are selectable and evented
     canvas.getObjects().forEach(obj => {
-      obj.selectable = true;
-      obj.evented = true;
+      if (obj.selectable === false || obj.evented === false) {
+        obj.set({
+          selectable: true,
+          evented: true
+        });
+      }
     });
+    canvas.requestRenderAll();
 
     const pointer = canvas.getPointer(e);
     startPointRef.current = { x: pointer.x, y: pointer.y };
