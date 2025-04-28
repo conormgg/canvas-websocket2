@@ -38,7 +38,7 @@ export const Toolbar = ({
     : "bg-[#221F26] rounded-lg shadow-lg p-2 flex items-center gap-2";
 
   // Only show sync toggle on teacher's board in teacher view (not in split mode)
-  const showSyncToggle = boardId === "teacher" && !isSplitScreen;
+  const showSyncToggle = boardId === "teacher1" && !isSplitScreen;
 
   return (
     <div className={containerClass}>
@@ -94,7 +94,7 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
-          {showSyncToggle && <SyncToggle isSplitScreen={true} />}
+          {showSyncToggle && <SyncToggle isSplitScreen={true} boardId={boardId} />}
         </>
       ) : (
         <>
@@ -117,7 +117,7 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
-          {showSyncToggle && <SyncToggle />}
+          {showSyncToggle && <SyncToggle boardId={boardId} />}
         </>
       )}
     </div>
