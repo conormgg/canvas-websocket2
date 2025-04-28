@@ -25,6 +25,17 @@ export const useCanvasPersistence = (
     
     try {
       console.log(`Saving canvas state for ${boardId}`);
+      
+      // Ensure all objects are selectable and interactive before saving
+      canvas.getObjects().forEach(obj => {
+        obj.set({
+          selectable: true,
+          evented: true,
+          hasControls: true,
+          hasBorders: true
+        });
+      });
+      
       const canvasData = canvas.toJSON();
       
       const { error } = await (supabase
@@ -102,6 +113,18 @@ export const useCanvasPersistence = (
           const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
           debouncedSave(canvas, studentBoardId);
         }
+      }
+    });
+    
+    // Ensure objects are selectable when they're added to canvas
+    canvas.on('object:added', (e) => {
+      if (e.target) {
+        e.target.set({
+          selectable: true,
+          evented: true,
+          hasControls: true,
+          hasBorders: true
+        });
       }
     });
     

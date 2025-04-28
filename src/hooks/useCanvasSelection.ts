@@ -14,11 +14,16 @@ export const useCanvasSelection = (
     const canvas = fabricRef.current;
     if (!canvas || activeTool !== "select") return;
 
-    // Make sure all objects are selectable
+    // Make sure all objects are selectable and interactive
     canvas.getObjects().forEach(obj => {
-      obj.selectable = true;
-      obj.evented = true;
+      obj.set({
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true
+      });
     });
+    canvas.requestRenderAll();
 
     const pointer = canvas.getPointer(e);
     startPointRef.current = { x: pointer.x, y: pointer.y };
@@ -74,12 +79,10 @@ export const useCanvasSelection = (
       if (obj === selectionRect) return false;
       
       // For paths and complex objects, ensure we check properly
-      // Check for path-like objects without directly accessing undefined properties
       const objectType = obj.get('type');
       const isPathType = objectType === 'path' || objectType === 'group';
       
       if (isPathType) {
-        // For path objects, check if their bounding box intersects
         const objBounds = obj.getBoundingRect();
         const rectBounds = selectionRect.getBoundingRect();
         
@@ -97,6 +100,16 @@ export const useCanvasSelection = (
     if (objects.length > 0) {
       console.log(`Selected ${objects.length} objects`);
       
+      // Make sure all objects in selection are selectable and interactive
+      objects.forEach(obj => {
+        obj.set({
+          selectable: true,
+          evented: true,
+          hasControls: true,
+          hasBorders: true
+        });
+      });
+
       if (objects.length === 1) {
         canvas.setActiveObject(objects[0]);
       } else {
@@ -107,7 +120,7 @@ export const useCanvasSelection = (
     
     canvas.remove(selectionRect);
     selectionRectRef.current = null;
-    canvas.renderAll();
+    canvas.requestRenderAll();
   };
 
   return {

@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
 import { useClipboardContext } from "@/context/ClipboardContext";
@@ -57,10 +56,19 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
   
-  // Always enable real-time sync regardless of whether the board is a student board
+  // Always enable real-time sync
   useRealtimeSync(fabricRef, id, true);
-  const { isActive } = useBoardActivity(id, canvasRef);
 
+  useEffect(() => {
+    // Set this board as active as soon as it's mounted
+    if (fabricRef.current) {
+      console.log(`Setting ${id} as active board on mount`);
+      window.__wbActiveBoard = canvasRef.current;
+      window.__wbActiveBoardId = id;
+      setActiveCanvas(fabricRef.current, id);
+    }
+  }, [id, canvasRef, fabricRef, setActiveCanvas]);
+  
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     return false;
@@ -122,8 +130,8 @@ export const Whiteboard = ({
       className={cn(
         "relative flex flex-col items-center justify-start",
         "transition-all duration-300 ease-in-out",
-        isActive && "ring-2 ring-orange-400 bg-orange-50/30 rounded-lg shadow-lg",
-        isMaximized ? "fixed inset-4 z-50 bg-white" : "w-full h-full",
+        "w-full h-full",
+        isMaximized ? "fixed inset-4 z-50 bg-white" : ""
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
@@ -139,7 +147,6 @@ export const Whiteboard = ({
         boardId={id}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        onSelectAll={handleSelectAll}
       />
       <canvas 
         ref={canvasRef} 
@@ -147,7 +154,6 @@ export const Whiteboard = ({
         tabIndex={0}
         data-board-id={id}
       />
-      <ActiveBoardIndicator isActive={isActive} />
     </div>
   );
 };
