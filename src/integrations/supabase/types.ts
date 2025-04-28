@@ -9,54 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          id: string
-          updated_at: string
-          username: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          id: string
-          updated_at?: string
-          username?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          id?: string
-          updated_at?: string
-          username?: string | null
-        }
-        Relationships: []
-      }
-      whiteboard_objects: {
-        Row: {
-          board_id: string
-          created_at: string
-          id: string
-          object_data: Json
-          updated_at: string
-        }
-        Insert: {
-          board_id: string
-          created_at?: string
-          id?: string
-          object_data: Json
-          updated_at?: string
-        }
-        Update: {
-          board_id?: string
-          created_at?: string
-          id?: string
-          object_data?: Json
-          updated_at?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
