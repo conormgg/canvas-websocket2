@@ -1,7 +1,7 @@
 
 import { Toggle } from "@/components/ui/toggle";
 import { useSyncContext } from "@/context/SyncContext";
-import { Link, Link2Off } from "lucide-react";
+import { Link, LinkOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WhiteboardId } from "@/types/canvas";
 
@@ -57,7 +57,7 @@ export const SyncToggle = ({
       {isSyncEnabled ? (
         <Link className="h-4 w-4 mr-1 text-green-500" />
       ) : (
-        <Link2Off className="h-4 w-4 mr-1" />
+        <LinkOff className="h-4 w-4 mr-1" />
       )}
       Sync {isSyncEnabled ? "ON" : "OFF"}
     </Toggle>
