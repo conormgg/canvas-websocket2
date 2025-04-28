@@ -1,4 +1,3 @@
-
 import { useRef, useEffect } from 'react';
 import { Canvas, FabricObject } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
@@ -38,7 +37,6 @@ export const useCanvasPersistence = (
       
       const canvasData = canvas.toJSON();
       
-      // Insert new state record
       const { error } = await (supabase
         .from('whiteboard_objects') as any)
         .insert({
@@ -64,16 +62,20 @@ export const useCanvasPersistence = (
     
     saveTimeoutRef.current = window.setTimeout(() => {
       saveCanvasState(canvas, boardId);
-    }, 200); // Reduced from 300ms to 200ms for more responsive saving
+    }, 200);
   };
 
   const handleObjectModified = (canvas: Canvas) => {
     console.log(`Canvas ${id} modified, saving state`);
     debouncedSave(canvas, id);
     
-    if (id.startsWith('teacher')) {
-      const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
-      debouncedSave(canvas, studentBoardId);
+    // Handle two-way sync for board 2
+    if (id === "teacher2") {
+      debouncedSave(canvas, "student2");
+    } else if (id === "student2") {
+      debouncedSave(canvas, "teacher2");
+    } else if (id === "teacher1") {
+      debouncedSave(canvas, "student1");
     }
   };
 
@@ -91,10 +93,13 @@ export const useCanvasPersistence = (
     
     debouncedSave(canvas, id);
     
-    if ((id.startsWith("teacher")) && isTeacherView) {
-      console.log(`${id} added object, sending to corresponding student board`);
-      const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
-      debouncedSave(canvas, studentBoardId);
+    // Handle two-way sync for board 2
+    if (id === "teacher2") {
+      debouncedSave(canvas, "student2");
+    } else if (id === "student2") {
+      debouncedSave(canvas, "teacher2");
+    } else if (id === "teacher1") {
+      debouncedSave(canvas, "student1");
     }
   };
 

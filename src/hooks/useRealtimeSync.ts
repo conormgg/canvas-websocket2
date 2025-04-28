@@ -24,17 +24,26 @@ export const useRealtimeSync = (
     const canvas = fabricRef.current;
     let lastLoadedContent: string | null = null;
     
-    // Function to load existing content for the board
     const loadExistingContent = async () => {
       try {
         console.log(`Loading existing content for board: ${boardId}`);
         
-        const { data, error } = await (supabase
-          .from('whiteboard_objects') as any)
-          .select('object_data')
-          .eq('board_id', boardId)
-          .order('created_at', { ascending: false })
-          .limit(1);
+        // For board 2, check both teacher2 and student2 content
+        const query = (boardId === "teacher2" || boardId === "student2") 
+          ? supabase
+              .from('whiteboard_objects')
+              .select('object_data')
+              .in('board_id', ['teacher2', 'student2'])
+              .order('created_at', { ascending: false })
+              .limit(1)
+          : supabase
+              .from('whiteboard_objects')
+              .select('object_data')
+              .eq('board_id', boardId)
+              .order('created_at', { ascending: false })
+              .limit(1);
+        
+        const { data, error } = await query;
         
         if (error) {
           console.error('Error fetching existing content:', error);
@@ -55,10 +64,8 @@ export const useRealtimeSync = (
           // Store the loaded content for future comparison
           lastLoadedContent = contentString;
           
-          // Add a small delay to ensure canvas is fully initialized
           setTimeout(() => {
             canvas.loadFromJSON(objectData as Record<string, any>, () => {
-              // Ensure all objects are selectable and interactive after loading
               canvas.getObjects().forEach(obj => {
                 obj.set({
                   selectable: true,
@@ -67,32 +74,30 @@ export const useRealtimeSync = (
                   hasBorders: true
                 });
               });
-              
               canvas.renderAll();
               console.log('Loaded existing content for board:', boardId);
             });
           }, 100);
-        } else {
-          console.log(`No existing content found for board: ${boardId}`);
         }
       } catch (err) {
         console.error('Failed to load existing content:', err);
       }
     };
     
-    // Load existing content on initial mount
     loadExistingContent();
 
-    // Use type assertion to fix TypeScript error with the 'postgres_changes' event
+    // Set up realtime subscription for two-way sync
     const channel = supabase
       .channel(`whiteboard-sync-${boardId}`)
       .on(
-        'postgres_changes' as any, 
+        'postgres_changes' as any,
         {
-          event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
+          event: '*',
           schema: 'public',
           table: 'whiteboard_objects',
-          filter: `board_id=eq.${boardId}`
+          filter: boardId === "teacher2" || boardId === "student2"
+            ? `board_id=in.(teacher2,student2)`
+            : `board_id=eq.${boardId}`
         },
         (payload: { new: WhiteboardObject; eventType: string }) => {
           console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
@@ -135,9 +140,8 @@ export const useRealtimeSync = (
       )
       .subscribe();
 
-    // Cleanup subscription
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fabricRef, boardId]); // We only depend on fabricRef and boardId to ensure persistent sync
+  }, [fabricRef, boardId]);
 };
