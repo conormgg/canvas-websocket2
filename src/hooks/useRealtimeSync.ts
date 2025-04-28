@@ -62,11 +62,11 @@ export const useRealtimeSync = (
     // Load existing content on initial mount
     loadExistingContent();
 
-    // Always enable real-time subscription regardless of isEnabled flag
+    // Fix for TypeScript error - properly define the channel with correct types
     const channel = supabase
       .channel(`whiteboard-sync-${boardId}`)
       .on(
-        'postgres_changes',
+        'postgres_changes', 
         {
           event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
           schema: 'public',
