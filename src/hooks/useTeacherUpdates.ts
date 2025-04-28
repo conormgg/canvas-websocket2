@@ -9,6 +9,12 @@ export const useTeacherUpdates = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   isSyncEnabled: boolean
 ) => {
+  const shouldShowToastForBoard = (boardId: string) => {
+    const activeBoard = window.__wbActiveBoardId;
+    return activeBoard === boardId || 
+           boardId === "student1";
+  };
+
   useEffect(() => {
     // Only update boards that should receive synced updates
     if (!id.startsWith("student")) {
@@ -16,7 +22,6 @@ export const useTeacherUpdates = (
     }
 
     const handleTeacherUpdate = (e: CustomEvent) => {
-      // If sync is disabled, don't process updates
       if (!isSyncEnabled) {
         console.log(`Update received for ${id} but sync is disabled, ignoring`);
         return;
@@ -53,11 +58,15 @@ export const useTeacherUpdates = (
           })
           .catch((err) => {
             console.error("Failed to enliven object", err);
-            toast.error("Could not sync object to this board.");
+            if (shouldShowToastForBoard(id)) {
+              toast.error("Could not sync object to this board.");
+            }
           });
       } catch (error) {
         console.error("Error processing teacher update:", error);
-        toast.error("Error syncing content from teacher's board");
+        if (shouldShowToastForBoard(id)) {
+          toast.error("Error syncing content from teacher's board");
+        }
       }
     };
 

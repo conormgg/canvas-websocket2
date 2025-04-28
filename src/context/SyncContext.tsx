@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { WhiteboardId, TeacherId, StudentId } from "@/types/canvas";
 import { toast } from "sonner";
@@ -18,14 +17,12 @@ interface SyncContextProps {
   sendObjectToStudents: (objectData: any, sourceId: WhiteboardId) => void;
 }
 
-// Define storage keys for each sync state
 const SYNC_STORAGE_KEY = "whiteboard-sync-enabled";
 const SYNC2_STORAGE_KEY = "whiteboard-sync2-enabled";
 const SYNC3_STORAGE_KEY = "whiteboard-sync3-enabled";
 const SYNC4_STORAGE_KEY = "whiteboard-sync4-enabled";
 const SYNC5_STORAGE_KEY = "whiteboard-sync5-enabled";
 
-// Define teacher-to-student board mapping
 interface SyncPair {
   teacherId: TeacherId;
   studentId: StudentId;
@@ -43,7 +40,6 @@ const syncPairsConfig: SyncPair[] = [
 const SyncContext = createContext<SyncContextProps | undefined>(undefined);
 
 export const SyncProvider = ({ children }: { children: ReactNode }) => {
-  // Initialize sync states from local storage
   const [isSyncEnabled, setIsSyncEnabled] = useState<boolean>(() => {
     const savedSync = localStorage.getItem(SYNC_STORAGE_KEY);
     return savedSync ? JSON.parse(savedSync) : false;
@@ -69,7 +65,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     return savedSync ? JSON.parse(savedSync) : false;
   });
 
-  // Save sync states to local storage when they change
   useEffect(() => {
     localStorage.setItem(SYNC_STORAGE_KEY, JSON.stringify(isSyncEnabled));
     console.log(`Sync 1 ${isSyncEnabled ? "enabled" : "disabled"}`);
@@ -95,48 +90,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     console.log(`Sync 5 ${isSync5Enabled ? "enabled" : "disabled"}`);
   }, [isSync5Enabled]);
 
-  // Toggle functions for each sync state
-  const toggleSync = () => {
-    setIsSyncEnabled((prev) => {
-      const newState = !prev;
-      toast(newState ? "Sync 1 enabled" : "Sync 1 disabled");
-      return newState;
-    });
-  };
-
-  const toggleSync2 = () => {
-    setIsSync2Enabled((prev) => {
-      const newState = !prev;
-      toast(newState ? "Sync 2 enabled" : "Sync 2 disabled");
-      return newState;
-    });
-  };
-
-  const toggleSync3 = () => {
-    setIsSync3Enabled((prev) => {
-      const newState = !prev;
-      toast(newState ? "Sync 3 enabled" : "Sync 3 disabled");
-      return newState;
-    });
-  };
-
-  const toggleSync4 = () => {
-    setIsSync4Enabled((prev) => {
-      const newState = !prev;
-      toast(newState ? "Sync 4 enabled" : "Sync 4 disabled");
-      return newState;
-    });
-  };
-
-  const toggleSync5 = () => {
-    setIsSync5Enabled((prev) => {
-      const newState = !prev;
-      toast(newState ? "Sync 5 enabled" : "Sync 5 disabled");
-      return newState;
-    });
-  };
-
-  // Get the current sync state for a specific teacher board
   const getBoardSyncState = (boardId: TeacherId): boolean => {
     const syncStates = {
       'teacher1': isSyncEnabled,
@@ -149,15 +102,70 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     return syncStates[boardId] || false;
   };
 
-  // Send object from teacher board to student board
+  const shouldShowToastForBoard = (boardId: string) => {
+    const activeBoard = window.__wbActiveBoardId;
+    
+    return activeBoard === boardId || 
+           boardId === "teacher1" || 
+           boardId === "student1";
+  };
+
+  const toggleSync = () => {
+    setIsSyncEnabled((prev) => {
+      const newState = !prev;
+      if (shouldShowToastForBoard("teacher1")) {
+        toast(newState ? "Sync 1 enabled" : "Sync 1 disabled");
+      }
+      return newState;
+    });
+  };
+
+  const toggleSync2 = () => {
+    setIsSync2Enabled((prev) => {
+      const newState = !prev;
+      if (shouldShowToastForBoard("teacher2")) {
+        toast(newState ? "Sync 2 enabled" : "Sync 2 disabled");
+      }
+      return newState;
+    });
+  };
+
+  const toggleSync3 = () => {
+    setIsSync3Enabled((prev) => {
+      const newState = !prev;
+      if (shouldShowToastForBoard("teacher3")) {
+        toast(newState ? "Sync 3 enabled" : "Sync 3 disabled");
+      }
+      return newState;
+    });
+  };
+
+  const toggleSync4 = () => {
+    setIsSync4Enabled((prev) => {
+      const newState = !prev;
+      if (shouldShowToastForBoard("teacher4")) {
+        toast(newState ? "Sync 4 enabled" : "Sync 4 disabled");
+      }
+      return newState;
+    });
+  };
+
+  const toggleSync5 = () => {
+    setIsSync5Enabled((prev) => {
+      const newState = !prev;
+      if (shouldShowToastForBoard("teacher5")) {
+        toast(newState ? "Sync 5 enabled" : "Sync 5 disabled");
+      }
+      return newState;
+    });
+  };
+
   const sendObjectToStudents = (objectData: any, sourceId: WhiteboardId) => {
-    // Only process if it's a teacher board
     if (!sourceId.startsWith('teacher')) {
       console.log(`Object from ${sourceId} not synced - not a teacher board`);
       return;
     }
     
-    // Find the matching sync pair configuration
     const syncPair = syncPairsConfig.find(pair => pair.teacherId === sourceId);
     
     if (!syncPair) {
@@ -165,7 +173,6 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    // Check if sync is enabled for this teacher board
     const isSyncEnabledForBoard = getBoardSyncState(sourceId as TeacherId);
     
     if (!isSyncEnabledForBoard) {
@@ -173,10 +180,8 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     
-    // Debug the object being sent
     console.log(`Preparing to sync object from ${sourceId} to ${syncPair.studentId}`, objectData);
     
-    // Create and dispatch the sync event
     const syncEvent = new CustomEvent("teacher-update", {
       detail: {
         object: objectData,
