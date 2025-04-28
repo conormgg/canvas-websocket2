@@ -1,5 +1,6 @@
+
 import { useRef, useEffect } from 'react';
-import { Canvas } from 'fabric';
+import { Canvas, ActiveSelection } from 'fabric';
 
 export const useCanvasHistory = (fabricRef: React.MutableRefObject<Canvas | null>) => {
   const historyRef = useRef<string[]>([]);
@@ -95,13 +96,13 @@ export const useCanvasHistory = (fabricRef: React.MutableRefObject<Canvas | null
 
   const selectAll = () => {
     const canvas = fabricRef.current;
-    if (!canvas) return;
+    if (!canvas) return false;
 
     // Select all objects in the canvas
     const objects = canvas.getObjects();
     if (objects.length > 0) {
       canvas.discardActiveObject();
-      const selection = new fabric.ActiveSelection(objects, { canvas });
+      const selection = new ActiveSelection(objects, { canvas });
       canvas.setActiveObject(selection);
       canvas.requestRenderAll();
       return true;

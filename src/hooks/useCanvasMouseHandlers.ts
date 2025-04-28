@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Canvas, TPointerEvent, TPointerEventInfo } from 'fabric';
 import { useCanvasKeyboard } from './useCanvasKeyboard';
@@ -70,8 +69,6 @@ export const useCanvasMouseHandlers = (
     setIsDrawing(false);
   };
 
-  // Since useCanvasKeyboard no longer returns handleKeyDown,
-  // we don't need to pass it to the return object
   return {
     isDrawing,
     handleMouseWheel,

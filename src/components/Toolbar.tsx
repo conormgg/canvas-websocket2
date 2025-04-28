@@ -1,5 +1,4 @@
-
-import { MousePointer, Pencil, Eraser, Undo2, Redo2, SelectAll } from "lucide-react";
+import { MousePointer, Pencil, Eraser, Undo2, Redo2, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "./ColorPicker";
 import {
@@ -43,7 +42,6 @@ export const Toolbar = ({
     ? "bg-[#221F26] rounded-md shadow-md p-1 flex items-center justify-center gap-1 scale-90 max-w-xs"
     : "bg-[#221F26] rounded-lg shadow-lg p-2 flex items-center gap-2";
 
-  // Only show sync toggle on teacher's board in teacher view (not in split mode)
   const showSyncToggle = boardId === "teacher1" && !isSplitScreen;
 
   return (
@@ -73,7 +71,6 @@ export const Toolbar = ({
         <Eraser className="h-5 w-5" />
       </Button>
 
-      {/* Add Undo/Redo buttons */}
       <Button
         variant="ghost"
         size="icon"
@@ -99,7 +96,7 @@ export const Toolbar = ({
         className="text-white hover:text-white"
         title="Select All (Ctrl+A)"
       >
-        <SelectAll className="h-5 w-5" />
+        <CheckSquare className="h-5 w-5" />
       </Button>
 
       {isSplitScreen ? (
