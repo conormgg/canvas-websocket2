@@ -47,7 +47,10 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     // Create a complete map of all possible teacher IDs to their sync states
     const syncStates: Record<TeacherId, boolean> = {
       'teacher1': isSyncEnabled,
-      'teacher2': isSync2Enabled
+      'teacher2': isSync2Enabled,
+      'teacher3': false,
+      'teacher4': false,
+      'teacher5': false
     };
     
     const isSyncEnabledForBoard = getBoardSyncState(sourceId as TeacherId, syncStates);

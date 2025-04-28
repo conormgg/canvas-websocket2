@@ -27,7 +27,10 @@ export const Whiteboard = ({
 
   const syncStateMap = {
     "teacher1": isSyncEnabled,
-    "teacher2": isSync2Enabled
+    "teacher2": isSync2Enabled,
+    "teacher3": false,
+    "teacher4": false,
+    "teacher5": false
   };
   
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;

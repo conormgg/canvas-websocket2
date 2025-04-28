@@ -7,9 +7,12 @@ import { WhiteboardId, TeacherId } from "@/types/canvas";
 export const SplitWhiteboard = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
   
-  // The secondary boards - using only valid TeacherId
+  // All secondary teacher boards
   const secondaryBoards: TeacherId[] = [
-    "teacher2"
+    "teacher2",
+    "teacher3",
+    "teacher4",
+    "teacher5"
   ];
   
   // Initialize active board tracking when component mounts
@@ -46,10 +49,10 @@ export const SplitWhiteboard = () => {
       ? "fixed inset-4 z-50"
       : enlarged
       ? "w-1/5"
-      : "w-1/2";
+      : "w-1/3";
 
   const secondaryBoardsContainerCls =
-    enlarged === "teacher1" ? "w-0 opacity-0" : enlarged ? "w-full" : "w-1/2";
+    enlarged === "teacher1" ? "w-0 opacity-0" : enlarged ? "w-full" : "w-2/3";
 
   const secondaryBoardCls = (id: TeacherId) => {
     if (enlarged === id) return "fixed inset-4 z-50";
@@ -73,7 +76,7 @@ export const SplitWhiteboard = () => {
 
       <div
         className={cn(
-          "transition-all duration-300 ease-in-out h-full grid grid-cols-1 gap-4", // Updated to grid-cols-1 since we only have one secondary board
+          "transition-all duration-300 ease-in-out h-full grid grid-cols-2 gap-4",
           secondaryBoardsContainerCls
         )}
       >
