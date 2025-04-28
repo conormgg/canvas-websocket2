@@ -3,14 +3,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { MemoryRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ClipboardProvider } from "@/context/ClipboardContext";
 import { SyncProvider } from "@/context/SyncContext";
 import { ViewSelector } from "./components/ViewSelector";
+import { TeacherView } from "./components/TeacherView";
 import { StudentView } from "./components/StudentView";
 import { SplitModeView } from "./components/SplitModeView";
 import NotFound from "./pages/NotFound";
-import { SplitWhiteboard } from "./components/SplitWhiteboard";
 
 const queryClient = new QueryClient();
 
@@ -21,15 +21,15 @@ const App = () => (
         <SyncProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <MemoryRouter>
             <Routes>
               <Route path="/" element={<ViewSelector />} />
-              <Route path="/teacher" element={<SplitWhiteboard />} />
+              <Route path="/teacher" element={<TeacherView />} />
               <Route path="/student" element={<StudentView />} />
               <Route path="/split-mode" element={<SplitModeView />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
+          </MemoryRouter>
         </SyncProvider>
       </ClipboardProvider>
     </TooltipProvider>

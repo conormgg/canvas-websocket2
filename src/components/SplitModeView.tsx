@@ -22,31 +22,29 @@ export const SplitModeView = () => {
         <SyncToggle />
       </div>
       <div className="flex flex-col gap-4 flex-1">
-        {/* Top row - Teacher's View 1 and Student's View 1 */}
         <div className="flex gap-4 flex-1">
           <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="absolute top-2 left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
               Teacher's View 1
             </div>
-            <Whiteboard id="teacher" isSplitScreen={true} />
+            <Whiteboard id="teacher1" isSplitScreen={true} />
           </div>
           <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="absolute top-2 left-[calc(50%+0.5rem)] px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
+            <div className="absolute top-2 right-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
               Student's View 1
             </div>
             <Whiteboard id="student1" isSplitScreen={true} />
           </div>
         </div>
-        {/* Bottom row - Teacher's View 2 and Student's View 2 */}
         <div className="flex gap-4 flex-1">
           <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="absolute top-[calc(50%+1rem)] left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
+            <div className="absolute top-2 left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
               Teacher's View 2
             </div>
             <Whiteboard id="teacher2" isSplitScreen={true} />
           </div>
           <div className="w-1/2 h-full bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="absolute top-[calc(50%+1rem)] left-[calc(50%+0.5rem)] px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
+            <div className="absolute top-2 right-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
               Student's View 2
             </div>
             <Whiteboard id="student2" isSplitScreen={true} />

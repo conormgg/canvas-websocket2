@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { WhiteboardId } from "@/types/canvas";
+import { WhiteboardId, SYNC_PAIRS, TeacherId } from "@/types/canvas";
 import { toast } from "sonner";
 
 interface SyncContextProps {
@@ -34,28 +35,24 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   const sendObjectToStudents = (objectData: any, sourceId: WhiteboardId) => {
     if (!isSyncEnabled) return;
     
-    const syncPairs = {
-      'teacher': 'student1',
-      'teacher2': 'student2'
-    };
-    
-    const targetId = syncPairs[sourceId as keyof typeof syncPairs];
-    if (!targetId) {
+    // Check if the source is a teacher board
+    if (sourceId in SYNC_PAIRS) {
+      const targetId = SYNC_PAIRS[sourceId as TeacherId];
+      
+      const syncEvent = new CustomEvent("teacher-update", {
+        detail: {
+          object: objectData,
+          sourceId,
+          timestamp: Date.now(),
+          targetId
+        }
+      });
+      
+      window.dispatchEvent(syncEvent);
+      console.log(`Object sent from ${sourceId} to ${targetId}:`, objectData);
+    } else {
       console.log(`Object from ${sourceId} not synced - not a teacher board`);
-      return;
     }
-    
-    const syncEvent = new CustomEvent("teacher-update", {
-      detail: {
-        object: objectData,
-        sourceId,
-        timestamp: Date.now(),
-        targetId
-      }
-    });
-    
-    window.dispatchEvent(syncEvent);
-    console.log(`Object sent from ${sourceId} to ${targetId}:`, objectData);
   };
 
   return (
