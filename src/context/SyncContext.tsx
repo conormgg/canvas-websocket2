@@ -40,6 +40,18 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     
     console.log(`Sync ${isSyncEnabled ? "enabled" : "disabled"}`);
   }, [isSyncEnabled]);
+  
+  // Listen for forced sync enable events (from SyncTestView)
+  useEffect(() => {
+    const handleForceSyncEnable = () => {
+      setIsSyncEnabled(true);
+    };
+    
+    window.addEventListener("sync-force-enable", handleForceSyncEnable);
+    return () => {
+      window.removeEventListener("sync-force-enable", handleForceSyncEnable);
+    };
+  }, []);
 
   const toggleSync = () => {
     setIsSyncEnabled((prev) => !prev);

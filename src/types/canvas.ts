@@ -9,6 +9,7 @@ export interface UseCanvasProps {
   onZoomChange?: (zoom: number) => void;
   onObjectAdded?: (object: FabricObject) => void;
   isSplitScreen?: boolean;
+  instanceId?: string;
 }
 
 export interface CanvasPosition {

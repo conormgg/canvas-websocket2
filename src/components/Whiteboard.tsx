@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -24,6 +25,7 @@ export const Whiteboard = ({
   const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
+  const instanceIdRef = useRef<string>(`${id}-${Math.random().toString(36).substring(2, 9)}`);
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
   const { sendObjectToTeacherBoards, isSyncEnabled, linkedBoards } = useSyncContext();
@@ -35,7 +37,12 @@ export const Whiteboard = ({
     if (id === "teacher" && isSyncEnabled) {
       console.log(`Teacher board ${id} added object, sending to other teacher boards:`, object);
       const objectData = object.toJSON();
-      sendObjectToTeacherBoards(objectData, id);
+      
+      // Include the canvas instance ID to avoid a board processing its own events
+      sendObjectToTeacherBoards({
+        ...objectData, 
+        canvasInstanceId: instanceIdRef.current
+      }, id);
     }
   };
 
@@ -47,11 +54,24 @@ export const Whiteboard = ({
     isSplitScreen,
     onZoomChange: setZoom,
     onObjectAdded: handleObjectAdded,
+    instanceId: instanceIdRef.current
   });
 
   // Listen for updates to teacher boards
   useTeacherBoardUpdates(id, fabricRef, isSyncEnabled);
   useBoardUpdates(id, fabricRef);
+
+  // Set canvas instance ID when canvas is created
+  useEffect(() => {
+    if (fabricRef.current) {
+      if (fabricRef.current.lowerCanvasEl) {
+        fabricRef.current.lowerCanvasEl.id = instanceIdRef.current;
+      }
+      if (fabricRef.current.upperCanvasEl) {
+        fabricRef.current.upperCanvasEl.id = instanceIdRef.current;
+      }
+    }
+  }, [fabricRef.current]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -138,6 +158,7 @@ export const Whiteboard = ({
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
+      data-instance-id={instanceIdRef.current}
     >
       <Toolbar
         activeTool={activeTool}
@@ -155,6 +176,7 @@ export const Whiteboard = ({
         className="w-full h-full z-0" 
         tabIndex={0}
         data-board-id={id}
+        id={instanceIdRef.current}
         onFocus={() => {
           window.__wbActiveBoard = canvasRef.current;
           window.__wbActiveBoardId = id;

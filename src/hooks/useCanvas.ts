@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
 import { UseCanvasProps, WhiteboardId } from "@/types/canvas";
@@ -14,6 +15,7 @@ export const useCanvas = ({
   onZoomChange,
   onObjectAdded,
   isSplitScreen,
+  instanceId,
 }: UseCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
@@ -37,6 +39,11 @@ export const useCanvas = ({
     if (!canvasRef.current) return;
 
     canvasRef.current.dataset.boardId = id;
+    
+    // Assign instance ID to help with sync
+    if (instanceId) {
+      canvasRef.current.id = instanceId;
+    }
 
     const canvas = new Canvas(canvasRef.current, {
       width: window.innerWidth,
@@ -47,8 +54,14 @@ export const useCanvas = ({
       selection: false,
     });
 
-    if (canvas.lowerCanvasEl) canvas.lowerCanvasEl.dataset.boardId = id;
-    if (canvas.upperCanvasEl) canvas.upperCanvasEl.dataset.boardId = id;
+    if (canvas.lowerCanvasEl) {
+      canvas.lowerCanvasEl.dataset.boardId = id;
+      if (instanceId) canvas.lowerCanvasEl.id = instanceId;
+    }
+    if (canvas.upperCanvasEl) {
+      canvas.upperCanvasEl.dataset.boardId = id;
+      if (instanceId) canvas.upperCanvasEl.id = instanceId;
+    }
 
     canvas.freeDrawingBrush = new PencilBrush(canvas);
     canvas.freeDrawingBrush.width = inkThickness;
@@ -56,7 +69,7 @@ export const useCanvas = ({
 
     if (onObjectAdded) {
       canvas.on("object:added", (e) => {
-        if (e.target && id === activeBoardId) {
+        if (e.target && (id === activeBoardId || id === "teacher")) {
           onObjectAdded(e.target);
         }
       });

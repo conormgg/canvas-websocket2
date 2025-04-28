@@ -17,11 +17,19 @@ export const useTeacherBoardUpdates = (
     const handleTeacherBoardUpdate = (e: CustomEvent) => {
       if (!isSyncEnabled) return;
 
-      // Prevent infinite loop by not processing our own events
-      if (e.detail.sourceId === id) return;
-
       const canvas = fabricRef.current;
       if (!canvas) return;
+      
+      // Generate a unique identifier for this specific canvas instance
+      // This prevents a board from processing its own events in SyncTestView
+      const canvasInstanceId = canvas.lowerCanvasEl?.id || canvas.upperCanvasEl?.id || "";
+
+      // Check if this update came from this specific canvas instance
+      // We now check both sourceId and canvasInstanceId
+      if (e.detail.sourceId === id && e.detail.canvasInstanceId === canvasInstanceId) {
+        console.log("Skipping update from self to prevent infinite loop");
+        return;
+      }
 
       console.log(`Teacher board ${id} received update from ${e.detail.sourceId}:`, e.detail);
 
