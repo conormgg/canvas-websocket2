@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -27,20 +28,6 @@ export const Whiteboard = ({
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
   const { sendObjectToStudents, isSyncEnabled, isSync2Enabled, isSync3Enabled, isSync4Enabled, isSync5Enabled } = useSyncContext();
 
-  // Determine which sync state to use based on board ID
-  const syncStateMap = {
-    "teacher": isSyncEnabled,
-    "teacher2": isSync2Enabled,
-    "teacher3": isSync3Enabled,
-    "teacher4": isSync4Enabled,
-    "teacher5": isSync5Enabled
-  };
-  
-  const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
-
-  // Add realtime sync for student boards
-  useRealtimeSync(fabricRef, id, id.startsWith('student'));
-
   const handleObjectAdded = (object: FabricObject) => {
     const isTeacherView = window.location.pathname.includes('/teacher') || 
                          window.location.pathname === '/' ||
@@ -62,6 +49,20 @@ export const Whiteboard = ({
     onZoomChange: setZoom,
     onObjectAdded: handleObjectAdded,
   });
+
+  // Determine which sync state to use based on board ID
+  const syncStateMap = {
+    "teacher": isSyncEnabled,
+    "teacher2": isSync2Enabled,
+    "teacher3": isSync3Enabled,
+    "teacher4": isSync4Enabled,
+    "teacher5": isSync5Enabled
+  };
+  
+  const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
+
+  // Add realtime sync for student boards
+  useRealtimeSync(fabricRef, id, id.startsWith('student'));
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
