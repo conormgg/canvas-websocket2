@@ -37,14 +37,24 @@ export const Whiteboard = ({
     activeColor,
     inkThickness,
     isSplitScreen,
+    onZoomChange: setZoom
+  });
+  
+  const isStudent = id.startsWith('student');
+  const { handleObjectAdded } = useCanvasPersistence(fabricRef, id, isTeacherView);
+  
+  // Update useCanvas hook with handleObjectAdded after it's been declared
+  useCanvas({
+    id,
+    activeTool,
+    activeColor,
+    inkThickness,
+    isSplitScreen,
     onZoomChange: setZoom,
     onObjectAdded: handleObjectAdded,
   });
   
-  const isStudent = id.startsWith('student');
   useRealtimeSync(fabricRef, id, isStudent);
-
-  const { handleObjectAdded } = useCanvasPersistence(fabricRef, id, isTeacherView);
   const { isActive } = useBoardActivity(id, canvasRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
