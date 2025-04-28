@@ -6,7 +6,7 @@ import { toast } from "sonner";
 interface SyncContextProps {
   isSyncEnabled: boolean;
   toggleSync: () => void;
-  sendObjectToStudents: (objectData: any) => void;
+  sendObjectToStudents: (objectData: any, sourceId: WhiteboardId) => void;
 }
 
 // Use localStorage to persist sync state across views
@@ -36,22 +36,28 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const sendObjectToStudents = (objectData: any) => {
+  const sendObjectToStudents = (objectData: any, sourceId: WhiteboardId) => {
     if (!isSyncEnabled) return;
+    
+    // Only sync from teacher's view 1 (id="teacher") to student's view 1 (id="teacher")
+    if (sourceId !== "teacher") {
+      console.log(`Object from ${sourceId} not synced - only sync from 'teacher' board`);
+      return;
+    }
     
     // Create a custom event to broadcast the object data to student boards
     const syncEvent = new CustomEvent("teacher-update", {
       detail: {
         object: objectData,
-        sourceId: "teacher",
+        sourceId: "teacher", // This identifies the source as teacher's view 1
         timestamp: Date.now(), // Add timestamp for ordering events
-        targetId: "teacher" // This specifies which board in the student view should receive updates
+        targetId: "teacher" // This specifies the student's view 1 board should receive updates
       }
     });
     
     // Dispatch the event for student boards to listen for
     window.dispatchEvent(syncEvent);
-    console.log("Object sent to students:", objectData);
+    console.log("Object sent from teacher's view 1 to student's view 1:", objectData);
   };
 
   return (

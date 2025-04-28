@@ -10,8 +10,11 @@ export const useTeacherUpdates = (
   isSyncEnabled: boolean
 ) => {
   useEffect(() => {
-    // Only update the "teacher" board in the student view (not student1)
-    if (id !== "teacher") return;
+    // Only update the board with id="teacher" in the student view
+    // This corresponds to student's view 1 in the naming convention
+    if (id !== "teacher") {
+      return;
+    }
 
     const handleTeacherUpdate = (e: CustomEvent) => {
       if (!isSyncEnabled) return;
@@ -23,9 +26,18 @@ export const useTeacherUpdates = (
       const isStudentView = window.location.pathname.includes('/student') || 
                           window.location.pathname.includes('/split-mode');
       
-      if (!isStudentView) return;
+      if (!isStudentView) {
+        // Don't process updates if we're in teacher view
+        return;
+      }
 
-      console.log(`Student view: Teacher board received update:`, e.detail);
+      // Verify this update is meant for this specific board
+      if (e.detail.targetId !== id) {
+        console.log(`Update not meant for this board. Target: ${e.detail.targetId}, This board: ${id}`);
+        return;
+      }
+
+      console.log(`Student view 1 (teacher board) received update:`, e.detail);
 
       util
         .enlivenObjects([e.detail.object])
