@@ -23,20 +23,11 @@ export const Whiteboard = ({
   const isActiveRef = useRef(false);
 
   const { activeBoardId } = useClipboardContext();
-  const { 
-    isSyncEnabled, 
-    isSync2Enabled, 
-    isSync3Enabled, 
-    isSync4Enabled, 
-    isSync5Enabled 
-  } = useSyncContext();
+  const { isSyncEnabled, isSync2Enabled } = useSyncContext();
 
   const syncStateMap = {
     "teacher1": isSyncEnabled,
-    "teacher2": isSync2Enabled,
-    "teacher3": isSync3Enabled,
-    "teacher4": isSync4Enabled,
-    "teacher5": isSync5Enabled
+    "teacher2": isSync2Enabled
   };
   
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;

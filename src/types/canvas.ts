@@ -16,6 +16,7 @@ export interface CanvasPosition {
   y: number;
 }
 
-export type WhiteboardId = "teacher1" | "teacher2" | "teacher3" | "teacher4" | "teacher5" | "student1" | "student2";
+export type WhiteboardId = "teacher1" | "teacher2" | "student1" | "student2";
 export type StudentId = "student1" | "student2";
-export type TeacherId = "teacher1" | "teacher2" | "teacher3" | "teacher4" | "teacher5";
+export type TeacherId = "teacher1" | "teacher2";
+

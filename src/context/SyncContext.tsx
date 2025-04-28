@@ -44,9 +44,10 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleSendObjectToStudents = (objectData: any, sourceId: WhiteboardId) => {
-    const syncStates = {
+    // Create a complete map of all possible teacher IDs to their sync states
+    const syncStates: Record<TeacherId, boolean> = {
       'teacher1': isSyncEnabled,
-      'teacher2': isSync2Enabled,
+      'teacher2': isSync2Enabled
     };
     
     const isSyncEnabledForBoard = getBoardSyncState(sourceId as TeacherId, syncStates);
@@ -75,4 +76,3 @@ export const useSyncContext = () => {
   }
   return context;
 };
-
