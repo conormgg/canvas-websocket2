@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -39,12 +40,16 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
   
-  useRealtimeSync(fabricRef, id, id.startsWith('student'));
+  // Use isStudent flag to determine if this is a student board
+  const isStudent = id.startsWith('student');
+  useRealtimeSync(fabricRef, id, isStudent);
 
+  // Save the entire canvas state to the database
   const saveCanvasState = async (canvas: Canvas, boardId: WhiteboardId) => {
     if (!canvas) return;
     
     try {
+      console.log(`Saving canvas state for ${boardId}`);
       const canvasData = canvas.toJSON();
       
       const { error } = await supabase
@@ -73,15 +78,40 @@ export const Whiteboard = ({
     const canvas = fabricRef.current;
     if (!canvas) return;
     
+    // Save the current state of the canvas to the database
     saveCanvasState(canvas, id);
     
     if ((id.startsWith("teacher")) && isTeacherView) {
-      console.log(`${id} added object, sending to corresponding student board:`, object);
+      console.log(`${id} added object, sending to corresponding student board`);
       const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
       
+      // Also save to the corresponding student board
       saveCanvasState(canvas, studentBoardId);
     }
   }
+
+  // Save canvas state on any significant changes
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    
+    const handleCanvasModified = () => {
+      console.log(`Canvas ${id} modified, saving state`);
+      saveCanvasState(canvas, id);
+      
+      // If this is a teacher board, also save to student board
+      if (id.startsWith('teacher')) {
+        const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
+        saveCanvasState(canvas, studentBoardId);
+      }
+    };
+    
+    canvas.on('object:modified', handleCanvasModified);
+    
+    return () => {
+      canvas.off('object:modified', handleCanvasModified);
+    };
+  }, [id, fabricRef]);
 
   const syncStateMap = {
     "teacher1": isSyncEnabled,

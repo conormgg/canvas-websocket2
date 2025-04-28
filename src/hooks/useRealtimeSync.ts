@@ -12,16 +12,15 @@ export const useRealtimeSync = (
   isEnabled: boolean
 ) => {
   useEffect(() => {
-    if (!isEnabled || !fabricRef.current) return;
+    if (!fabricRef.current) return;
 
     const canvas = fabricRef.current;
-    
-    // For student boards, subscribe to changes from the corresponding teacher board
-    const teacherBoardId = boardId.replace('student', 'teacher');
     
     // Function to load existing content for the board
     const loadExistingContent = async () => {
       try {
+        console.log(`Loading existing content for board: ${boardId}`);
+        
         const { data, error } = await supabase
           .from('whiteboard_objects')
           .select('object_data')
@@ -35,24 +34,30 @@ export const useRealtimeSync = (
         }
         
         if (data && data.length > 0) {
+          console.log(`Found existing content for board ${boardId}:`, data[0]);
           // Properly handle the Json type by converting to a string if needed
           const objectData = data[0].object_data;
           canvas.loadFromJSON(objectData as Record<string, any>, () => {
             canvas.renderAll();
             console.log('Loaded existing content for board:', boardId);
           });
+        } else {
+          console.log(`No existing content found for board: ${boardId}`);
         }
       } catch (err) {
         console.error('Failed to load existing content:', err);
       }
     };
     
-    // Load existing content first
+    // Load existing content on initial mount
     loadExistingContent();
+
+    // Only set up realtime subscription if enabled
+    if (!isEnabled) return;
 
     // Subscribe to realtime updates
     const channel = supabase
-      .channel('whiteboard-sync')
+      .channel('whiteboard-sync-' + boardId)
       .on(
         'postgres_changes',
         {
@@ -63,10 +68,11 @@ export const useRealtimeSync = (
         },
         (payload) => {
           if (payload.new && 'object_data' in payload.new) {
+            console.log(`Received realtime update for board ${boardId}:`, payload);
             const objectData = payload.new.object_data;
             canvas.loadFromJSON(objectData as Record<string, any>, () => {
               canvas.renderAll();
-              console.log('Canvas updated from realtime event:', payload);
+              console.log('Canvas updated from realtime event');
             });
           }
         }
