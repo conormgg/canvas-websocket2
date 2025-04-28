@@ -22,8 +22,7 @@ export const createGrid = (canvas: Canvas, gridSize: number = 50) => {
       data: { isGrid: true }
     });
     canvas.add(line);
-    // Use lower level method instead of sendToBack
-    line.moveTo(0);
+    canvas.sendObjectToBack(line);
   }
 
   for (let i = 0; i < height; i += gridSize) {
@@ -35,9 +34,9 @@ export const createGrid = (canvas: Canvas, gridSize: number = 50) => {
       data: { isGrid: true }
     });
     canvas.add(line);
-    // Use lower level method instead of sendToBack
-    line.moveTo(0);
+    canvas.sendObjectToBack(line);
   }
 
   canvas.renderAll();
 };
+
