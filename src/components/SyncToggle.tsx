@@ -11,35 +11,18 @@ interface SyncToggleProps {
 }
 
 export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher1" }: SyncToggleProps) => {
-  const { 
-    isSyncEnabled, 
-    isSync2Enabled, 
-    isSync3Enabled, 
-    isSync4Enabled, 
-    isSync5Enabled, 
-    toggleSync, 
-    toggleSync2, 
-    toggleSync3, 
-    toggleSync4, 
-    toggleSync5 
-  } = useSyncContext();
+  const { isSyncEnabled, isSync2Enabled, toggleSync, toggleSync2 } = useSyncContext();
   
   // Map each board ID to its corresponding sync state
   const syncStateMap = {
     "teacher1": isSyncEnabled,
     "teacher2": isSync2Enabled,
-    "teacher3": isSync3Enabled,
-    "teacher4": isSync4Enabled,
-    "teacher5": isSync5Enabled
   };
   
   // Map each board ID to its corresponding toggle function
   const toggleFunctionMap = {
     "teacher1": toggleSync,
     "teacher2": toggleSync2,
-    "teacher3": toggleSync3,
-    "teacher4": toggleSync4,
-    "teacher5": toggleSync5
   };
   
   // Get the correct sync state and toggle function for this board
@@ -66,3 +49,4 @@ export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher1" }: Sync
     </Toggle>
   );
 };
+
