@@ -7,8 +7,10 @@ import { useSyncContext } from "@/context/SyncContext";
 import { cn } from "@/lib/utils";
 import { Toolbar } from "./Toolbar";
 import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
+import { useTeacherBoardUpdates } from "@/hooks/useTeacherBoardUpdates";
+import { useBoardUpdates } from "@/hooks/useBoardUpdates";
 import { WhiteboardProps } from "@/types/whiteboard";
-import { useBoardSync } from "@/hooks/useBoardSync";
+import { Object as FabricObject } from "fabric";
 
 export const Whiteboard = ({ 
   id, 
@@ -23,13 +25,20 @@ export const Whiteboard = ({
   const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
-  // Generate a unique instance ID for this whiteboard instance
-  const instanceIdRef = useRef<string>(`${id}-${Math.random().toString(36).substring(2, 9)}`);
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
-  const { linkedBoards } = useSyncContext();
+  const { sendObjectToTeacherBoards, isSyncEnabled, linkedBoards } = useSyncContext();
   
   const isLinkedBoard = linkedBoards.includes(id);
+
+  const handleObjectAdded = (object: FabricObject) => {
+    // Only if this is the teacher's board and sync is enabled, send updates
+    if (id === "teacher" && isSyncEnabled) {
+      console.log("Teacher added object, sending to other teacher boards:", object);
+      const objectData = object.toJSON();
+      sendObjectToTeacherBoards(objectData);
+    }
+  };
 
   const { canvasRef, fabricRef } = useCanvas({
     id,
@@ -38,23 +47,12 @@ export const Whiteboard = ({
     inkThickness,
     isSplitScreen,
     onZoomChange: setZoom,
-    instanceId: instanceIdRef.current
+    onObjectAdded: handleObjectAdded,
   });
-  
-  // Use the new sync hook
-  useBoardSync(id, fabricRef, instanceIdRef.current);
 
-  // Set canvas instance ID when canvas is created
-  useEffect(() => {
-    if (fabricRef.current) {
-      if (fabricRef.current.lowerCanvasEl) {
-        fabricRef.current.lowerCanvasEl.id = instanceIdRef.current;
-      }
-      if (fabricRef.current.upperCanvasEl) {
-        fabricRef.current.upperCanvasEl.id = instanceIdRef.current;
-      }
-    }
-  }, [fabricRef.current]);
+  // Listen for updates to teacher boards
+  useTeacherBoardUpdates(id, fabricRef, isSyncEnabled);
+  useBoardUpdates(id, fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -141,8 +139,6 @@ export const Whiteboard = ({
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
-      data-instance-id={instanceIdRef.current}
-      data-board-id={id}
     >
       <Toolbar
         activeTool={activeTool}
@@ -160,7 +156,6 @@ export const Whiteboard = ({
         className="w-full h-full z-0" 
         tabIndex={0}
         data-board-id={id}
-        id={instanceIdRef.current}
         onFocus={() => {
           window.__wbActiveBoard = canvasRef.current;
           window.__wbActiveBoardId = id;

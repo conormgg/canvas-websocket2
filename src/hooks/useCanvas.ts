@@ -1,10 +1,10 @@
-
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
-import { UseCanvasProps } from "@/types/canvas";
+import { UseCanvasProps, WhiteboardId } from "@/types/canvas";
 import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
+import { useClipboardContext } from "@/context/ClipboardContext";
 
 export const useCanvas = ({
   id,
@@ -12,11 +12,12 @@ export const useCanvas = ({
   activeColor,
   inkThickness,
   onZoomChange,
+  onObjectAdded,
   isSplitScreen,
-  instanceId,
 }: UseCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
+  const { activeBoardId } = useClipboardContext();
 
   const { updateCursorAndNotify } = useCanvasTools();
   const {
@@ -36,11 +37,6 @@ export const useCanvas = ({
     if (!canvasRef.current) return;
 
     canvasRef.current.dataset.boardId = id;
-    
-    // Assign instance ID to help with sync
-    if (instanceId) {
-      canvasRef.current.id = instanceId;
-    }
 
     const canvas = new Canvas(canvasRef.current, {
       width: window.innerWidth,
@@ -51,18 +47,20 @@ export const useCanvas = ({
       selection: false,
     });
 
-    if (canvas.lowerCanvasEl) {
-      canvas.lowerCanvasEl.dataset.boardId = id;
-      if (instanceId) canvas.lowerCanvasEl.id = instanceId;
-    }
-    if (canvas.upperCanvasEl) {
-      canvas.upperCanvasEl.dataset.boardId = id;
-      if (instanceId) canvas.upperCanvasEl.id = instanceId;
-    }
+    if (canvas.lowerCanvasEl) canvas.lowerCanvasEl.dataset.boardId = id;
+    if (canvas.upperCanvasEl) canvas.upperCanvasEl.dataset.boardId = id;
 
     canvas.freeDrawingBrush = new PencilBrush(canvas);
     canvas.freeDrawingBrush.width = inkThickness;
     canvas.freeDrawingBrush.color = activeColor;
+
+    if (onObjectAdded) {
+      canvas.on("object:added", (e) => {
+        if (e.target && id === activeBoardId) {
+          onObjectAdded(e.target);
+        }
+      });
+    }
 
     canvas.on("mouse:wheel", handleMouseWheel);
     canvas.on("mouse:down", handleMouseDown);
