@@ -4,11 +4,10 @@ import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
 import { WhiteboardId } from "@/types/canvas";
 import { useSyncContext } from "@/context/SyncContext";
-import { Link } from "lucide-react";
 
 export const StudentView = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
-  const { isSyncEnabled, linkedBoards } = useSyncContext();
+  const { isSyncEnabled } = useSyncContext();
 
   const toggle = (id: WhiteboardId) => {
     setEnlarged(enlarged === id ? null : id);
@@ -16,23 +15,11 @@ export const StudentView = () => {
 
   const teacherCls = enlarged === "teacher" ? "fixed inset-4 z-50" : "w-1/2";
   const studentCls = enlarged === "student1" ? "fixed inset-4 z-50" : "w-1/2";
-  
-  const isTeacherLinked = linkedBoards.includes("teacher");
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#E8EDF5] p-4 flex gap-4 relative">
-      <div className={cn(
-        "h-full bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 ease-in-out", 
-        teacherCls,
-        isTeacherLinked && "border-2 border-green-400"
-      )}>
-        <div className={cn(
-          "absolute top-2 left-2 px-3 py-1 text-sm font-medium rounded-md flex items-center gap-1",
-          isTeacherLinked 
-            ? "bg-green-100 text-green-700" 
-            : "bg-sidebar-primary text-white"
-        )}>
-          {isTeacherLinked && <Link className="h-3 w-3" />}
+      <div className={cn("h-full bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 ease-in-out", teacherCls)}>
+        <div className="absolute top-2 left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
           Teacher's Board
         </div>
         <Whiteboard 

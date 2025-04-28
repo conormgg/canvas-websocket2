@@ -7,10 +7,9 @@ import { useSyncContext } from "@/context/SyncContext";
 import { cn } from "@/lib/utils";
 import { Toolbar } from "./Toolbar";
 import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
-import { useTeacherBoardUpdates } from "@/hooks/useTeacherBoardUpdates";
+import { useTeacherUpdates } from "@/hooks/useTeacherUpdates";
 import { useBoardUpdates } from "@/hooks/useBoardUpdates";
 import { WhiteboardProps } from "@/types/whiteboard";
-import { Object as FabricObject } from "fabric";
 
 export const Whiteboard = ({ 
   id, 
@@ -27,16 +26,13 @@ export const Whiteboard = ({
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
-  const { sendObjectToTeacherBoards, isSyncEnabled, linkedBoards } = useSyncContext();
-  
-  const isLinkedBoard = linkedBoards.includes(id);
+  const { sendObjectToStudents, isSyncEnabled } = useSyncContext();
 
   const handleObjectAdded = (object: FabricObject) => {
-    // Only if this is the teacher's board and sync is enabled, send updates
     if (id === "teacher" && isSyncEnabled) {
-      console.log("Teacher added object, sending to other teacher boards:", object);
+      console.log("Teacher added object, sending to students:", object);
       const objectData = object.toJSON();
-      sendObjectToTeacherBoards(objectData);
+      sendObjectToStudents(objectData);
     }
   };
 
@@ -50,8 +46,8 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
 
-  // Listen for updates to teacher boards
-  useTeacherBoardUpdates(id, fabricRef, isSyncEnabled);
+  // Use custom hooks for updates
+  useTeacherUpdates(id, fabricRef, isSyncEnabled);
   useBoardUpdates(id, fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -135,7 +131,6 @@ export const Whiteboard = ({
         "transition-all duration-300 ease-in-out",
         isActive && "ring-2 ring-orange-400 bg-orange-50/30 rounded-lg shadow-lg",
         isMaximized ? "fixed inset-4 z-50 bg-white" : "w-full h-full",
-        isLinkedBoard && "border-2 border-green-400"
       )}
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
@@ -149,7 +144,6 @@ export const Whiteboard = ({
         onInkThicknessChange={setInkThickness}
         isSplitScreen={isSplitScreen}
         boardId={id}
-        isLinked={isLinkedBoard}
       />
       <canvas 
         ref={canvasRef} 
@@ -168,7 +162,7 @@ export const Whiteboard = ({
         }}
         onClick={handleCanvasClick}
       />
-      <ActiveBoardIndicator isActive={isActive} isLinked={isLinkedBoard} />
+      <ActiveBoardIndicator isActive={isActive} />
     </div>
   );
 };

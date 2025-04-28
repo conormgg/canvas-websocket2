@@ -21,7 +21,6 @@ interface ToolbarProps {
   onInkThicknessChange: (thickness: number) => void;
   isSplitScreen?: boolean;
   boardId?: WhiteboardId;
-  isLinked?: boolean;
 }
 
 export const Toolbar = ({
@@ -33,7 +32,6 @@ export const Toolbar = ({
   onInkThicknessChange,
   isSplitScreen = false,
   boardId,
-  isLinked = false,
 }: ToolbarProps) => {
   const containerClass = isSplitScreen
     ? "bg-[#221F26] rounded-md shadow-md p-1 flex items-center justify-center gap-1 scale-90 max-w-xs"
@@ -96,7 +94,7 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
-          <SyncToggle isSplitScreen={true} boardId={boardId} isLinked={isLinked} />
+          {showSyncToggle && <SyncToggle isSplitScreen={true} />}
         </>
       ) : (
         <>
@@ -119,9 +117,10 @@ export const Toolbar = ({
               <SelectItem value="6">Thick</SelectItem>
             </SelectContent>
           </Select>
-          <SyncToggle boardId={boardId} isLinked={isLinked} />
+          {showSyncToggle && <SyncToggle />}
         </>
       )}
     </div>
   );
 };
+
