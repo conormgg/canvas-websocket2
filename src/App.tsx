@@ -10,6 +10,7 @@ import { ViewSelector } from "./components/ViewSelector";
 import { StudentView } from "./components/StudentView";
 import NotFound from "./pages/NotFound";
 import { SplitWhiteboard } from "./components/SplitWhiteboard";
+import { SyncTestView } from "./components/SyncTestView";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
               <Route path="/" element={<ViewSelector />} />
               <Route path="/teacher" element={<SplitWhiteboard />} />
               <Route path="/student" element={<StudentView />} />
+              <Route path="/sync-test" element={<SyncTestView />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
