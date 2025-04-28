@@ -3,11 +3,9 @@ import { useState } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
 import { WhiteboardId } from "@/types/canvas";
-import { useSyncContext } from "@/context/SyncContext";
 
 export const StudentView = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
-  const { isSyncEnabled } = useSyncContext();
 
   const toggle = (id: WhiteboardId) => {
     setEnlarged(enlarged === id ? null : id);

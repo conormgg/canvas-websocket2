@@ -38,6 +38,7 @@ export const useCanvasPersistence = (
       
       const canvasData = canvas.toJSON();
       
+      // Insert new state record
       const { error } = await (supabase
         .from('whiteboard_objects') as any)
         .insert({
@@ -63,12 +64,30 @@ export const useCanvasPersistence = (
     
     saveTimeoutRef.current = window.setTimeout(() => {
       saveCanvasState(canvas, boardId);
-    }, 300); // Reduced from 1000ms to 300ms for more responsive saving
+    }, 200); // Reduced from 300ms to 200ms for more responsive saving
+  };
+
+  const handleObjectModified = (canvas: Canvas) => {
+    console.log(`Canvas ${id} modified, saving state`);
+    debouncedSave(canvas, id);
+    
+    if (id.startsWith('teacher')) {
+      const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
+      debouncedSave(canvas, studentBoardId);
+    }
   };
 
   const handleObjectAdded = (object: FabricObject) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
+    
+    // Make sure the added object is selectable
+    object.set({
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      hasBorders: true
+    });
     
     debouncedSave(canvas, id);
     
@@ -83,17 +102,13 @@ export const useCanvasPersistence = (
     const canvas = fabricRef.current;
     if (!canvas) return;
     
+    // Save canvas state whenever objects are modified
     const handleCanvasModified = () => {
-      console.log(`Canvas ${id} modified, saving state`);
-      debouncedSave(canvas, id);
-      
-      if (id.startsWith('teacher')) {
-        const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
-        debouncedSave(canvas, studentBoardId);
-      }
+      handleObjectModified(canvas);
     };
 
-    const handlePathCreated = (e: any) => {
+    // Save when drawing paths are created
+    const handlePathCreated = () => {
       console.log(`Path created on canvas ${id}, saving state`);
       debouncedSave(canvas, id);
       
@@ -102,10 +117,9 @@ export const useCanvasPersistence = (
         debouncedSave(canvas, studentBoardId);
       }
     };
-    
-    canvas.on('object:modified', handleCanvasModified);
-    canvas.on('path:created', handlePathCreated);
-    canvas.on('mouse:up', () => {
+
+    // Save when mouse is released while in drawing mode
+    const handleMouseUp = () => {
       if (canvas.isDrawingMode) {
         debouncedSave(canvas, id);
         
@@ -114,10 +128,21 @@ export const useCanvasPersistence = (
           debouncedSave(canvas, studentBoardId);
         }
       }
-    });
+    };
+
+    // Save when objects are removed
+    const handleObjectRemoved = () => {
+      console.log(`Object removed from canvas ${id}, saving state`);
+      debouncedSave(canvas, id);
+      
+      if (id.startsWith('teacher')) {
+        const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
+        debouncedSave(canvas, studentBoardId);
+      }
+    };
     
     // Ensure objects are selectable when they're added to canvas
-    canvas.on('object:added', (e) => {
+    const handleObjectAddedToCanvas = (e: any) => {
       if (e.target) {
         e.target.set({
           selectable: true,
@@ -126,16 +151,25 @@ export const useCanvasPersistence = (
           hasBorders: true
         });
       }
-    });
+    };
+    
+    canvas.on('object:modified', handleCanvasModified);
+    canvas.on('path:created', handlePathCreated);
+    canvas.on('mouse:up', handleMouseUp);
+    canvas.on('object:removed', handleObjectRemoved);
+    canvas.on('object:added', handleObjectAddedToCanvas);
     
     return () => {
       canvas.off('object:modified', handleCanvasModified);
       canvas.off('path:created', handlePathCreated);
+      canvas.off('mouse:up', handleMouseUp);
+      canvas.off('object:removed', handleObjectRemoved);
+      canvas.off('object:added', handleObjectAddedToCanvas);
       if (saveTimeoutRef.current) {
         window.clearTimeout(saveTimeoutRef.current);
       }
     };
   }, [id, fabricRef, isTeacherView]);
 
-  return { handleObjectAdded };
+  return { handleObjectAdded, handleObjectModified };
 };

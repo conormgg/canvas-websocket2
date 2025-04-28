@@ -3,8 +3,6 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WhiteboardId } from '@/types/canvas';
 import { Canvas } from 'fabric';
-import { toast } from 'sonner';
-import { Json } from '@/integrations/supabase/types';
 
 // Define the table structure since we can't modify the auto-generated types
 interface WhiteboardObject {
@@ -64,30 +62,48 @@ export const useRealtimeSync = (
     // Load existing content on initial mount
     loadExistingContent();
 
-    // Always set up realtime subscription regardless of isEnabled flag to ensure real-time updates
-    // Subscribe to realtime updates
+    // Always enable real-time subscription regardless of isEnabled flag
     const channel = supabase
-      .channel('whiteboard-sync-' + boardId)
+      .channel(`whiteboard-sync-${boardId}`)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'whiteboard_objects',
           filter: `board_id=eq.${boardId}`
         },
-        (payload: { new: WhiteboardObject }) => {
+        (payload: { new: WhiteboardObject; eventType: string }) => {
+          console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
+          
+          if (payload.eventType === 'DELETE') {
+            // Handle deletion by reloading latest state
+            loadExistingContent();
+            return;
+          }
+          
           if (payload.new && 'object_data' in payload.new) {
-            console.log(`Received realtime update for board ${boardId}`);
             const objectData = payload.new.object_data;
             canvas.loadFromJSON(objectData as Record<string, any>, () => {
+              // Make all objects selectable again after loading
+              canvas.getObjects().forEach(obj => {
+                obj.set({
+                  selectable: true,
+                  evented: true,
+                  hasControls: true,
+                  hasBorders: true
+                });
+              });
+              
               canvas.renderAll();
               console.log('Canvas updated from realtime event');
             });
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Realtime subscription status for ${boardId}: ${status}`);
+      });
 
     // Cleanup subscription
     return () => {

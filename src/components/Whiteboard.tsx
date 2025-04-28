@@ -1,15 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
 import { useClipboardContext } from "@/context/ClipboardContext";
-import { useSyncContext } from "@/context/SyncContext";
 import { cn } from "@/lib/utils";
 import { Toolbar } from "./Toolbar";
-import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
 import { WhiteboardProps } from "@/types/whiteboard";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useCanvasPersistence } from "@/hooks/useCanvasPersistence";
-import { useBoardActivity } from "@/hooks/useBoardActivity";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { toast } from "sonner";
 
@@ -26,7 +24,6 @@ export const Whiteboard = ({
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
 
   const { setActiveCanvas } = useClipboardContext();
-  const { isSyncEnabled, isSync2Enabled, isSync3Enabled, isSync4Enabled, isSync5Enabled } = useSyncContext();
 
   const isTeacherView = window.location.pathname.includes('/teacher') || 
                        window.location.pathname === '/' ||
@@ -42,8 +39,8 @@ export const Whiteboard = ({
   });
   
   const isStudent = id.startsWith('student');
-  const { handleObjectAdded } = useCanvasPersistence(fabricRef, id, isTeacherView);
-  const { undo, redo, selectAll } = useCanvasHistory(fabricRef);
+  const { handleObjectAdded, handleObjectModified } = useCanvasPersistence(fabricRef, id, isTeacherView);
+  const { undo, redo } = useCanvasHistory(fabricRef);
   
   // Update useCanvas hook with handleObjectAdded after it's been declared
   useCanvas({
@@ -56,7 +53,7 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
   
-  // Always enable real-time sync
+  // Always enable real-time sync with true parameter
   useRealtimeSync(fabricRef, id, true);
 
   useEffect(() => {
@@ -105,25 +102,6 @@ export const Whiteboard = ({
       toast("Nothing to redo");
     }
   };
-  
-  const handleSelectAll = () => {
-    const result = selectAll();
-    if (result) {
-      toast("All objects selected");
-    } else {
-      toast("No objects to select");
-    }
-  };
-
-  const syncStateMap = {
-    "teacher1": isSyncEnabled,
-    "teacher2": isSync2Enabled,
-    "teacher3": isSync3Enabled,
-    "teacher4": isSync4Enabled,
-    "teacher5": isSync5Enabled
-  };
-  
-  const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
   return (
     <div
