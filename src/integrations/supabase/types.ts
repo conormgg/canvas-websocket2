@@ -33,6 +33,30 @@ export type Database = {
         }
         Relationships: []
       }
+      whiteboard_objects: {
+        Row: {
+          board_id: string
+          created_at: string
+          id: string
+          object_data: Json
+          updated_at: string
+        }
+        Insert: {
+          board_id: string
+          created_at?: string
+          id?: string
+          object_data: Json
+          updated_at?: string
+        }
+        Update: {
+          board_id?: string
+          created_at?: string
+          id?: string
+          object_data?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

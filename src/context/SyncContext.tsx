@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SyncContextProps {
   isSyncEnabled: boolean;
@@ -115,7 +116,7 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const sendObjectToStudents = (objectData: any, sourceId: WhiteboardId) => {
+  const sendObjectToStudents = async (objectData: any, sourceId: WhiteboardId) => {
     const syncPairs = {
       'teacher1': { targetId: 'student1', enabled: isSyncEnabled },
       'teacher2': { targetId: 'student2', enabled: isSync2Enabled }
@@ -126,18 +127,22 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       console.log(`Object from ${sourceId} not synced - either not a teacher board or sync disabled`);
       return;
     }
-    
-    const syncEvent = new CustomEvent("teacher-update", {
-      detail: {
-        object: objectData,
-        sourceId,
-        timestamp: Date.now(),
-        targetId: syncConfig.targetId
-      }
-    });
-    
-    window.dispatchEvent(syncEvent);
-    console.log(`Object sent from ${sourceId} to ${syncConfig.targetId}:`, objectData);
+
+    try {
+      const { error } = await supabase
+        .from('whiteboard_objects')
+        .insert({
+          board_id: syncConfig.targetId,
+          object_data: objectData
+        });
+
+      if (error) throw error;
+      
+      console.log(`Object sent from ${sourceId} to ${syncConfig.targetId}:`, objectData);
+    } catch (error) {
+      console.error('Error syncing whiteboard object:', error);
+      toast.error('Failed to sync whiteboard object');
+    }
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -7,10 +6,9 @@ import { useSyncContext } from "@/context/SyncContext";
 import { cn } from "@/lib/utils";
 import { Toolbar } from "./Toolbar";
 import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
-import { useTeacherUpdates } from "@/hooks/useTeacherUpdates";
-import { useBoardUpdates } from "@/hooks/useBoardUpdates";
 import { WhiteboardProps } from "@/types/whiteboard";
 import { Object as FabricObject } from "fabric";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 export const Whiteboard = ({ 
   id, 
@@ -40,13 +38,14 @@ export const Whiteboard = ({
   
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
+  // Add realtime sync for student boards
+  useRealtimeSync(fabricRef, id, id.startsWith('student'));
+
   const handleObjectAdded = (object: FabricObject) => {
-    // Determine if we're in the teacher view (main view, not student or split mode)
     const isTeacherView = window.location.pathname.includes('/teacher') || 
-                          window.location.pathname === '/' ||
-                          window.location.pathname.includes('/split-mode');
+                         window.location.pathname === '/' ||
+                         window.location.pathname.includes('/split-mode');
     
-    // Only sync objects from teacher boards when in appropriate view and sync is enabled
     if ((id.startsWith("teacher")) && isTeacherView) {
       console.log(`${id} added object, sending to corresponding student board:`, object);
       const objectData = object.toJSON();
@@ -63,10 +62,6 @@ export const Whiteboard = ({
     onZoomChange: setZoom,
     onObjectAdded: handleObjectAdded,
   });
-
-  // Use the board-specific sync state
-  useTeacherUpdates(id, fabricRef, currentSyncState);
-  useBoardUpdates(id, fabricRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
