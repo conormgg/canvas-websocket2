@@ -1,10 +1,13 @@
+
 import { Canvas, Point } from 'fabric';
 import { useEffect } from 'react';
 import { useClipboardContext } from '@/context/ClipboardContext';
 import { WhiteboardId } from '@/types/canvas';
+import { useCanvasHistory } from '../useCanvasHistory';
 
 export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | null>) => {
   const { copySelectedObjects, pasteToCanvas, activeBoardId } = useClipboardContext();
+  const { undo, redo, selectAll } = useCanvasHistory(fabricRef);
 
   useEffect(() => {
     // Track the last clicked position
@@ -78,6 +81,27 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
           }
         }
         
+        // Undo (Ctrl/Cmd + Z)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+          return;
+        }
+        
+        // Redo (Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+          e.preventDefault();
+          redo();
+          return;
+        }
+        
+        // Select All (Ctrl/Cmd + A)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+          e.preventDefault();
+          selectAll();
+          return;
+        }
+        
         // Copy (Ctrl/Cmd + C)
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
           e.preventDefault();
@@ -140,5 +164,5 @@ export const useKeyboardHandlers = (fabricRef: React.MutableRefObject<Canvas | n
         console.warn('Could not clean up click listener:', err);
       }
     };
-  }, [fabricRef, copySelectedObjects, pasteToCanvas, activeBoardId]);
+  }, [fabricRef, copySelectedObjects, pasteToCanvas, activeBoardId, undo, redo, selectAll]);
 };

@@ -64,9 +64,7 @@ export const useRealtimeSync = (
     // Load existing content on initial mount
     loadExistingContent();
 
-    // Only set up realtime subscription if enabled
-    if (!isEnabled) return;
-
+    // Always set up realtime subscription regardless of isEnabled flag to ensure real-time updates
     // Subscribe to realtime updates
     const channel = supabase
       .channel('whiteboard-sync-' + boardId)
@@ -95,5 +93,5 @@ export const useRealtimeSync = (
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fabricRef, boardId, isEnabled]);
+  }, [fabricRef, boardId]); // Removed isEnabled dependency to ensure real-time updates happen always
 };

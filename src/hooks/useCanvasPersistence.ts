@@ -1,3 +1,4 @@
+
 import { useRef, useEffect } from 'react';
 import { Canvas, FabricObject } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
@@ -51,7 +52,7 @@ export const useCanvasPersistence = (
     
     saveTimeoutRef.current = window.setTimeout(() => {
       saveCanvasState(canvas, boardId);
-    }, 1000);
+    }, 300); // Reduced from 1000ms to 300ms for more responsive saving
   };
 
   const handleObjectAdded = (object: FabricObject) => {
@@ -80,11 +81,33 @@ export const useCanvasPersistence = (
         debouncedSave(canvas, studentBoardId);
       }
     };
+
+    const handlePathCreated = (e: any) => {
+      console.log(`Path created on canvas ${id}, saving state`);
+      debouncedSave(canvas, id);
+      
+      if (id.startsWith('teacher')) {
+        const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
+        debouncedSave(canvas, studentBoardId);
+      }
+    };
     
     canvas.on('object:modified', handleCanvasModified);
+    canvas.on('path:created', handlePathCreated);
+    canvas.on('mouse:up', () => {
+      if (canvas.isDrawingMode) {
+        debouncedSave(canvas, id);
+        
+        if (id.startsWith('teacher')) {
+          const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
+          debouncedSave(canvas, studentBoardId);
+        }
+      }
+    });
     
     return () => {
       canvas.off('object:modified', handleCanvasModified);
+      canvas.off('path:created', handlePathCreated);
       if (saveTimeoutRef.current) {
         window.clearTimeout(saveTimeoutRef.current);
       }

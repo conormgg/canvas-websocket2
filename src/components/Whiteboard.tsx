@@ -11,6 +11,8 @@ import { WhiteboardProps } from "@/types/whiteboard";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useCanvasPersistence } from "@/hooks/useCanvasPersistence";
 import { useBoardActivity } from "@/hooks/useBoardActivity";
+import { useCanvasHistory } from "@/hooks/useCanvasHistory";
+import { toast } from "sonner";
 
 export const Whiteboard = ({ 
   id, 
@@ -42,6 +44,7 @@ export const Whiteboard = ({
   
   const isStudent = id.startsWith('student');
   const { handleObjectAdded } = useCanvasPersistence(fabricRef, id, isTeacherView);
+  const { undo, redo, selectAll } = useCanvasHistory(fabricRef);
   
   // Update useCanvas hook with handleObjectAdded after it's been declared
   useCanvas({
@@ -54,7 +57,8 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
   
-  useRealtimeSync(fabricRef, id, isStudent);
+  // Always enable real-time sync regardless of whether the board is a student board
+  useRealtimeSync(fabricRef, id, true);
   const { isActive } = useBoardActivity(id, canvasRef);
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -73,6 +77,33 @@ export const Whiteboard = ({
 
     if (e.ctrlKey && onCtrlClick) {
       onCtrlClick();
+    }
+  };
+  
+  const handleUndo = () => {
+    const result = undo();
+    if (result) {
+      toast("Undo operation performed");
+    } else {
+      toast("Nothing to undo");
+    }
+  };
+  
+  const handleRedo = () => {
+    const result = redo();
+    if (result) {
+      toast("Redo operation performed");
+    } else {
+      toast("Nothing to redo");
+    }
+  };
+  
+  const handleSelectAll = () => {
+    const result = selectAll();
+    if (result) {
+      toast("All objects selected");
+    } else {
+      toast("No objects to select");
     }
   };
 
@@ -106,6 +137,9 @@ export const Whiteboard = ({
         onInkThicknessChange={setInkThickness}
         isSplitScreen={isSplitScreen}
         boardId={id}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onSelectAll={handleSelectAll}
       />
       <canvas 
         ref={canvasRef} 

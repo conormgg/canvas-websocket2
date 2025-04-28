@@ -1,5 +1,5 @@
 
-import { MousePointer, Pencil, Eraser } from "lucide-react";
+import { MousePointer, Pencil, Eraser, Undo2, Redo2, SelectAll } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "./ColorPicker";
 import {
@@ -21,6 +21,9 @@ interface ToolbarProps {
   onInkThicknessChange: (thickness: number) => void;
   isSplitScreen?: boolean;
   boardId?: WhiteboardId;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onSelectAll?: () => void;
 }
 
 export const Toolbar = ({
@@ -32,6 +35,9 @@ export const Toolbar = ({
   onInkThicknessChange,
   isSplitScreen = false,
   boardId,
+  onUndo,
+  onRedo,
+  onSelectAll,
 }: ToolbarProps) => {
   const containerClass = isSplitScreen
     ? "bg-[#221F26] rounded-md shadow-md p-1 flex items-center justify-center gap-1 scale-90 max-w-xs"
@@ -65,6 +71,35 @@ export const Toolbar = ({
         className="text-white hover:text-white"
       >
         <Eraser className="h-5 w-5" />
+      </Button>
+
+      {/* Add Undo/Redo buttons */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onUndo}
+        className="text-white hover:text-white"
+        title="Undo (Ctrl+Z)"
+      >
+        <Undo2 className="h-5 w-5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onRedo}
+        className="text-white hover:text-white"
+        title="Redo (Ctrl+Y)"
+      >
+        <Redo2 className="h-5 w-5" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onSelectAll}
+        className="text-white hover:text-white"
+        title="Select All (Ctrl+A)"
+      >
+        <SelectAll className="h-5 w-5" />
       </Button>
 
       {isSplitScreen ? (
