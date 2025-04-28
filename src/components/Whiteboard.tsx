@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Toolbar } from "./Toolbar";
 import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
 import { WhiteboardProps } from "@/types/whiteboard";
-import { Object as FabricObject } from "fabric";
+import { Object as FabricObject, Canvas } from "fabric";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,7 +41,7 @@ export const Whiteboard = ({
   
   useRealtimeSync(fabricRef, id, id.startsWith('student'));
 
-  const saveCanvasState = async (canvas: fabric.Canvas, boardId: WhiteboardId) => {
+  const saveCanvasState = async (canvas: Canvas, boardId: WhiteboardId) => {
     if (!canvas) return;
     
     try {
