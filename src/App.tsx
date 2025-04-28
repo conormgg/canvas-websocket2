@@ -8,6 +8,7 @@ import { ClipboardProvider } from "@/context/ClipboardContext";
 import { SyncProvider } from "@/context/SyncContext";
 import { ViewSelector } from "./components/ViewSelector";
 import { StudentView } from "./components/StudentView";
+import { SplitModeView } from "./components/SplitModeView";
 import NotFound from "./pages/NotFound";
 import { SplitWhiteboard } from "./components/SplitWhiteboard";
 
@@ -25,6 +26,7 @@ const App = () => (
               <Route path="/" element={<ViewSelector />} />
               <Route path="/teacher" element={<SplitWhiteboard />} />
               <Route path="/student" element={<StudentView />} />
+              <Route path="/split-mode" element={<SplitModeView />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
