@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
-import { UseCanvasProps, WhiteboardId } from "@/types/canvas";
+import { UseCanvasProps } from "@/types/canvas";
 import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 import { useClipboardContext } from "@/context/ClipboardContext";
+import { createGrid } from "@/utils/gridUtils";
 
 export const useCanvas = ({
   id,
@@ -54,6 +55,10 @@ export const useCanvas = ({
     canvas.freeDrawingBrush.width = inkThickness;
     canvas.freeDrawingBrush.color = activeColor;
 
+    if (id === "teacher1") {
+      createGrid(canvas);
+    }
+
     if (onObjectAdded) {
       canvas.on("object:added", (e) => {
         if (e.target && id === activeBoardId) {
@@ -76,6 +81,10 @@ export const useCanvas = ({
           width: parent.clientWidth,
           height: parent.clientHeight,
         });
+        
+        if (id === "teacher1") {
+          createGrid(canvas);
+        }
       } else {
         canvas.setDimensions({
           width: window.innerWidth,
