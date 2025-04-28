@@ -67,7 +67,7 @@ export const SplitWhiteboard = () => {
         onClick={(e) => toggle("teacher1", e)}
       >
         <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden">
-          <Whiteboard id="teacher1" isSplitScreen={!enlarged} />
+          <Whiteboard id="teacher1" isSplitScreen={!enlarged} isCircular={true} />
         </div>
       </div>
 
