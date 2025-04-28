@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -29,9 +28,8 @@ export const Whiteboard = ({
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
   const { sendObjectToStudents, isSyncEnabled, isSync2Enabled, isSync3Enabled, isSync4Enabled, isSync5Enabled } = useSyncContext();
 
-  // Determine which sync state to use based on board ID
   const syncStateMap = {
-    "teacher": isSyncEnabled,
+    "teacher1": isSyncEnabled,
     "teacher2": isSync2Enabled,
     "teacher3": isSync3Enabled,
     "teacher4": isSync4Enabled,
@@ -41,16 +39,16 @@ export const Whiteboard = ({
   const currentSyncState = syncStateMap[id as keyof typeof syncStateMap] || false;
 
   const handleObjectAdded = (object: FabricObject) => {
-    // Determine if we're in the teacher view (main view, not student or split mode)
     const isTeacherView = window.location.pathname.includes('/teacher') || 
                           window.location.pathname === '/' ||
                           window.location.pathname.includes('/split-mode');
     
-    // Only sync objects from teacher boards when in appropriate view and sync is enabled
-    if ((id.startsWith("teacher")) && isTeacherView) {
-      console.log(`${id} added object, sending to corresponding student board:`, object);
+    if ((id.startsWith("teacher")) && isTeacherView && currentSyncState) {
+      console.log(`${id} added object and sync is enabled (${currentSyncState}), sending to corresponding student board:`, object);
       const objectData = object.toJSON();
       sendObjectToStudents(objectData, id);
+    } else if ((id.startsWith("teacher")) && isTeacherView && !currentSyncState) {
+      console.log(`${id} added object but sync is disabled (${currentSyncState}), not sending to student board`);
     }
   };
 
@@ -64,7 +62,6 @@ export const Whiteboard = ({
     onObjectAdded: handleObjectAdded,
   });
 
-  // Use the board-specific sync state
   useTeacherUpdates(id, fabricRef, currentSyncState);
   useBoardUpdates(id, fabricRef);
 

@@ -16,6 +16,12 @@ export const useTeacherUpdates = (
     }
 
     const handleTeacherUpdate = (e: CustomEvent) => {
+      // If sync is disabled, don't process updates
+      if (!isSyncEnabled) {
+        console.log(`Update received for ${id} but sync is disabled, ignoring`);
+        return;
+      }
+
       const canvas = fabricRef.current;
       if (!canvas) return;
 
@@ -31,7 +37,7 @@ export const useTeacherUpdates = (
         return;
       }
 
-      console.log(`${id} received update from corresponding teacher board`);
+      console.log(`${id} received update from corresponding teacher board (sync enabled: ${isSyncEnabled})`);
 
       util
         .enlivenObjects([e.detail.object])
