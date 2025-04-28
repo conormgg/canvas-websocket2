@@ -22,6 +22,7 @@ export const useRealtimeSync = (
     if (!fabricRef.current) return;
 
     const canvas = fabricRef.current;
+    let lastLoadedContent: string | null = null;
     
     // Function to load existing content for the board
     const loadExistingContent = async () => {
@@ -43,6 +44,16 @@ export const useRealtimeSync = (
         if (data && data.length > 0) {
           console.log(`Found existing content for board ${boardId}`);
           const objectData = data[0].object_data;
+          
+          // Check if the content is different from what we already loaded
+          const contentString = JSON.stringify(objectData);
+          if (contentString === lastLoadedContent) {
+            console.log('Content is the same as already loaded, skipping update');
+            return;
+          }
+          
+          // Store the loaded content for future comparison
+          lastLoadedContent = contentString;
           
           // Add a small delay to ensure canvas is fully initialized
           setTimeout(() => {
@@ -87,13 +98,24 @@ export const useRealtimeSync = (
           console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
           
           if (payload.eventType === 'DELETE') {
-            // Handle deletion by reloading latest state
+            // For delete events, we don't clear the board but reload latest state
             loadExistingContent();
             return;
           }
           
           if (payload.new && 'object_data' in payload.new) {
             const objectData = payload.new.object_data;
+            
+            // Check if the content is different from what we already loaded
+            const contentString = JSON.stringify(objectData);
+            if (contentString === lastLoadedContent) {
+              console.log('Content is the same as already loaded, skipping update');
+              return;
+            }
+            
+            // Store the loaded content for future comparison
+            lastLoadedContent = contentString;
+            
             canvas.loadFromJSON(objectData as Record<string, any>, () => {
               // Make all objects selectable again after loading
               canvas.getObjects().forEach(obj => {

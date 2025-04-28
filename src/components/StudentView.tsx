@@ -22,7 +22,7 @@ export const StudentView = () => {
       // Just trigger a re-render by rotating the active index
       // This ensures each board gets refreshed periodically
       setActiveBoardIndex(prevIndex => (prevIndex + 1) % boards.length);
-    }, 3000);
+    }, 5000);  // Increased to 5 seconds for less frequent refreshes
     
     return () => clearInterval(interval);
   }, []);
