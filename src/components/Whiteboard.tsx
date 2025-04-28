@@ -7,10 +7,8 @@ import { useSyncContext } from "@/context/SyncContext";
 import { cn } from "@/lib/utils";
 import { Toolbar } from "./Toolbar";
 import { ActiveBoardIndicator } from "./whiteboard/ActiveBoardIndicator";
-import { useTeacherBoardUpdates } from "@/hooks/useTeacherBoardUpdates";
-import { useBoardUpdates } from "@/hooks/useBoardUpdates";
 import { WhiteboardProps } from "@/types/whiteboard";
-import { Object as FabricObject } from "fabric";
+import { useBoardSync } from "@/hooks/useBoardSync";
 
 export const Whiteboard = ({ 
   id, 
@@ -25,26 +23,13 @@ export const Whiteboard = ({
   const [isActive, setIsActive] = useState(false);
   const isActiveRef = useRef(false);
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
+  // Generate a unique instance ID for this whiteboard instance
   const instanceIdRef = useRef<string>(`${id}-${Math.random().toString(36).substring(2, 9)}`);
 
   const { setActiveCanvas, activeBoardId } = useClipboardContext();
-  const { sendObjectToTeacherBoards, isSyncEnabled, linkedBoards } = useSyncContext();
+  const { linkedBoards } = useSyncContext();
   
   const isLinkedBoard = linkedBoards.includes(id);
-
-  const handleObjectAdded = (object: FabricObject) => {
-    // Only if this is a teacher's board and sync is enabled, send updates
-    if (id === "teacher" && isSyncEnabled) {
-      console.log(`Teacher board ${id} added object, sending to other teacher boards:`, object);
-      const objectData = object.toJSON();
-      
-      // Include the canvas instance ID to avoid a board processing its own events
-      sendObjectToTeacherBoards({
-        ...objectData, 
-        canvasInstanceId: instanceIdRef.current
-      }, id);
-    }
-  };
 
   const { canvasRef, fabricRef } = useCanvas({
     id,
@@ -53,13 +38,11 @@ export const Whiteboard = ({
     inkThickness,
     isSplitScreen,
     onZoomChange: setZoom,
-    onObjectAdded: handleObjectAdded,
     instanceId: instanceIdRef.current
   });
-
-  // Fix: Remove the third argument (isSyncEnabled) as it's not expected by the hook
-  useTeacherBoardUpdates(id, fabricRef);
-  useBoardUpdates(id, fabricRef);
+  
+  // Use the new sync hook
+  useBoardSync(id, fabricRef, instanceIdRef.current);
 
   // Set canvas instance ID when canvas is created
   useEffect(() => {
@@ -159,6 +142,7 @@ export const Whiteboard = ({
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
       data-instance-id={instanceIdRef.current}
+      data-board-id={id}
     >
       <Toolbar
         activeTool={activeTool}

@@ -1,11 +1,10 @@
 
 import { useEffect, useRef } from "react";
 import { Canvas, PencilBrush } from "fabric";
-import { UseCanvasProps, WhiteboardId } from "@/types/canvas";
+import { UseCanvasProps } from "@/types/canvas";
 import { useCanvasMouseHandlers } from "./useCanvasMouseHandlers";
 import { useCanvasTools } from "./useCanvasTools";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
-import { useClipboardContext } from "@/context/ClipboardContext";
 
 export const useCanvas = ({
   id,
@@ -13,13 +12,11 @@ export const useCanvas = ({
   activeColor,
   inkThickness,
   onZoomChange,
-  onObjectAdded,
   isSplitScreen,
   instanceId,
 }: UseCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
-  const { activeBoardId } = useClipboardContext();
 
   const { updateCursorAndNotify } = useCanvasTools();
   const {
@@ -66,14 +63,6 @@ export const useCanvas = ({
     canvas.freeDrawingBrush = new PencilBrush(canvas);
     canvas.freeDrawingBrush.width = inkThickness;
     canvas.freeDrawingBrush.color = activeColor;
-
-    if (onObjectAdded) {
-      canvas.on("object:added", (e) => {
-        if (e.target && (id === activeBoardId || id === "teacher")) {
-          onObjectAdded(e.target);
-        }
-      });
-    }
 
     canvas.on("mouse:wheel", handleMouseWheel);
     canvas.on("mouse:down", handleMouseDown);

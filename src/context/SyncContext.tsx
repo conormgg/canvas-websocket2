@@ -2,18 +2,18 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
-import { Link, Link2Off } from "lucide-react";
+import { Link, Link2Off, ArrowRight } from "lucide-react";
 
 // Define sync modes
 export type SyncMode = "off" | "one-way" | "two-way";
 
 interface SyncContextProps {
   isSyncEnabled: boolean;
-  toggleSync: () => void;
-  sendObjectToTeacherBoards: (objectData: any, sourceId: string) => void;
-  linkedBoards: WhiteboardId[];
   syncMode: SyncMode;
+  toggleSync: () => void;
   setSyncMode: (mode: SyncMode) => void;
+  sendUpdate: (objectData: any, sourceId: string, instanceId: string) => void;
+  linkedBoards: WhiteboardId[];
 }
 
 const SYNC_STORAGE_KEY = "whiteboard-sync-enabled";
@@ -28,8 +28,8 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   });
   
   const [syncMode, setSyncMode] = useState<SyncMode>(() => {
-    const savedMode = localStorage.getItem(SYNC_MODE_STORAGE_KEY);
-    return (savedMode as SyncMode) || "two-way";
+    const savedMode = localStorage.getItem(SYNC_MODE_STORAGE_KEY) as SyncMode | null;
+    return savedMode || "off";
   });
 
   const [linkedBoards, setLinkedBoards] = useState<WhiteboardId[]>([]);
@@ -40,12 +40,17 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     
     if (isSyncEnabled) {
       setLinkedBoards(["teacher"]);
+      const syncIcon = syncMode === "one-way" 
+        ? <ArrowRight className="h-4 w-4 text-blue-400" /> 
+        : <Link className="h-4 w-4 text-green-500" />;
+      
       toast.success(`Teacher boards linked - ${syncMode} sync mode`, {
-        icon: <Link className="h-4 w-4" />
+        icon: syncIcon
       });
     } else {
       setLinkedBoards([]);
-      toast.info("Teacher boards unlinked", {
+      setSyncMode("off");
+      toast.info("Sync disabled", {
         icon: <Link2Off className="h-4 w-4" />
       });
     }
@@ -66,37 +71,53 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const toggleSync = () => {
-    setIsSyncEnabled((prev) => !prev);
+    if (isSyncEnabled) {
+      // Turn off sync completely
+      setIsSyncEnabled(false);
+      setSyncMode("off");
+    } else {
+      // Turn on sync with the last mode or default to "two-way"
+      setIsSyncEnabled(true);
+      if (syncMode === "off") {
+        setSyncMode("two-way");
+      }
+    }
   };
 
-  const sendObjectToTeacherBoards = (objectData: any, sourceId: string) => {
+  const sendUpdate = (objectData: any, sourceId: string, instanceId: string) => {
     if (!isSyncEnabled) return;
     
-    // In one-way mode, only allow updates from the primary teacher board
+    // Add verification to prevent sending unwanted updates
+    if (syncMode === "off") return;
+    
+    // In one-way mode, only allow updates from the teacher view's teacher board
     if (syncMode === "one-way" && sourceId !== "teacher") {
+      console.log("One-way sync: Blocking update from non-teacher source", sourceId);
       return;
     }
     
-    const syncEvent = new CustomEvent("teacher-board-update", {
+    const syncEvent = new CustomEvent("board-sync-update", {
       detail: {
         object: objectData,
         sourceId,
+        instanceId,
+        syncMode,
         timestamp: Date.now()
       }
     });
     
     window.dispatchEvent(syncEvent);
-    console.log(`Object sent from board ${sourceId} to all teacher boards in ${syncMode} mode:`, objectData);
+    console.log(`Object sent from board ${sourceId} (${instanceId}) in ${syncMode} mode`);
   };
 
   return (
     <SyncContext.Provider value={{ 
       isSyncEnabled, 
-      toggleSync, 
-      sendObjectToTeacherBoards,
-      linkedBoards,
       syncMode,
-      setSyncMode
+      toggleSync, 
+      setSyncMode,
+      sendUpdate,
+      linkedBoards
     }}>
       {children}
     </SyncContext.Provider>

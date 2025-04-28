@@ -18,27 +18,25 @@ const queryClient = new QueryClient();
 
 const App = () => {
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <TooltipProvider>
           <ClipboardProvider>
             <SyncProvider>
-              <TooltipProvider>
-                <Routes>
-                  <Route path="/" element={<ViewSelector />} />
-                  <Route path="/teacher" element={<SplitWhiteboard />} />
-                  <Route path="/student" element={<StudentView />} />
-                  <Route path="/sync-test" element={<SyncTestView />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Toaster />
-                <Sonner />
-              </TooltipProvider>
+              <Routes>
+                <Route path="/" element={<ViewSelector />} />
+                <Route path="/teacher" element={<SplitWhiteboard />} />
+                <Route path="/student" element={<StudentView />} />
+                <Route path="/sync-test" element={<SyncTestView />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Toaster />
+              <Sonner />
             </SyncProvider>
           </ClipboardProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </React.StrictMode>
+        </TooltipProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 };
 

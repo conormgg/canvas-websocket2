@@ -7,7 +7,6 @@ export interface UseCanvasProps {
   activeColor: string;
   inkThickness: number;
   onZoomChange?: (zoom: number) => void;
-  onObjectAdded?: (object: FabricObject) => void;
   isSplitScreen?: boolean;
   instanceId?: string;
 }

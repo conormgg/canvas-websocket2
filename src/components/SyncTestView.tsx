@@ -11,19 +11,15 @@ export const SyncTestView = () => {
 
   useEffect(() => {
     // Make sure sync is enabled when this view loads, but don't force the mode
+    const syncEvent = new CustomEvent("sync-force-enable", {});
+    window.dispatchEvent(syncEvent);
+    
     if (!isSyncEnabled) {
-      const syncEvent = new CustomEvent("sync-force-enable", {});
-      window.dispatchEvent(syncEvent);
-      
       toast.info("Sync mode automatically enabled in test view", {
         duration: 3000,
       });
     }
-    
-    return () => {
-      // Clean up if needed
-    };
-  }, [isSyncEnabled]);
+  }, []);
 
   const toggleSyncMode = () => {
     if (syncMode === "off") {
@@ -62,19 +58,19 @@ export const SyncTestView = () => {
       
       <div className="flex flex-1">
         <div className="w-1/2 h-full p-4">
-          <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="absolute top-2 left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
+          <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden relative">
+            <div className="absolute top-2 left-2 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md z-10">
               Teacher Board 1
             </div>
             <Whiteboard id="teacher" isSplitScreen={true} />
           </div>
         </div>
         <div className="w-1/2 h-full p-4 border-l-2 border-gray-200">
-          <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="absolute top-2 right-6 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md">
-              Teacher Board 2
+          <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden relative">
+            <div className="absolute top-2 right-6 px-3 py-1 bg-sidebar-primary text-white text-sm font-medium rounded-md z-10">
+              Student Board
             </div>
-            <Whiteboard id="teacher" isSplitScreen={true} />
+            <Whiteboard id="student1" isSplitScreen={true} />
           </div>
         </div>
       </div>
