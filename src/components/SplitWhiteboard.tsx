@@ -8,9 +8,7 @@ export const SplitWhiteboard = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
   const studentIds: StudentId[] = [
     "student1",
-    "student2",
-    "student3",
-    "student4",
+    "student2"
   ];
   
   // Initialize active board tracking when component mounts

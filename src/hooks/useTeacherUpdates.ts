@@ -16,8 +16,6 @@ export const useTeacherUpdates = (
     }
 
     const handleTeacherUpdate = (e: CustomEvent) => {
-      if (!isSyncEnabled) return;
-
       const canvas = fabricRef.current;
       if (!canvas) return;
 
@@ -44,6 +42,7 @@ export const useTeacherUpdates = (
             canvas.add(obj);
             canvas.renderAll();
           });
+          console.log(`Object successfully added to ${id} from teacher update`);
         })
         .catch((err) => {
           console.error("Failed to enliven object", err);
