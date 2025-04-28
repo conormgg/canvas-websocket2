@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
@@ -6,12 +7,9 @@ import { WhiteboardId, TeacherId } from "@/types/canvas";
 export const SplitWhiteboard = () => {
   const [enlarged, setEnlarged] = useState<WhiteboardId | null>(null);
   
-  // The secondary boards
+  // The secondary boards - using only valid TeacherId
   const secondaryBoards: TeacherId[] = [
-    "teacher2",
-    "teacher3",
-    "teacher4",
-    "teacher5"
+    "teacher2"
   ];
   
   // Initialize active board tracking when component mounts
@@ -75,7 +73,7 @@ export const SplitWhiteboard = () => {
 
       <div
         className={cn(
-          "transition-all duration-300 ease-in-out h-full grid grid-cols-2 gap-4",
+          "transition-all duration-300 ease-in-out h-full grid grid-cols-1 gap-4", // Updated to grid-cols-1 since we only have one secondary board
           secondaryBoardsContainerCls
         )}
       >
