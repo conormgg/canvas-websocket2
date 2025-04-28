@@ -11,16 +11,19 @@ export const useTeacherBoardUpdates = (
   isSyncEnabled: boolean
 ) => {
   useEffect(() => {
-    // Only teacher boards should listen for updates from other teacher boards
+    // Only teacher boards should listen for updates
     if (id !== "teacher") return;
 
     const handleTeacherBoardUpdate = (e: CustomEvent) => {
       if (!isSyncEnabled) return;
 
+      // Prevent infinite loop by not processing our own events
+      if (e.detail.sourceId === id) return;
+
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      console.log(`Teacher board ${id} received update:`, e.detail);
+      console.log(`Teacher board ${id} received update from ${e.detail.sourceId}:`, e.detail);
 
       util
         .enlivenObjects([e.detail.object])

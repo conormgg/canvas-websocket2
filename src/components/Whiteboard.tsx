@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
@@ -32,11 +31,11 @@ export const Whiteboard = ({
   const isLinkedBoard = linkedBoards.includes(id);
 
   const handleObjectAdded = (object: FabricObject) => {
-    // Only if this is the teacher's board and sync is enabled, send updates
+    // Only if this is a teacher's board and sync is enabled, send updates
     if (id === "teacher" && isSyncEnabled) {
-      console.log("Teacher added object, sending to other teacher boards:", object);
+      console.log(`Teacher board ${id} added object, sending to other teacher boards:`, object);
       const objectData = object.toJSON();
-      sendObjectToTeacherBoards(objectData);
+      sendObjectToTeacherBoards(objectData, id);
     }
   };
 

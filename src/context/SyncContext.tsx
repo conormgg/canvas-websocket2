@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { WhiteboardId } from "@/types/canvas";
 import { toast } from "sonner";
@@ -6,7 +7,7 @@ import { Link, Link2Off } from "lucide-react";
 interface SyncContextProps {
   isSyncEnabled: boolean;
   toggleSync: () => void;
-  sendObjectToTeacherBoards: (objectData: any) => void;
+  sendObjectToTeacherBoards: (objectData: any, sourceId: string) => void;
   linkedBoards: WhiteboardId[];
 }
 
@@ -44,18 +45,19 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
     setIsSyncEnabled((prev) => !prev);
   };
 
-  const sendObjectToTeacherBoards = (objectData: any) => {
+  const sendObjectToTeacherBoards = (objectData: any, sourceId: string) => {
     if (!isSyncEnabled) return;
     
     const syncEvent = new CustomEvent("teacher-board-update", {
       detail: {
         object: objectData,
+        sourceId,
         timestamp: Date.now()
       }
     });
     
     window.dispatchEvent(syncEvent);
-    console.log("Object sent to all teacher boards:", objectData);
+    console.log(`Object sent from board ${sourceId} to all teacher boards:`, objectData);
   };
 
   return (
