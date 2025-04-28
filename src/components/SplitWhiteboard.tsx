@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Whiteboard } from "./Whiteboard";
 import { cn } from "@/lib/utils";
@@ -67,7 +66,13 @@ export const SplitWhiteboard = () => {
         onClick={(e) => toggle("teacher1", e)}
       >
         <div className="h-full bg-white rounded-xl shadow-lg overflow-hidden">
-          <Whiteboard id="teacher1" isSplitScreen={!enlarged} />
+          <Whiteboard 
+            id="teacher1" 
+            isSplitScreen={!enlarged}
+            toolbarProps={{
+              backgroundColor: "[#F97316]"
+            }}
+          />
         </div>
       </div>
 

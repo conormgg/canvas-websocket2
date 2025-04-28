@@ -1,4 +1,3 @@
-
 import { WhiteboardId } from "./canvas";
 
 export interface WhiteboardProps {
@@ -6,6 +5,9 @@ export interface WhiteboardProps {
   isSplitScreen?: boolean;
   onCtrlClick?: () => void;
   isMaximized?: boolean;
+  toolbarProps?: {
+    backgroundColor?: string;
+  };
 }
 
 export interface WhiteboardState {

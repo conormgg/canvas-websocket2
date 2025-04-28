@@ -16,7 +16,8 @@ export const Whiteboard = ({
   id, 
   isSplitScreen = false,
   onCtrlClick,
-  isMaximized: initialIsMaximized = false 
+  isMaximized: initialIsMaximized = false,
+  toolbarProps = {}
 }: WhiteboardProps) => {
   const [activeTool, setActiveTool] = useState<"select" | "draw" | "eraser">("draw");
   const [activeColor, setActiveColor] = useState<string>("#ff0000");
@@ -162,6 +163,7 @@ export const Whiteboard = ({
         onInkThicknessChange={setInkThickness}
         isSplitScreen={isSplitScreen}
         boardId={id}
+        backgroundColor={toolbarProps.backgroundColor}
       />
       <canvas 
         ref={canvasRef} 

@@ -1,4 +1,3 @@
-
 import { MousePointer, Pencil, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "./ColorPicker";
@@ -21,6 +20,7 @@ interface ToolbarProps {
   onInkThicknessChange: (thickness: number) => void;
   isSplitScreen?: boolean;
   boardId?: WhiteboardId;
+  backgroundColor?: string;
 }
 
 export const Toolbar = ({
@@ -32,10 +32,11 @@ export const Toolbar = ({
   onInkThicknessChange,
   isSplitScreen = false,
   boardId,
+  backgroundColor,
 }: ToolbarProps) => {
   const containerClass = isSplitScreen
-    ? "bg-[#221F26] rounded-md shadow-md p-1 flex items-center justify-center gap-1 scale-90 max-w-xs"
-    : "bg-[#221F26] rounded-lg shadow-lg p-2 flex items-center gap-2";
+    ? `bg-${backgroundColor || '[#221F26]'} rounded-md shadow-md p-1 flex items-center justify-center gap-1 scale-90 max-w-xs`
+    : `bg-${backgroundColor || '[#221F26]'} rounded-lg shadow-lg p-2 flex items-center gap-2`;
 
   // Only show sync toggle on teacher's board in teacher view (not in split mode)
   const showSyncToggle = boardId === "teacher1" && !isSplitScreen;
