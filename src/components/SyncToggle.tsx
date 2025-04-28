@@ -10,7 +10,7 @@ interface SyncToggleProps {
   boardId?: WhiteboardId;
 }
 
-export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher" }: SyncToggleProps) => {
+export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher1" }: SyncToggleProps) => {
   const { 
     isSyncEnabled, 
     isSync2Enabled, 
@@ -26,7 +26,7 @@ export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher" }: SyncT
   
   // Determine which sync state and toggle function to use based on the board ID
   const syncStateMap = {
-    "teacher": isSyncEnabled,
+    "teacher1": isSyncEnabled,
     "teacher2": isSync2Enabled,
     "teacher3": isSync3Enabled,
     "teacher4": isSync4Enabled,
@@ -34,7 +34,7 @@ export const SyncToggle = ({ isSplitScreen = false, boardId = "teacher" }: SyncT
   };
   
   const toggleFunctionMap = {
-    "teacher": toggleSync,
+    "teacher1": toggleSync,
     "teacher2": toggleSync2,
     "teacher3": toggleSync3,
     "teacher4": toggleSync4,
