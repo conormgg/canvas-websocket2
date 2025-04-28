@@ -9,65 +9,38 @@ export const useTeacherUpdates = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   isSyncEnabled: boolean
 ) => {
-  const shouldShowToastForBoard = (boardId: string) => {
-    const activeBoard = window.__wbActiveBoardId;
-    return activeBoard === boardId || 
-           boardId === "student1";
-  };
-
   useEffect(() => {
-    // Only update boards that should receive synced updates
-    if (!id.startsWith("student")) {
-      return;
-    }
+    // Only update the "teacher" board in the student view (not student1)
+    if (id !== "teacher") return;
 
     const handleTeacherUpdate = (e: CustomEvent) => {
-      if (!isSyncEnabled) {
-        console.log(`Update received for ${id} but sync is disabled, ignoring`);
-        return;
-      }
+      if (!isSyncEnabled) return;
 
       const canvas = fabricRef.current;
       if (!canvas) return;
 
-      // Make sure we're in the student or split-mode view
-      const isValidView = window.location.pathname.includes('/student') || 
-                         window.location.pathname.includes('/split-mode');
+      // Make sure we're in the student view by checking URL
+      const isStudentView = window.location.pathname.includes('/student') || 
+                          window.location.pathname.includes('/split-mode');
       
-      if (!isValidView) return;
+      if (!isStudentView) return;
 
-      // Verify this update is meant for this specific board
-      if (e.detail.targetId !== id) {
-        console.log(`Update not meant for this board. Target: ${e.detail.targetId}, This board: ${id}`);
-        return;
-      }
+      console.log(`Student view: Teacher board received update:`, e.detail);
 
-      console.log(`${id} received update from teacher board (sync enabled: ${isSyncEnabled})`, e.detail);
-
-      try {
-        util
-          .enlivenObjects([e.detail.object])
-          .then((objects: FabricObject[]) => {
-            objects.forEach((obj) => {
-              obj.selectable = true;
-              obj.evented = true;
-              canvas.add(obj);
-              canvas.renderAll();
-            });
-            console.log(`Object successfully added to ${id} from teacher update`);
-          })
-          .catch((err) => {
-            console.error("Failed to enliven object", err);
-            if (shouldShowToastForBoard(id)) {
-              toast.error("Could not sync object to this board.");
-            }
+      util
+        .enlivenObjects([e.detail.object])
+        .then((objects: FabricObject[]) => {
+          objects.forEach((obj) => {
+            obj.selectable = true;
+            obj.evented = true;
+            canvas.add(obj);
+            canvas.renderAll();
           });
-      } catch (error) {
-        console.error("Error processing teacher update:", error);
-        if (shouldShowToastForBoard(id)) {
-          toast.error("Error syncing content from teacher's board");
-        }
-      }
+        })
+        .catch((err) => {
+          console.error("Failed to enliven object", err);
+          toast.error("Could not sync object to this board.");
+        });
     };
 
     window.addEventListener("teacher-update", handleTeacherUpdate as EventListener);
