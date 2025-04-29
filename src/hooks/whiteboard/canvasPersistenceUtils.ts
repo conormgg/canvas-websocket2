@@ -1,3 +1,4 @@
+
 import { Canvas } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
 import { CanvasStateManager } from './canvasStateManager';
@@ -27,6 +28,7 @@ export class CanvasPersistenceUtils {
     this.clearTimeout();
     
     this.saveTimeoutRef = window.setTimeout(() => {
+      console.log(`Executing debounced save for board ${boardId}`);
       this.canvasStateManager.saveCanvasState(canvas, boardId);
     }, this.DEBOUNCE_TIMEOUT);
   }
@@ -35,9 +37,9 @@ export class CanvasPersistenceUtils {
     console.log(`Canvas ${boardId} modified, queuing save`);
     this.debouncedSave(canvas, boardId);
     
-    // Sync from teacher to student
+    // Sync from teacher to student with immediate sync for critical paths
     if (boardId === "teacher1") {
-      console.log("Syncing teacher1 changes to student1");
+      console.log("Syncing teacher1 changes to student1 (immediate sync)");
       // Force immediate sync without debounce for critical teacher->student path
       this.canvasStateManager.syncBoardState(canvas, boardId, "student1");
     } else if (boardId === "teacher2") {

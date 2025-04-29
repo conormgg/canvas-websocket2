@@ -11,6 +11,8 @@ export const SplitModeView = () => {
     { teacher: "teacher2", student: "student2" },
   ];
 
+  const [syncActive, setSyncActive] = useState(true);
+
   // Add clear cache button functionality
   const handleClearCache = () => {
     // Clear all supabase channel cache
@@ -31,7 +33,34 @@ export const SplitModeView = () => {
     // Close all active Supabase connections to force a reconnect
     supabase.realtime.disconnect();
     
-    toast.success("Cache cleared successfully. Refresh the page to reconnect.");
+    toast.success("Cache cleared successfully. Page will refresh in 1 second.");
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  };
+
+  const handleClearAllData = async () => {
+    try {
+      // Clear all whiteboard data from the database
+      const { error } = await supabase
+        .from('whiteboard_objects')
+        .delete()
+        .neq('id', 'placeholder');
+      
+      if (error) {
+        console.error('Error clearing whiteboard data:', error);
+        toast.error('Failed to clear whiteboard data');
+        return;
+      }
+      
+      toast.success("All whiteboard data cleared. Refreshing page in 1 second.");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to clear whiteboard data:', err);
+      toast.error('Failed to clear whiteboard data');
+    }
   };
 
   // Clear cache on mount to ensure fresh connections
@@ -54,13 +83,24 @@ export const SplitModeView = () => {
           <span className="text-green-600">
             Real-time synchronization active between teacher and student boards
           </span>
+          <span className="text-sm text-blue-700 mt-1">
+            Changes on teacher boards will automatically sync to student boards
+          </span>
         </div>
-        <button 
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          onClick={handleClearCache}
-        >
-          Clear Cache & Reconnect
-        </button>
+        <div className="flex gap-2">
+          <button 
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            onClick={handleClearCache}
+          >
+            Clear Cache & Reconnect
+          </button>
+          <button 
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            onClick={handleClearAllData}
+          >
+            Clear All Drawing Data
+          </button>
+        </div>
       </div>
       
       <div className="flex flex-col gap-4 h-[calc(100vh-180px)]">
