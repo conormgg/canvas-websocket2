@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react';
+
+import { useRef, useEffect, useCallback } from 'react';
 import { Canvas, FabricObject } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,19 +13,22 @@ interface WhiteboardObject {
   id?: string;
 }
 
+// Optimize by only sending the differences, but for now we'll just implement better debouncing
 export const useCanvasPersistence = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   id: WhiteboardId,
   isTeacherView: boolean
 ) => {
   const saveTimeoutRef = useRef<number | null>(null);
+  const lastSavedStateRef = useRef<string | null>(null);
 
-  const saveCanvasState = async (canvas: Canvas, boardId: WhiteboardId) => {
+  // More aggressive debounce timeout - wait longer before saving
+  const DEBOUNCE_TIMEOUT = 500; // Increased from 200ms to 500ms
+
+  const saveCanvasState = useCallback(async (canvas: Canvas, boardId: WhiteboardId) => {
     if (!canvas) return;
     
     try {
-      console.log(`Saving canvas state for ${boardId}`);
-      
       // Ensure all objects are selectable and interactive before saving
       canvas.getObjects().forEach(obj => {
         obj.set({
@@ -36,6 +40,16 @@ export const useCanvasPersistence = (
       });
       
       const canvasData = canvas.toJSON();
+      const canvasDataString = JSON.stringify(canvasData);
+      
+      // Skip saving if the state hasn't changed
+      if (canvasDataString === lastSavedStateRef.current) {
+        console.log(`Canvas state unchanged for ${boardId}, skipping save`);
+        return;
+      }
+      
+      console.log(`Saving canvas state for ${boardId}`);
+      lastSavedStateRef.current = canvasDataString;
       
       const { error } = await (supabase
         .from('whiteboard_objects') as any)
@@ -53,20 +67,20 @@ export const useCanvasPersistence = (
     } catch (err) {
       console.error('Failed to save canvas state:', err);
     }
-  };
+  }, []);
 
-  const debouncedSave = (canvas: Canvas, boardId: WhiteboardId) => {
+  const debouncedSave = useCallback((canvas: Canvas, boardId: WhiteboardId) => {
     if (saveTimeoutRef.current) {
       window.clearTimeout(saveTimeoutRef.current);
     }
     
     saveTimeoutRef.current = window.setTimeout(() => {
       saveCanvasState(canvas, boardId);
-    }, 200);
-  };
+    }, DEBOUNCE_TIMEOUT);
+  }, [saveCanvasState]);
 
-  const handleObjectModified = (canvas: Canvas) => {
-    console.log(`Canvas ${id} modified, saving state`);
+  const handleObjectModified = useCallback((canvas: Canvas) => {
+    console.log(`Canvas ${id} modified, queuing save`);
     debouncedSave(canvas, id);
     
     // Handle two-way sync for board 2
@@ -77,9 +91,9 @@ export const useCanvasPersistence = (
     } else if (id === "teacher1") {
       debouncedSave(canvas, "student1");
     }
-  };
+  }, [id, debouncedSave]);
 
-  const handleObjectAdded = (object: FabricObject) => {
+  const handleObjectAdded = useCallback((object: FabricObject) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     
@@ -101,52 +115,56 @@ export const useCanvasPersistence = (
     } else if (id === "teacher1") {
       debouncedSave(canvas, "student1");
     }
-  };
+  }, [id, debouncedSave, fabricRef]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    // Save canvas state whenever objects are modified
-    const handleCanvasModified = () => {
+    // Use a single handler for all canvas events to reduce event handler overhead
+    const handleCanvasChanged = () => {
       handleObjectModified(canvas);
     };
 
-    // Save when drawing paths are created
+    // Throttle events that might fire very rapidly
+    let isDrawing = false;
+    let pendingDrawUpdate = false;
+    
+    const handleDrawingEvents = () => {
+      if (isDrawing && !pendingDrawUpdate) {
+        pendingDrawUpdate = true;
+        // Wait until the user pauses drawing before saving
+        setTimeout(() => {
+          handleCanvasChanged();
+          pendingDrawUpdate = false;
+        }, 300);
+      }
+    };
+
     const handlePathCreated = () => {
-      console.log(`Path created on canvas ${id}, saving state`);
-      debouncedSave(canvas, id);
-      
-      if (id.startsWith('teacher')) {
-        const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
-        debouncedSave(canvas, studentBoardId);
-      }
+      console.log(`Path created on canvas ${id}, queuing save`);
+      // Only save when drawing is finished, not during every path update
+      handleCanvasChanged();
     };
 
-    // Save when mouse is released while in drawing mode
-    const handleMouseUp = () => {
+    const handleMouseDown = () => {
       if (canvas.isDrawingMode) {
-        debouncedSave(canvas, id);
-        
-        if (id.startsWith('teacher')) {
-          const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
-          debouncedSave(canvas, studentBoardId);
-        }
+        isDrawing = true;
       }
     };
 
-    // Save when objects are removed
-    const handleObjectRemoved = () => {
-      console.log(`Object removed from canvas ${id}, saving state`);
-      debouncedSave(canvas, id);
-      
-      if (id.startsWith('teacher')) {
-        const studentBoardId = id.replace('teacher', 'student') as WhiteboardId;
-        debouncedSave(canvas, studentBoardId);
+    const handleMouseUp = () => {
+      if (canvas.isDrawingMode && isDrawing) {
+        isDrawing = false;
+        handleCanvasChanged();
       }
+    };
+
+    const handleObjectRemoved = () => {
+      console.log(`Object removed from canvas ${id}, queuing save`);
+      handleCanvasChanged();
     };
     
-    // Ensure objects are selectable when they're added to canvas
     const handleObjectAddedToCanvas = (e: any) => {
       if (e.target) {
         e.target.set({
@@ -158,15 +176,18 @@ export const useCanvasPersistence = (
       }
     };
     
-    canvas.on('object:modified', handleCanvasModified);
+    // Attach optimized event handlers
+    canvas.on('object:modified', handleCanvasChanged);
     canvas.on('path:created', handlePathCreated);
+    canvas.on('mouse:down', handleMouseDown);
     canvas.on('mouse:up', handleMouseUp);
     canvas.on('object:removed', handleObjectRemoved);
     canvas.on('object:added', handleObjectAddedToCanvas);
     
     return () => {
-      canvas.off('object:modified', handleCanvasModified);
+      canvas.off('object:modified', handleCanvasChanged);
       canvas.off('path:created', handlePathCreated);
+      canvas.off('mouse:down', handleMouseDown);
       canvas.off('mouse:up', handleMouseUp);
       canvas.off('object:removed', handleObjectRemoved);
       canvas.off('object:added', handleObjectAddedToCanvas);
@@ -174,7 +195,7 @@ export const useCanvasPersistence = (
         window.clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [id, fabricRef, isTeacherView]);
+  }, [id, handleObjectModified, fabricRef]);
 
   return { handleObjectAdded, handleObjectModified };
 };

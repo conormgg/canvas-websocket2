@@ -1,8 +1,8 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WhiteboardId } from '@/types/canvas';
-import { Canvas } from 'fabric';
+import { Canvas, FabricObject } from 'fabric';
 
 // Define the table structure since we can't modify the auto-generated types
 interface WhiteboardObject {
@@ -13,16 +13,68 @@ interface WhiteboardObject {
   id: string;
 }
 
+// Helper function to compare two canvas states
+const areCanvasStatesEqual = (state1: any, state2: any): boolean => {
+  if (!state1 || !state2) return false;
+  // Compare objects array length as a quick check
+  if (state1.objects?.length !== state2.objects?.length) return false;
+  
+  // For deeper comparison, we use JSON stringify but this could be optimized further
+  // by implementing a more efficient diff algorithm
+  return JSON.stringify(state1) === JSON.stringify(state2);
+};
+
 export const useRealtimeSync = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   boardId: WhiteboardId,
   isEnabled: boolean
 ) => {
+  const lastLoadedContentRef = useRef<Record<string, any> | null>(null);
+  const pendingUpdatesRef = useRef<boolean>(false);
+  
+  // Apply updates optimistically
+  const applyCanvasUpdate = (canvas: Canvas, objectData: Record<string, any>) => {
+    // Skip if we're already processing updates or if the content is the same
+    if (pendingUpdatesRef.current || areCanvasStatesEqual(lastLoadedContentRef.current, objectData)) {
+      console.log('Skipping redundant update');
+      return;
+    }
+    
+    // Mark that we're processing an update
+    pendingUpdatesRef.current = true;
+    
+    // Store the state we're loading
+    lastLoadedContentRef.current = objectData;
+    
+    // Apply the update without blocking
+    setTimeout(() => {
+      try {
+        canvas.loadFromJSON(objectData, () => {
+          // Make all objects interactive after loading
+          canvas.getObjects().forEach(obj => {
+            obj.set({
+              selectable: true,
+              evented: true,
+              hasControls: true,
+              hasBorders: true
+            });
+          });
+          canvas.renderAll();
+          console.log(`Canvas updated for board ${boardId}`);
+        });
+      } catch (err) {
+        console.error('Failed to apply canvas update:', err);
+      } finally {
+        // Clear the pending flag
+        pendingUpdatesRef.current = false;
+      }
+    }, 50);
+  };
+
   useEffect(() => {
     if (!fabricRef.current) return;
 
     const canvas = fabricRef.current;
-    let lastLoadedContent: string | null = null;
     
     const loadExistingContent = async () => {
       try {
@@ -54,30 +106,14 @@ export const useRealtimeSync = (
           console.log(`Found existing content for board ${boardId}`);
           const objectData = data[0].object_data;
           
-          // Check if the content is different from what we already loaded
-          const contentString = JSON.stringify(objectData);
-          if (contentString === lastLoadedContent) {
-            console.log('Content is the same as already loaded, skipping update');
+          // Check if the content is different from what we already have
+          if (areCanvasStatesEqual(lastLoadedContentRef.current, objectData)) {
+            console.log('Content is identical to what we already have, skipping update');
             return;
           }
           
-          // Store the loaded content for future comparison
-          lastLoadedContent = contentString;
-          
-          setTimeout(() => {
-            canvas.loadFromJSON(objectData as Record<string, any>, () => {
-              canvas.getObjects().forEach(obj => {
-                obj.set({
-                  selectable: true,
-                  evented: true,
-                  hasControls: true,
-                  hasBorders: true
-                });
-              });
-              canvas.renderAll();
-              console.log('Loaded existing content for board:', boardId);
-            });
-          }, 100);
+          // Apply the update optimistically
+          applyCanvasUpdate(canvas, objectData);
         }
       } catch (err) {
         console.error('Failed to load existing content:', err);
@@ -86,7 +122,7 @@ export const useRealtimeSync = (
     
     loadExistingContent();
 
-    // Set up realtime subscription for two-way sync
+    // Set up realtime subscription for two-way sync with optimized event handling
     const channel = supabase
       .channel(`whiteboard-sync-${boardId}`)
       .on(
@@ -103,7 +139,7 @@ export const useRealtimeSync = (
           console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
           
           if (payload.eventType === 'DELETE') {
-            // For delete events, we don't clear the board but reload latest state
+            // For delete events, reload the latest state
             loadExistingContent();
             return;
           }
@@ -111,30 +147,8 @@ export const useRealtimeSync = (
           if (payload.new && 'object_data' in payload.new) {
             const objectData = payload.new.object_data;
             
-            // Check if the content is different from what we already loaded
-            const contentString = JSON.stringify(objectData);
-            if (contentString === lastLoadedContent) {
-              console.log('Content is the same as already loaded, skipping update');
-              return;
-            }
-            
-            // Store the loaded content for future comparison
-            lastLoadedContent = contentString;
-            
-            canvas.loadFromJSON(objectData as Record<string, any>, () => {
-              // Make all objects selectable again after loading
-              canvas.getObjects().forEach(obj => {
-                obj.set({
-                  selectable: true,
-                  evented: true,
-                  hasControls: true,
-                  hasBorders: true
-                });
-              });
-              
-              canvas.renderAll();
-              console.log('Canvas updated from realtime event');
-            });
+            // Apply the update optimistically
+            applyCanvasUpdate(canvas, objectData);
           }
         }
       )

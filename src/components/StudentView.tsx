@@ -15,14 +15,14 @@ export const StudentView = () => {
   const teacherCls = enlarged === "student1" ? "fixed inset-4 z-50" : "w-1/2";
   const studentCls = enlarged === "student2" ? "fixed inset-4 z-50" : "w-1/2";
   
-  // Rotate active boards to ensure they all receive updates
+  // Rotate active boards much less frequently
   useEffect(() => {
     const boards = ["student1", "student2"];
     const interval = setInterval(() => {
       // Just trigger a re-render by rotating the active index
       // This ensures each board gets refreshed periodically
       setActiveBoardIndex(prevIndex => (prevIndex + 1) % boards.length);
-    }, 5000);  // Increased to 5 seconds for less frequent refreshes
+    }, 30000);  // Increased to 30 seconds for much less frequent refreshes
     
     return () => clearInterval(interval);
   }, []);

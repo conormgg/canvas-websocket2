@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
 import { useClipboardContext } from "@/context/ClipboardContext";
@@ -22,6 +22,7 @@ export const Whiteboard = ({
   const [inkThickness, setInkThickness] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
+  const [lastRender, setLastRender] = useState<number>(Date.now());
 
   const { setActiveCanvas } = useClipboardContext();
 
@@ -56,27 +57,35 @@ export const Whiteboard = ({
   // Always enable real-time sync
   useRealtimeSync(fabricRef, id, true);
 
-  useEffect(() => {
-    // Set this board as active as soon as it's mounted - this ensures it's always active
+  // Set this board as active
+  const setAsActiveBoard = useCallback(() => {
     if (fabricRef.current) {
-      console.log(`Setting ${id} as active board on mount and keeping it active`);
+      console.log(`Setting ${id} as active board`);
       window.__wbActiveBoard = canvasRef.current;
       window.__wbActiveBoardId = id;
       setActiveCanvas(fabricRef.current, id);
     }
   }, [id, canvasRef, fabricRef, setActiveCanvas]);
-  
-  // Additional effect to periodically check and refresh the canvas if needed
+
   useEffect(() => {
+    // Set this board as active as soon as it's mounted
+    setAsActiveBoard();
+    
+    // Refresh render periodically but less frequently
     const checkInterval = setInterval(() => {
-      if (fabricRef.current && canvasRef.current) {
-        // Re-render the canvas to ensure content is displayed
-        fabricRef.current.renderAll();
+      const now = Date.now();
+      
+      // Only re-render every 10 seconds at most to reduce unnecessary updates
+      if (now - lastRender > 10000) { // 10 seconds
+        if (fabricRef.current && canvasRef.current) {
+          fabricRef.current.renderAll();
+          setLastRender(now);
+        }
       }
-    }, 5000); // Check every 5 seconds
+    }, 10000); // Check every 10 seconds
     
     return () => clearInterval(checkInterval);
-  }, [fabricRef, canvasRef]);
+  }, [fabricRef, canvasRef, setAsActiveBoard, lastRender]);
   
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -84,13 +93,7 @@ export const Whiteboard = ({
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    console.log(`Setting ${id} as active board`);
-    window.__wbActiveBoard = canvasRef.current;
-    window.__wbActiveBoardId = id;
-    
-    if (fabricRef.current) {
-      setActiveCanvas(fabricRef.current, id);
-    }
+    setAsActiveBoard();
 
     if (e.ctrlKey && onCtrlClick) {
       onCtrlClick();
