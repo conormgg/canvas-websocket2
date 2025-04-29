@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WhiteboardId } from '@/types/canvas';
@@ -58,11 +59,15 @@ export const useRealtimeSync = (
     if (!fabricRef.current || !isEnabled || cleanupRef.current || !mountedRef.current) return;
 
     const canvas = fabricRef.current;
-    const boardSessionId = `${boardId}-${Date.now()}`;
+    
+    // Clear any cached channel data to ensure fresh connection
+    const cacheKey = `supabase-channel-whiteboard-sync-${boardId}`;
+    sessionStorage.removeItem(cacheKey);
     
     const handleCanvasUpdate = (objectData: Record<string, any>) => {
       if (!canvas || !objectData || cleanupRef.current || !mountedRef.current) return;
       
+      console.log(`Applying update to canvas ${boardId}`);
       canvasUpdateManager.current.applyCanvasUpdate(canvas, objectData);
     };
     
@@ -95,6 +100,7 @@ export const useRealtimeSync = (
 
     const subscribeTimer = setTimeout(() => {
       if (!cleanupRef.current && mountedRef.current) {
+        console.log(`Creating subscription for ${boardId}`);
         const channel = SupabaseSync.subscribeToUpdates(
           boardId,
           handleCanvasUpdate,

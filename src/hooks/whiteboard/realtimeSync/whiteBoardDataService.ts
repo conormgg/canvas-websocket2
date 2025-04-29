@@ -35,20 +35,30 @@ export class WhiteboardDataService {
     try {
       console.log(`Loading existing content for board: ${boardId}`);
       
-      // For board 2, check both teacher2 and student2 content
-      const query = (boardId === "teacher2" || boardId === "student2") 
-        ? supabase
-            .from('whiteboard_objects')
-            .select('object_data')
-            .in('board_id', ['teacher2', 'student2'])
-            .order('created_at', { ascending: false })
-            .limit(1)
-        : supabase
-            .from('whiteboard_objects')
-            .select('object_data')
-            .eq('board_id', boardId)
-            .order('created_at', { ascending: false })
-            .limit(1);
+      // For board pairs, check both boards' content
+      let query;
+      if (boardId === "teacher2" || boardId === "student2") {
+        query = supabase
+          .from('whiteboard_objects')
+          .select('object_data')
+          .in('board_id', ['teacher2', 'student2'])
+          .order('created_at', { ascending: false })
+          .limit(1);
+      } else if (boardId === "teacher1" || boardId === "student1") {
+        query = supabase
+          .from('whiteboard_objects')
+          .select('object_data')
+          .in('board_id', ['teacher1', 'student1'])
+          .order('created_at', { ascending: false })
+          .limit(1);
+      } else {
+        query = supabase
+          .from('whiteboard_objects')
+          .select('object_data')
+          .eq('board_id', boardId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+      }
       
       const { data, error } = await query;
       

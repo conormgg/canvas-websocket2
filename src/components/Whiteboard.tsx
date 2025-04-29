@@ -10,6 +10,7 @@ import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useCanvasPersistence } from "@/hooks/useCanvasPersistence";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { toast } from "sonner";
+import { useSyncContext } from "@/context/SyncContext";
 
 export const Whiteboard = ({ 
   id, 
@@ -30,6 +31,7 @@ export const Whiteboard = ({
   const mounted = useRef<boolean>(false);
 
   const { setActiveCanvas } = useClipboardContext();
+  const { isSyncEnabled } = useSyncContext();
 
   const isTeacherView = window.location.pathname.includes('/teacher') || 
                        window.location.pathname === '/' ||
@@ -45,6 +47,10 @@ export const Whiteboard = ({
   });
   
   const isStudent = id.startsWith('student');
+
+  // For teacher1 board, we should enable sync based on the sync context
+  const shouldEnableSync = id === "teacher1" ? isSyncEnabled : true;
+
   const { handleObjectAdded, handleObjectModified } = useCanvasPersistence(fabricRef, id, isTeacherView);
   const { undo, redo } = useCanvasHistory(fabricRef);
   
@@ -74,6 +80,15 @@ export const Whiteboard = ({
     
     // Set this board as active as soon as it's mounted
     setAsActiveBoard();
+    
+    // Clear cache to ensure fresh data on refresh
+    if (id === "teacher1" || id === "student1") {
+      const channel = window.sessionStorage.getItem(`supabase-channel-whiteboard-sync-${id}`);
+      if (channel) {
+        window.sessionStorage.removeItem(`supabase-channel-whiteboard-sync-${id}`);
+        console.log(`Cleared channel cache for ${id}`);
+      }
+    }
     
     // Set up unloading detection to prevent memory leaks and infinite loops
     window.addEventListener('beforeunload', () => {

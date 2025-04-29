@@ -52,11 +52,13 @@ export class SupabaseSyncManager {
     channel.on(
       'postgres_changes',
       {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'whiteboard_objects',
         filter: boardId === "teacher2" || boardId === "student2"
           ? `board_id=in.(teacher2,student2)`
+          : boardId === "teacher1" || boardId === "student1"
+          ? `board_id=in.(teacher1,student1)`
           : `board_id=eq.${boardId}`
       },
       (payload: any) => {
@@ -75,12 +77,6 @@ export class SupabaseSyncManager {
         
         console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
         
-        if (payload.eventType === 'DELETE') {
-          // For delete events, reload the latest state
-          onDeleteEvent();
-          return;
-        }
-        
         if (payload.new && 'object_data' in payload.new) {
           const objectData = payload.new.object_data;
           
@@ -92,6 +88,17 @@ export class SupabaseSyncManager {
             console.error('Received invalid object data format:', objectData);
           }
         }
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'whiteboard_objects'
+      },
+      () => {
+        onDeleteEvent();
       }
     )
     .subscribe((status: string) => {

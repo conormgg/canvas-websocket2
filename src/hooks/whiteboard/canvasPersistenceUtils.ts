@@ -42,6 +42,7 @@ export class CanvasPersistenceUtils {
     } else if (boardId === "student2") {
       this.canvasStateManager.syncBoardState(canvas, boardId, "teacher2");
     } else if (boardId === "teacher1") {
+      console.log("Syncing teacher1 changes to student1");
       this.canvasStateManager.syncBoardState(canvas, boardId, "student1");
     }
   }
