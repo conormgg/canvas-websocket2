@@ -2,21 +2,23 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { Canvas, FabricObject } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
-import { CanvasPersistenceUtils } from './whiteboard/canvasPersistenceUtils';
 import { ObjectModificationHandlers } from './whiteboard/persistenceTypes';
 import { useModificationQueue } from './whiteboard/useModificationQueue';
 import { useCanvasStateComparison } from './whiteboard/useCanvasStateComparison';
 import { useCanvasEventHandlers } from './whiteboard/useCanvasEventHandlers';
+import { useCanvasPersistenceManager } from './whiteboard/useCanvasPersistenceManager';
 
-// Optimize by only sending the differences, but for now we'll just implement better debouncing
+/**
+ * Hook for handling canvas object modifications and persistence
+ */
 export const useCanvasPersistence = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   id: WhiteboardId,
   isTeacherView: boolean
 ): ObjectModificationHandlers => {
-  const persistenceUtilsRef = useRef<CanvasPersistenceUtils>(new CanvasPersistenceUtils());
   const { queueModification } = useModificationQueue();
   const { hasStateChanged, setInitialState } = useCanvasStateComparison();
+  const { saveCanvasState } = useCanvasPersistenceManager(id, isTeacherView);
   
   // Queue a modification to save canvas state
   const handleObjectModified = useCallback((canvas: Canvas) => {
@@ -27,9 +29,9 @@ export const useCanvasPersistence = (
     }
     
     queueModification(() => {
-      persistenceUtilsRef.current.handleSyncedModification(canvas, id);
+      saveCanvasState(canvas);
     });
-  }, [id, queueModification, hasStateChanged]);
+  }, [id, queueModification, hasStateChanged, saveCanvasState]);
 
   const handleObjectAdded = useCallback((object: FabricObject) => {
     const canvas = fabricRef.current;
@@ -50,9 +52,9 @@ export const useCanvasPersistence = (
         hasBorders: true
       });
       
-      persistenceUtilsRef.current.handleSyncedModification(canvas, id);
+      saveCanvasState(canvas);
     });
-  }, [id, fabricRef, queueModification, hasStateChanged]);
+  }, [id, fabricRef, queueModification, hasStateChanged, saveCanvasState]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -81,7 +83,6 @@ export const useCanvasPersistence = (
       canvas.off('mouse:up');
       canvas.off('object:removed');
       canvas.off('object:added');
-      persistenceUtilsRef.current.clearTimeout();
       eventHandlers.cleanupTimeouts();
     };
   }, [id, handleObjectModified, fabricRef, setInitialState]);
