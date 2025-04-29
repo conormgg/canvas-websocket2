@@ -6,9 +6,10 @@ import { WhiteboardObject } from './types';
 export class SupabaseSync {
   private static channelCache = new Map<string, any>();
   private static lastInsertTimestamps = new Map<string, number>();
-  private static MIN_UPDATE_INTERVAL = 800; // Increased to prevent update storms
+  private static MIN_UPDATE_INTERVAL = 1000; // Increased to prevent update storms
   private static updateCounts = new Map<string, number>();
   private static resetCountsInterval: number | null = null;
+  private static latestUpdateHashes = new Map<string, string>(); // Track the latest update hash per board
 
   // Static initialization
   static {
@@ -85,15 +86,20 @@ export class SupabaseSync {
     }
   }
 
+  // Generate a stable channel name based on boardId
+  private static getChannelName(boardId: WhiteboardId): string {
+    return `whiteboard-sync-${boardId}`;
+  }
+
   // Subscribe to realtime updates with improved infinite loop protection
   static subscribeToUpdates(
     boardId: WhiteboardId, 
     onUpdate: (data: Record<string, any>) => void, 
     onDeleteEvent: () => void
   ) {
-    // Generate a truly unique channel name for this specific board and session
-    const sessionId = Math.random().toString(36).substring(2, 15);
-    const channelName = `whiteboard-sync-${boardId}-${sessionId}-${Date.now()}`;
+    // Generate a more stable channel name - only use boardId without timestamps
+    // This prevents creating multiple channels for the same board
+    const channelName = this.getChannelName(boardId);
     
     // Check if we already have a channel for this board
     if (this.channelCache.has(boardId)) {
@@ -125,6 +131,19 @@ export class SupabaseSync {
             : `board_id=eq.${boardId}`
         },
         (payload) => {
+          // Calculate a hash based on the payload to detect duplicates
+          const payloadHash = JSON.stringify(payload.new || {}).slice(0, 100);
+          const lastHash = this.latestUpdateHashes.get(boardId);
+          
+          // If this is the same as the last update we processed, skip it
+          if (lastHash === payloadHash) {
+            console.log(`Skipping duplicate update for board ${boardId}`);
+            return;
+          }
+          
+          // Store this hash for future duplicate detection
+          this.latestUpdateHashes.set(boardId, payloadHash);
+          
           // Implement rate limiting to prevent infinite loops
           const now = Date.now();
           const lastUpdateTime = this.lastInsertTimestamps.get(boardId) || 0;
@@ -134,16 +153,16 @@ export class SupabaseSync {
           this.updateCounts.set(boardId, currentCount + 1);
           
           // If we're getting too many updates in a short time, it might be an infinite loop
-          if (currentCount > 60) { // More than 60 updates per minute might indicate a loop
+          if (currentCount > 30) { // Lowered threshold - more than 30 updates per minute might indicate a loop
             console.warn(`Possible infinite loop detected for board ${boardId}, throttling updates`);
             
-            // Only process 1 in 5 updates until the counter resets
-            if (currentCount % 5 !== 0) {
+            // Only process 1 in 10 updates until the counter resets (more aggressive throttling)
+            if (currentCount % 10 !== 0) {
               return;
             }
           }
           
-          // Basic rate limiting
+          // Basic rate limiting - more aggressive to prevent storms
           if (now - lastUpdateTime < this.MIN_UPDATE_INTERVAL) {
             console.log(`Throttling update for board ${boardId}, too soon after last update`);
             return;

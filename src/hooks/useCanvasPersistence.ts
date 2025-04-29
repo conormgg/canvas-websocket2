@@ -13,8 +13,20 @@ export const useCanvasPersistence = (
   const persistenceUtilsRef = useRef<CanvasPersistenceUtils>(new CanvasPersistenceUtils());
   const lastUpdateTimeRef = useRef<number>(0);
   const updateQueueRef = useRef<boolean>(false);
-  const MIN_UPDATE_INTERVAL = 500; // Minimum time between updates in ms
+  const MIN_UPDATE_INTERVAL = 800; // Increased minimum time between updates in ms
   const mountedRef = useRef<boolean>(true);
+  const pendingModificationsRef = useRef<boolean>(false);
+  const lastSavedStateHashRef = useRef<string>('');
+
+  // Function to generate a simple hash of the canvas state
+  const generateCanvasStateHash = useCallback((canvas: Canvas): string => {
+    try {
+      const objects = canvas.getObjects();
+      return `${objects.length}-${Date.now()}`;
+    } catch (err) {
+      return Date.now().toString();
+    }
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -27,16 +39,27 @@ export const useCanvasPersistence = (
   const handleObjectModified = useCallback((canvas: Canvas) => {
     if (!mountedRef.current) return;
     
+    // Generate a state hash to prevent saving identical states
+    const stateHash = generateCanvasStateHash(canvas);
+    if (stateHash === lastSavedStateHashRef.current) {
+      console.log('Skipping save - canvas state hash unchanged');
+      return;
+    }
+    
     // Rate limit updates to prevent update storms
     const now = Date.now();
     if (now - lastUpdateTimeRef.current < MIN_UPDATE_INTERVAL) {
       if (!updateQueueRef.current) {
         // Schedule a save for later if we're throttling
         updateQueueRef.current = true;
+        pendingModificationsRef.current = true;
         setTimeout(() => {
-          if (mountedRef.current && fabricRef.current) {
+          if (mountedRef.current && fabricRef.current && pendingModificationsRef.current) {
+            const newHash = generateCanvasStateHash(fabricRef.current);
+            lastSavedStateHashRef.current = newHash;
             persistenceUtilsRef.current.handleSyncedModification(fabricRef.current, id);
             updateQueueRef.current = false;
+            pendingModificationsRef.current = false;
           }
         }, MIN_UPDATE_INTERVAL);
       }
@@ -44,8 +67,10 @@ export const useCanvasPersistence = (
     }
     
     lastUpdateTimeRef.current = now;
+    lastSavedStateHashRef.current = stateHash;
+    pendingModificationsRef.current = false;
     persistenceUtilsRef.current.handleSyncedModification(canvas, id);
-  }, [id, fabricRef]);
+  }, [id, fabricRef, generateCanvasStateHash]);
 
   const handleObjectAdded = useCallback((object: FabricObject) => {
     if (!mountedRef.current) return;
@@ -61,6 +86,9 @@ export const useCanvasPersistence = (
       hasBorders: true
     });
     
+    // Mark that we have pending modifications
+    pendingModificationsRef.current = true;
+    
     // Rate limit updates
     const now = Date.now();
     if (now - lastUpdateTimeRef.current < MIN_UPDATE_INTERVAL) {
@@ -68,9 +96,12 @@ export const useCanvasPersistence = (
         // Schedule a save for later if we're throttling
         updateQueueRef.current = true;
         setTimeout(() => {
-          if (mountedRef.current && fabricRef.current) {
+          if (mountedRef.current && fabricRef.current && pendingModificationsRef.current) {
+            const newHash = generateCanvasStateHash(fabricRef.current);
+            lastSavedStateHashRef.current = newHash;
             persistenceUtilsRef.current.handleSyncedModification(fabricRef.current, id);
             updateQueueRef.current = false;
+            pendingModificationsRef.current = false;
           }
         }, MIN_UPDATE_INTERVAL);
       }
@@ -78,8 +109,11 @@ export const useCanvasPersistence = (
     }
     
     lastUpdateTimeRef.current = now;
+    const stateHash = generateCanvasStateHash(canvas);
+    lastSavedStateHashRef.current = stateHash;
+    pendingModificationsRef.current = false;
     persistenceUtilsRef.current.handleSyncedModification(canvas, id);
-  }, [id, fabricRef]);
+  }, [id, fabricRef, generateCanvasStateHash]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -88,6 +122,7 @@ export const useCanvasPersistence = (
     // Use a single handler for all canvas events to reduce event handler overhead
     const handleCanvasChanged = () => {
       if (!mountedRef.current) return;
+      pendingModificationsRef.current = true;
       handleObjectModified(canvas);
     };
 
@@ -100,6 +135,7 @@ export const useCanvasPersistence = (
       
       if (isDrawing && !pendingDrawUpdate) {
         pendingDrawUpdate = true;
+        pendingModificationsRef.current = true;
         // Wait until the user pauses drawing before saving
         setTimeout(() => {
           if (mountedRef.current) {
@@ -114,6 +150,7 @@ export const useCanvasPersistence = (
       if (!mountedRef.current) return;
       
       console.log(`Path created on canvas ${id}, queuing save`);
+      pendingModificationsRef.current = true;
       // Only save when drawing is finished, not during every path update
       handleCanvasChanged();
     };
@@ -131,6 +168,7 @@ export const useCanvasPersistence = (
       
       if (canvas.isDrawingMode && isDrawing) {
         isDrawing = false;
+        pendingModificationsRef.current = true;
         handleCanvasChanged();
       }
     };
@@ -139,6 +177,7 @@ export const useCanvasPersistence = (
       if (!mountedRef.current) return;
       
       console.log(`Object removed from canvas ${id}, queuing save`);
+      pendingModificationsRef.current = true;
       handleCanvasChanged();
     };
     
@@ -153,6 +192,8 @@ export const useCanvasPersistence = (
           hasBorders: true
         });
       }
+      
+      pendingModificationsRef.current = true;
     };
     
     // Attach optimized event handlers
@@ -172,7 +213,7 @@ export const useCanvasPersistence = (
       canvas.off('object:added', handleObjectAddedToCanvas);
       persistenceUtilsRef.current.clearTimeout();
     };
-  }, [id, handleObjectModified, fabricRef]);
+  }, [id, handleObjectModified, fabricRef, generateCanvasStateHash]);
 
   return { handleObjectAdded, handleObjectModified };
 };

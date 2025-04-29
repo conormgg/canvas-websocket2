@@ -9,11 +9,13 @@ export class CanvasUpdateManager {
   private updateIds: Set<string> = new Set(); // Track already processed updates
   private lastUpdateTimestamp: number = 0;
   private updateCounter: number = 0;
-  private MAX_UPDATES_PER_MINUTE: number = 120; // Limit updates to prevent infinite loops
+  private MAX_UPDATES_PER_MINUTE: number = 60; // Reduced limit to prevent infinite loops
+  private MAX_QUEUE_SIZE: number = 3; // Limit queue size
+  private contentHashes: Map<string, number> = new Map(); // Track content hashes with timestamps
 
   constructor() {
     // Initialize a background processing interval
-    this.processingInterval = window.setInterval(() => this.processQueue(), 500);
+    this.processingInterval = window.setInterval(() => this.processQueue(), 1000); // Slowed down processing
     this.resetUpdateCounter();
   }
 
@@ -21,6 +23,13 @@ export class CanvasUpdateManager {
   private resetUpdateCounter(): void {
     setInterval(() => {
       this.updateCounter = 0;
+      // Clear old hashes to prevent memory leaks
+      const now = Date.now();
+      this.contentHashes.forEach((timestamp, hash) => {
+        if (now - timestamp > 60000) { // Clear hashes older than 1 minute
+          this.contentHashes.delete(hash);
+        }
+      });
     }, 60000); // Reset counter every minute
   }
 
@@ -31,11 +40,15 @@ export class CanvasUpdateManager {
     try {
       // Extract only essential data for comparing updates
       const essentialData = {
+        objectCount: objectData.objects?.length || 0,
         objects: objectData.objects?.map((obj: any) => ({
           id: obj.id || '',
           type: obj.type || '',
-          path: obj.path ? JSON.stringify(obj.path).substring(0, 50) : '', // For path objects, limit length
-          points: obj.points ? JSON.stringify(obj.points).substring(0, 50) : '' // For polyline/polygon objects
+          top: Math.round(obj.top || 0),
+          left: Math.round(obj.left || 0),
+          // For path objects, use a more detailed hash
+          path: obj.path ? JSON.stringify(obj.path).substring(0, 100) : '', 
+          points: obj.points ? JSON.stringify(obj.points).substring(0, 100) : ''
         }))
       };
       return JSON.stringify(essentialData);
@@ -56,7 +69,10 @@ export class CanvasUpdateManager {
     this.updateCounter++;
     if (this.updateCounter > this.MAX_UPDATES_PER_MINUTE) {
       console.warn('Update rate limit exceeded, possible infinite loop detected');
-      return;
+      // Skip every other update when rate limited
+      if (this.updateCounter % 2 === 0) {
+        return;
+      }
     }
 
     // Generate a content hash to identify this update
@@ -66,13 +82,32 @@ export class CanvasUpdateManager {
       return;
     }
     
-    // Add rate limiting - don't process updates too quickly
+    // Check if we've seen this exact content recently (within the last minute)
     const now = Date.now();
-    if (now - this.lastUpdateTimestamp < 200) {
+    if (this.contentHashes.has(contentHash)) {
+      const lastSeenTime = this.contentHashes.get(contentHash) || 0;
+      // If we've seen this exact content within the last 5 seconds, skip it
+      if (now - lastSeenTime < 5000) {
+        console.log('Skipping duplicate update (by content hash)');
+        return;
+      }
+    }
+    
+    // Record that we've seen this content
+    this.contentHashes.set(contentHash, now);
+    
+    // Add rate limiting - don't process updates too quickly
+    if (now - this.lastUpdateTimestamp < 300) { // Increased delay between updates
       // Only queue if it's not already in the queue and not already processed
       if (!this.updateIds.has(contentHash) && 
           !this.updateQueue.some(update => this.generateContentHash(update) === contentHash)) {
-        this.updateQueue.push(objectData);
+        // Check queue size before adding
+        if (this.updateQueue.length < this.MAX_QUEUE_SIZE) {
+          console.log('Update queued for later processing');
+          this.updateQueue.push(objectData);
+        } else {
+          console.log('Update queue full, dropping update');
+        }
       }
       return;
     }
@@ -101,18 +136,22 @@ export class CanvasUpdateManager {
     this.updateIds.add(contentHash);
     
     // Limit size of tracking set to prevent memory leaks
-    if (this.updateIds.size > 50) {
+    if (this.updateIds.size > 30) {
       // Convert to array, remove oldest entries, and convert back to Set
       const idArray = Array.from(this.updateIds);
-      this.updateIds = new Set(idArray.slice(-30));
+      this.updateIds = new Set(idArray.slice(-15)); // Keep only the most recent 15
     }
     
     // If we're processing an update, queue this one
     if (this.isPendingUpdate) {
       // Only queue if it's not a duplicate
       if (!this.updateQueue.some(update => this.generateContentHash(update) === contentHash)) {
-        console.log('Update queued for later processing');
-        this.updateQueue.push(objectData);
+        if (this.updateQueue.length < this.MAX_QUEUE_SIZE) {
+          console.log('Update queued for later processing');
+          this.updateQueue.push(objectData);
+        } else {
+          console.log('Update queue full, dropping update');
+        }
       }
       return;
     }
@@ -156,7 +195,7 @@ export class CanvasUpdateManager {
             const nextUpdate = this.updateQueue.shift();
             if (nextUpdate) {
               // Wait a bit before processing the next update to prevent too rapid updates
-              setTimeout(() => this.applyCanvasUpdate(canvas, nextUpdate), 200);
+              setTimeout(() => this.applyCanvasUpdate(canvas, nextUpdate), 300); // Increased delay
             }
           }
         }
@@ -174,10 +213,10 @@ export class CanvasUpdateManager {
     }
     
     // Limit queue size to prevent memory issues
-    if (this.updateQueue.length > 5) {
-      console.log(`Pruning update queue from ${this.updateQueue.length} to 3 items`);
+    if (this.updateQueue.length > this.MAX_QUEUE_SIZE) {
+      console.log(`Pruning update queue from ${this.updateQueue.length} to ${this.MAX_QUEUE_SIZE} items`);
       // Keep only the most recent updates
-      this.updateQueue = this.updateQueue.slice(-3);
+      this.updateQueue = this.updateQueue.slice(-this.MAX_QUEUE_SIZE);
     }
   }
   
@@ -188,6 +227,7 @@ export class CanvasUpdateManager {
     }
     this.updateQueue = [];
     this.updateIds.clear();
+    this.contentHashes.clear();
     this.isPendingUpdate = false;
     this.lastLoadedContent = null;
   }

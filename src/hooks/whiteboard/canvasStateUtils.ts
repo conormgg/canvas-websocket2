@@ -37,6 +37,23 @@ export const areCanvasStatesEqual = ({ state1, state2 }: CanvasStateComparisonPr
       if (typeCount1[type] !== typeCount2[type]) return false;
     }
     
+    // More detailed comparison for path objects (which cause most duplication issues)
+    const pathObjects1 = objects1.filter((obj: any) => obj?.type === 'path');
+    const pathObjects2 = objects2.filter((obj: any) => obj?.type === 'path');
+    
+    if (pathObjects1.length !== pathObjects2.length) return false;
+    
+    // Compare path IDs - if they're the same, it's likely the same update
+    const pathIds1 = new Set(pathObjects1.map((obj: any) => obj.id).filter(Boolean));
+    const pathIds2 = new Set(pathObjects2.map((obj: any) => obj.id).filter(Boolean));
+    
+    // If all path IDs match, consider it the same state
+    if (pathIds1.size === pathIds2.size && 
+        pathIds1.size > 0 && 
+        [...pathIds1].every(id => pathIds2.has(id))) {
+      return true;
+    }
+    
     // Create a map of object IDs for deeper comparison
     const objectMap = new Map<string, any>();
     objects1.forEach((obj: any) => {
@@ -80,6 +97,9 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
         }
       });
       
+      // Track if we've made any changes to avoid unnecessary renders
+      let madeChanges = false;
+      
       // Process each object in the new state
       const promises: Promise<void>[] = [];
       
@@ -96,14 +116,22 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
           
           if (existingObj) {
             // Update the object properties instead of replacing it
+            let hasChanges = false;
             Object.keys(objData).forEach(key => {
               if (key !== 'id') {
-                existingObj.set(key, objData[key]);
+                // Only update if the value is actually different
+                if (JSON.stringify(existingObj.get(key)) !== JSON.stringify(objData[key])) {
+                  existingObj.set(key, objData[key]);
+                  hasChanges = true;
+                }
               }
             });
             
-            // Mark as modified
-            existingObj.setCoords();
+            // Mark as modified only if changes were made
+            if (hasChanges) {
+              existingObj.setCoords();
+              madeChanges = true;
+            }
           }
         } else if (objId) {
           // New object, need to add it
@@ -117,6 +145,7 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
                   newObj.id = objId;
                 }
                 canvas.add(newObj);
+                madeChanges = true;
               }
             })
             .catch(err => {
@@ -130,9 +159,15 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
       // Wait for all new objects to be added
       Promise.all(promises).then(() => {
         // Objects remaining in the map weren't in the new state, remove them
+        let removedObjects = false;
         currentObjectsMap.forEach(obj => {
           canvas.remove(obj);
+          removedObjects = true;
         });
+        
+        if (removedObjects) {
+          madeChanges = true;
+        }
         
         // Fix: Ensure the currentVPT array has exactly 6 elements before using it
         if (currentVPT && currentVPT.length === 6) {
@@ -142,10 +177,13 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
         // Update background if it changed
         if (newState.background && canvas.backgroundColor !== newState.background) {
           canvas.backgroundColor = newState.background;
+          madeChanges = true;
         }
         
-        // Render the changes without a full reload
-        canvas.renderAll();
+        // Render the changes without a full reload, but only if we made actual changes
+        if (madeChanges) {
+          canvas.renderAll();
+        }
       });
     }
   } catch (err) {

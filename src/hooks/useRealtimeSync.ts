@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WhiteboardId } from '@/types/canvas';
 import { Canvas } from 'fabric';
@@ -15,6 +15,7 @@ export const useRealtimeSync = (
   const isInitialLoad = useRef<boolean>(true);
   const cleanupRef = useRef<boolean>(false);
   const mountedRef = useRef<boolean>(true);
+  const channelRef = useRef<any>(null); // Track the channel for cleanup
   
   // Make sure we clear all drawings from database when requested
   useEffect(() => {
@@ -33,6 +34,7 @@ export const useRealtimeSync = (
   // Use useEffect cleanup to properly remove listeners
   useEffect(() => {
     mountedRef.current = true;
+    cleanupRef.current = false;
     
     return () => {
       mountedRef.current = false;
@@ -45,6 +47,16 @@ export const useRealtimeSync = (
       
       // Remove the Supabase channel for this board
       SupabaseSync.removeChannel(boardId);
+      
+      // Also clean up the local channel reference
+      if (channelRef.current) {
+        try {
+          supabase.removeChannel(channelRef.current);
+        } catch (err) {
+          console.error(`Error removing channel from ref for board ${boardId}:`, err);
+        }
+        channelRef.current = null;
+      }
     };
   }, [boardId]);
   
@@ -52,7 +64,6 @@ export const useRealtimeSync = (
     if (!fabricRef.current || !isEnabled || cleanupRef.current || !mountedRef.current) return;
 
     const canvas = fabricRef.current;
-    let channel: any = null;
     const boardSessionId = `${boardId}-${Date.now()}`;
     
     // Helper function to apply canvas updates
@@ -62,39 +73,50 @@ export const useRealtimeSync = (
       canvasUpdateManager.current.applyCanvasUpdate(canvas, objectData);
     };
     
-    // Load existing content from Supabase
-    const loadContent = async () => {
-      if (cleanupRef.current || !mountedRef.current) return;
+    // Load existing content from Supabase - with debounce to prevent rapid reloads
+    const loadContentDebounced = (() => {
+      let timeout: number | null = null;
       
-      if (isInitialLoad.current) {
-        console.log(`Initial load of content for board ${boardId}`);
-        const objectData = await SupabaseSync.loadExistingContent(boardId);
-        if (objectData && mountedRef.current) {
-          handleCanvasUpdate(objectData);
+      return () => {
+        if (cleanupRef.current || !mountedRef.current) return;
+        
+        // Clear any pending load
+        if (timeout !== null) {
+          window.clearTimeout(timeout);
         }
-        isInitialLoad.current = false;
-      } else {
-        console.log(`Reload of content for board ${boardId} (not initial)`);
-        const objectData = await SupabaseSync.loadExistingContent(boardId);
-        if (objectData && mountedRef.current) {
-          handleCanvasUpdate(objectData);
-        }
-      }
-    };
+        
+        // Schedule a new load with a delay
+        timeout = window.setTimeout(async () => {
+          if (cleanupRef.current || !mountedRef.current) return;
+          
+          console.log(`Loading content for board ${boardId}`);
+          const objectData = await SupabaseSync.loadExistingContent(boardId);
+          if (objectData && mountedRef.current && !cleanupRef.current) {
+            handleCanvasUpdate(objectData);
+          }
+          
+          isInitialLoad.current = false;
+          timeout = null;
+        }, isInitialLoad.current ? 300 : 800); // Longer delay for non-initial loads
+      };
+    })();
     
     // Initial load
-    loadContent();
+    loadContentDebounced();
 
     // Subscribe to realtime updates with a longer delay to prevent duplicate updates
     const subscribeTimer = setTimeout(() => {
       if (!cleanupRef.current && mountedRef.current) {
-        channel = SupabaseSync.subscribeToUpdates(
+        // Store the channel in the ref for proper cleanup
+        const channel = SupabaseSync.subscribeToUpdates(
           boardId,
           handleCanvasUpdate,
-          loadContent // Reload content on DELETE events
+          loadContentDebounced // Debounced reload content on DELETE events
         );
+        
+        channelRef.current = channel;
       }
-    }, 500);
+    }, 800); // Increased delay
 
     return () => {
       clearTimeout(subscribeTimer);
@@ -103,13 +125,19 @@ export const useRealtimeSync = (
       if (canvasUpdateManager.current) {
         canvasUpdateManager.current.cleanup();
       }
-      if (channel) {
+      
+      // Remove channel using both our static method and local ref
+      SupabaseSync.removeChannel(boardId);
+      
+      if (channelRef.current) {
         try {
-          supabase.removeChannel(channel);
+          supabase.removeChannel(channelRef.current);
         } catch (err) {
           console.error(`Error removing channel for board ${boardId}:`, err);
         }
+        channelRef.current = null;
       }
+      
       isInitialLoad.current = true;
     };
   }, [fabricRef, boardId, isEnabled]);
