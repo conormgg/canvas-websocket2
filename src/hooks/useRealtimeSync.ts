@@ -104,16 +104,22 @@ export const useRealtimeSync = (
         
         if (data && data.length > 0) {
           console.log(`Found existing content for board ${boardId}`);
+          // Fix here - ensure we're handling objectData properly as a Record<string, any>
           const objectData = data[0].object_data;
           
-          // Check if the content is different from what we already have
-          if (areCanvasStatesEqual(lastLoadedContentRef.current, objectData)) {
-            console.log('Content is identical to what we already have, skipping update');
-            return;
+          // Type guard to ensure objectData is a valid Record<string, any>
+          if (objectData && typeof objectData === 'object' && !Array.isArray(objectData)) {
+            // Check if the content is different from what we already have
+            if (areCanvasStatesEqual(lastLoadedContentRef.current, objectData)) {
+              console.log('Content is identical to what we already have, skipping update');
+              return;
+            }
+            
+            // Apply the update optimistically
+            applyCanvasUpdate(canvas, objectData as Record<string, any>);
+          } else {
+            console.error('Received invalid object data format:', objectData);
           }
-          
-          // Apply the update optimistically
-          applyCanvasUpdate(canvas, objectData);
         }
       } catch (err) {
         console.error('Failed to load existing content:', err);
@@ -147,8 +153,13 @@ export const useRealtimeSync = (
           if (payload.new && 'object_data' in payload.new) {
             const objectData = payload.new.object_data;
             
-            // Apply the update optimistically
-            applyCanvasUpdate(canvas, objectData);
+            // Add type guard to ensure objectData is a valid Record<string, any>
+            if (objectData && typeof objectData === 'object' && !Array.isArray(objectData)) {
+              // Apply the update optimistically
+              applyCanvasUpdate(canvas, objectData as Record<string, any>);
+            } else {
+              console.error('Received invalid object data format:', objectData);
+            }
           }
         }
       )
