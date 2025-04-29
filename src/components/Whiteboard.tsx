@@ -24,6 +24,7 @@ export const Whiteboard = ({
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
   const initComplete = useRef<boolean>(false);
   const syncEnabled = useRef<boolean>(true);
+  const unloadingRef = useRef<boolean>(false);
   
   // Track when the component is mounted
   const mounted = useRef<boolean>(false);
@@ -48,7 +49,7 @@ export const Whiteboard = ({
   const { undo, redo } = useCanvasHistory(fabricRef);
   
   // Enable real-time sync with proper dependency on the canvas reference
-  useRealtimeSync(fabricRef, id, syncEnabled.current);
+  useRealtimeSync(fabricRef, id, syncEnabled.current && !unloadingRef.current);
   
   // Set this board as active
   const setAsActiveBoard = useCallback(() => {
@@ -69,11 +70,14 @@ export const Whiteboard = ({
   // Run this effect only once after mounting
   useEffect(() => {
     mounted.current = true;
+    unloadingRef.current = false;
     
     // Set this board as active as soon as it's mounted
     setAsActiveBoard();
     
     return () => {
+      // Mark that we're unloading to prevent new updates
+      unloadingRef.current = true;
       mounted.current = false;
       
       // Clean up any resources specific to this board

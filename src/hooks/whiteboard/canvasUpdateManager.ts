@@ -8,10 +8,25 @@ export class CanvasUpdateManager {
   private updateQueue: Record<string, any>[] = [];
   private processingInterval: number | null = null;
   private updateIds: Set<string> = new Set(); // Track already processed updates
+  private lastUpdateTimestamp: number = 0;
 
   constructor() {
     // Initialize a background processing interval
     this.processingInterval = window.setInterval(() => this.processQueue(), 500);
+  }
+
+  // Generate a unique hash for an update to prevent duplicates
+  private generateContentHash(objectData: Record<string, any>): string {
+    // Extract only essential data for comparing updates
+    const essentialData = {
+      objects: objectData.objects?.map((obj: any) => ({
+        id: obj.id,
+        type: obj.type,
+        path: obj.path, // For path objects
+        points: obj.points // For polyline/polygon objects
+      }))
+    };
+    return JSON.stringify(essentialData);
   }
 
   // Apply updates optimistically using incremental updates
@@ -22,7 +37,20 @@ export class CanvasUpdateManager {
     }
 
     // Generate a content hash to identify this update
-    const contentHash = JSON.stringify(objectData);
+    const contentHash = this.generateContentHash(objectData);
+    
+    // Add rate limiting - don't process updates too quickly
+    const now = Date.now();
+    if (now - this.lastUpdateTimestamp < 100) {
+      console.log('Update received too quickly, throttling');
+      // Only queue if it's not already in the queue
+      if (!this.updateQueue.some(update => this.generateContentHash(update) === contentHash)) {
+        this.updateQueue.push(objectData);
+      }
+      return;
+    }
+    
+    this.lastUpdateTimestamp = now;
     
     // Skip if we've already processed this exact update
     if (this.updateIds.has(contentHash)) {
@@ -37,7 +65,7 @@ export class CanvasUpdateManager {
     }
     
     // Store the state we're loading for future comparison
-    this.lastLoadedContent = objectData;
+    this.lastLoadedContent = {...objectData};
     
     // Add to processed updates
     this.updateIds.add(contentHash);
@@ -51,13 +79,9 @@ export class CanvasUpdateManager {
     
     // If we're processing an update, queue this one
     if (this.isPendingUpdate) {
-      console.log('Update queued for later processing');
-      // Only queue if it's not a duplicate (by simple check)
-      const isDuplicate = this.updateQueue.some(
-        update => JSON.stringify(update) === contentHash
-      );
-      
-      if (!isDuplicate) {
+      // Only queue if it's not a duplicate
+      if (!this.updateQueue.some(update => this.generateContentHash(update) === contentHash)) {
+        console.log('Update queued for later processing');
         this.updateQueue.push(objectData);
       }
       return;
@@ -101,7 +125,8 @@ export class CanvasUpdateManager {
           if (this.updateQueue.length > 0 && canvas) {
             const nextUpdate = this.updateQueue.shift();
             if (nextUpdate) {
-              this.applyCanvasUpdate(canvas, nextUpdate);
+              // Wait a bit before processing the next update to prevent too rapid updates
+              setTimeout(() => this.applyCanvasUpdate(canvas, nextUpdate), 100);
             }
           }
         }

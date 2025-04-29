@@ -5,6 +5,8 @@ import { WhiteboardObject } from './types';
 
 export class SupabaseSync {
   private static channelCache = new Map<string, any>();
+  private static lastInsertTimestamps = new Map<string, number>();
+  private static MIN_UPDATE_INTERVAL = 500; // Minimum time between updates in ms
 
   // Load existing content from Supabase
   static async loadExistingContent(boardId: WhiteboardId): Promise<Record<string, any> | null> {
@@ -60,6 +62,9 @@ export class SupabaseSync {
     onUpdate: (data: Record<string, any>) => void, 
     onDeleteEvent: () => void
   ) {
+    // Generate a unique channel name for this specific board and session
+    const channelName = `whiteboard-sync-${boardId}-${Date.now()}`;
+    
     // Check if we already have a channel for this board
     const existingChannel = this.channelCache.get(boardId);
     if (existingChannel) {
@@ -67,11 +72,11 @@ export class SupabaseSync {
       return existingChannel;
     }
     
-    console.log(`Creating new subscription channel for board ${boardId}`);
+    console.log(`Creating new subscription channel ${channelName} for board ${boardId}`);
     
     // Set up realtime subscription for two-way sync with optimized event handling
     const channel = supabase
-      .channel(`whiteboard-sync-${boardId}-${Date.now()}`) // Add timestamp to make channel name unique
+      .channel(channelName)
       .on(
         'postgres_changes' as any,
         {
@@ -83,7 +88,17 @@ export class SupabaseSync {
             : `board_id=eq.${boardId}`
         },
         (payload: { new: WhiteboardObject; eventType: string }) => {
+          // Rate limit updates to prevent infinite loops
+          const now = Date.now();
+          const lastUpdateTime = this.lastInsertTimestamps.get(boardId) || 0;
+          
+          if (now - lastUpdateTime < this.MIN_UPDATE_INTERVAL) {
+            console.log(`Throttling update for board ${boardId}, too soon after last update`);
+            return;
+          }
+          
           console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
+          this.lastInsertTimestamps.set(boardId, now);
           
           if (payload.eventType === 'DELETE') {
             // For delete events, reload the latest state
@@ -120,5 +135,16 @@ export class SupabaseSync {
       this.channelCache.delete(boardId);
       console.log(`Removed channel for board ${boardId}`);
     }
+  }
+  
+  // Clear all cached channels - useful for cleanup
+  static removeAllChannels() {
+    for (const [boardId, channel] of this.channelCache.entries()) {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    }
+    this.channelCache.clear();
+    console.log('Removed all Supabase channels');
   }
 }

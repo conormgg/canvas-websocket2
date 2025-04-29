@@ -12,8 +12,17 @@ export const useCanvasPersistence = (
   isTeacherView: boolean
 ): ObjectModificationHandlers => {
   const persistenceUtilsRef = useRef<CanvasPersistenceUtils>(new CanvasPersistenceUtils());
+  const lastUpdateTimeRef = useRef<number>(0);
+  const MIN_UPDATE_INTERVAL = 300; // Minimum time between updates in ms
 
   const handleObjectModified = useCallback((canvas: Canvas) => {
+    // Rate limit updates to prevent update storms
+    const now = Date.now();
+    if (now - lastUpdateTimeRef.current < MIN_UPDATE_INTERVAL) {
+      return; // Skip this update if it's too soon
+    }
+    lastUpdateTimeRef.current = now;
+    
     persistenceUtilsRef.current.handleSyncedModification(canvas, id);
   }, [id]);
 
@@ -28,6 +37,13 @@ export const useCanvasPersistence = (
       hasControls: true,
       hasBorders: true
     });
+    
+    // Rate limit updates
+    const now = Date.now();
+    if (now - lastUpdateTimeRef.current < MIN_UPDATE_INTERVAL) {
+      return; // Skip this update if it's too soon
+    }
+    lastUpdateTimeRef.current = now;
     
     persistenceUtilsRef.current.handleSyncedModification(canvas, id);
   }, [id, fabricRef]);
@@ -52,7 +68,7 @@ export const useCanvasPersistence = (
         setTimeout(() => {
           handleCanvasChanged();
           pendingDrawUpdate = false;
-        }, 300);
+        }, MIN_UPDATE_INTERVAL);
       }
     };
 

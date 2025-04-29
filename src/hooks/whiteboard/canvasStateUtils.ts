@@ -8,9 +8,32 @@ export const areCanvasStatesEqual = ({ state1, state2 }: CanvasStateComparisonPr
   // Compare objects array length as a quick check
   if (state1.objects?.length !== state2.objects?.length) return false;
   
-  // For deeper comparison, we use JSON stringify but this could be optimized further
-  // by implementing a more efficient diff algorithm
-  return JSON.stringify(state1) === JSON.stringify(state2);
+  // For a deeper but efficient comparison, compare essential properties
+  // but not the entire object which could be large
+  try {
+    const objects1 = state1.objects || [];
+    const objects2 = state2.objects || [];
+    
+    // Different number of objects means they're not equal
+    if (objects1.length !== objects2.length) return false;
+    
+    // Create a map of object IDs for quick lookup
+    const objectMap = new Map();
+    objects1.forEach((obj: any) => {
+      if (obj.id) objectMap.set(obj.id, obj);
+    });
+    
+    // Check if all objects in state2 match objects in state1
+    for (const obj of objects2) {
+      if (!obj.id || !objectMap.has(obj.id)) return false;
+    }
+    
+    return true;
+  } catch (e) {
+    console.error('Error comparing canvas states:', e);
+    // Default to not equal in case of error
+    return false;
+  }
 };
 
 // Helper function to apply incremental updates to a canvas
@@ -60,12 +83,10 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
             
             // Mark as modified
             existingObj.setCoords();
-            canvas.fire('object:modified', { target: existingObj });
           }
         } else {
           // New object, need to add it
-          // Use fabric's ability to create objects from serialized data
-          // Using Promise-based API for Fabric.js v6
+          // Use Fabric.js v6 Promise API for enliven
           fabricUtil.enlivenObjects([objData])
             .then((enlivenedObjects: FabricObject[]) => {
               if (enlivenedObjects.length > 0) {

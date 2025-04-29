@@ -13,22 +13,40 @@ export const useRealtimeSync = (
 ) => {
   const canvasUpdateManager = useRef<CanvasUpdateManager>(new CanvasUpdateManager());
   const isInitialLoad = useRef<boolean>(true);
+  const cleanupRef = useRef<boolean>(false);
+  
+  // Use useEffect cleanup to properly remove listeners
+  useEffect(() => {
+    return () => {
+      cleanupRef.current = true;
+      
+      // Clean up the update manager
+      if (canvasUpdateManager.current) {
+        canvasUpdateManager.current.cleanup();
+      }
+      
+      // Remove the Supabase channel for this board
+      SupabaseSync.removeChannel(boardId);
+    };
+  }, [boardId]);
   
   useEffect(() => {
-    if (!fabricRef.current || !isEnabled) return;
+    if (!fabricRef.current || !isEnabled || cleanupRef.current) return;
 
     const canvas = fabricRef.current;
     let channel: any = null;
     
     // Helper function to apply canvas updates
     const handleCanvasUpdate = (objectData: Record<string, any>) => {
-      if (canvas && objectData) {
+      if (canvas && objectData && !cleanupRef.current) {
         canvasUpdateManager.current.applyCanvasUpdate(canvas, objectData);
       }
     };
     
     // Load existing content from Supabase
     const loadContent = async () => {
+      if (cleanupRef.current) return;
+      
       if (isInitialLoad.current) {
         console.log(`Initial load of content for board ${boardId}`);
         const objectData = await SupabaseSync.loadExistingContent(boardId);
@@ -48,16 +66,20 @@ export const useRealtimeSync = (
     // Initial load
     loadContent();
 
-    // Subscribe to realtime updates from Supabase with a delay to avoid duplicate updates
-    setTimeout(() => {
-      channel = SupabaseSync.subscribeToUpdates(
-        boardId,
-        handleCanvasUpdate,
-        loadContent // Reload content on DELETE events
-      );
+    // Subscribe to realtime updates with a short delay to prevent duplicate updates
+    const subscribeTimer = setTimeout(() => {
+      if (!cleanupRef.current) {
+        channel = SupabaseSync.subscribeToUpdates(
+          boardId,
+          handleCanvasUpdate,
+          loadContent // Reload content on DELETE events
+        );
+      }
     }, 300);
 
     return () => {
+      clearTimeout(subscribeTimer);
+      
       // Clean up resources
       if (canvasUpdateManager.current) {
         canvasUpdateManager.current.cleanup();
