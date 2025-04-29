@@ -5,6 +5,8 @@
 export class ContentHashGenerator {
   /**
    * Generate a unique hash for an update to prevent duplicates
+   * @param objectData The object data to generate a hash from
+   * @returns A string hash representing the object data
    */
   static generateContentHash(objectData: Record<string, any>): string {
     if (!objectData || !objectData.objects) return '';
