@@ -7,7 +7,6 @@ import { WhiteboardObject } from './persistenceTypes';
 
 export class CanvasStateManager {
   private lastSavedState: string | null = null;
-  private statesByBoardId: Map<string, string> = new Map();
 
   constructor() {
     this.lastSavedState = null;
@@ -19,14 +18,6 @@ export class CanvasStateManager {
 
   getLastSavedState(): string | null {
     return this.lastSavedState;
-  }
-
-  getBoardState(boardId: WhiteboardId): string | null {
-    return this.statesByBoardId.get(boardId) || null;
-  }
-
-  setBoardState(boardId: WhiteboardId, state: string): void {
-    this.statesByBoardId.set(boardId, state);
   }
 
   async saveCanvasState(canvas: Canvas, boardId: WhiteboardId): Promise<boolean> {
@@ -46,17 +37,14 @@ export class CanvasStateManager {
       const canvasData = canvas.toJSON();
       const canvasDataString = JSON.stringify(canvasData);
       
-      // Get board-specific saved state
-      const lastBoardState = this.getBoardState(boardId);
-      
       // Skip saving if the state hasn't changed
-      if (canvasDataString === lastBoardState) {
+      if (canvasDataString === this.lastSavedState) {
         console.log(`Canvas state unchanged for ${boardId}, skipping save`);
         return false;
       }
       
       console.log(`Saving canvas state for ${boardId}`);
-      this.setBoardState(boardId, canvasDataString);
+      this.lastSavedState = canvasDataString;
       
       const { error } = await (supabase
         .from('whiteboard_objects') as any)
@@ -80,51 +68,12 @@ export class CanvasStateManager {
   }
 
   syncBoardState(canvas: Canvas, sourceId: WhiteboardId, targetId: WhiteboardId): void {
-    console.log(`Syncing state from ${sourceId} to ${targetId}`);
-    
-    // Create a deep copy of the canvas data to avoid reference issues
-    const canvasData = JSON.parse(JSON.stringify(canvas.toJSON()));
-    
-    // For critical teacher1->student1 path, add extra logging and reliability measures
-    const isTeacher1ToStudent1 = sourceId === 'teacher1' && targetId === 'student1';
-    if (isTeacher1ToStudent1) {
-      console.log(`CRITICAL SYNC PATH: ${sourceId} -> ${targetId} with data:`, canvasData);
+    if (sourceId === "teacher2" && targetId === "student2") {
+      this.saveCanvasState(canvas, targetId);
+    } else if (sourceId === "student2" && targetId === "teacher2") {
+      this.saveCanvasState(canvas, targetId);
+    } else if (sourceId === "teacher1" && targetId === "student1") {
+      this.saveCanvasState(canvas, targetId);
     }
-    
-    // Insert the state into the target board immediately
-    (supabase
-      .from('whiteboard_objects') as any)
-      .insert({
-        board_id: targetId,
-        object_data: canvasData
-      } as WhiteboardObject)
-      .then(({ error }) => {
-        if (error) {
-          console.error(`Error syncing from ${sourceId} to ${targetId}:`, error);
-          toast.error(`Failed to sync from ${sourceId} to ${targetId}`);
-          
-          if (isTeacher1ToStudent1) {
-            // For critical path, try one more time after a short delay
-            setTimeout(() => {
-              console.log(`Retrying critical sync from ${sourceId} to ${targetId}`);
-              (supabase
-                .from('whiteboard_objects') as any)
-                .insert({
-                  board_id: targetId,
-                  object_data: canvasData
-                } as WhiteboardObject)
-                .then(({ error }) => {
-                  if (error) {
-                    console.error(`Retry failed for sync from ${sourceId} to ${targetId}:`, error);
-                  } else {
-                    console.log(`Retry succeeded for sync from ${sourceId} to ${targetId}`);
-                  }
-                });
-            }, 500);
-          }
-        } else {
-          console.log(`Successfully synced state from ${sourceId} to ${targetId}`);
-        }
-      });
   }
 }

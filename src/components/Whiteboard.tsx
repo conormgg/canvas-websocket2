@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
 import { useClipboardContext } from "@/context/ClipboardContext";
@@ -22,12 +22,7 @@ export const Whiteboard = ({
   const [inkThickness, setInkThickness] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
-  const initComplete = useRef<boolean>(false);
-  const syncEnabled = useRef<boolean>(true); // Always true now
-  const unloadingRef = useRef<boolean>(false);
-  
-  // Track when the component is mounted
-  const mounted = useRef<boolean>(false);
+  const [lastRender, setLastRender] = useState<number>(Date.now());
 
   const { setActiveCanvas } = useClipboardContext();
 
@@ -45,13 +40,23 @@ export const Whiteboard = ({
   });
   
   const isStudent = id.startsWith('student');
-
   const { handleObjectAdded, handleObjectModified } = useCanvasPersistence(fabricRef, id, isTeacherView);
   const { undo, redo } = useCanvasHistory(fabricRef);
   
-  // Enable real-time sync with proper dependency on the canvas reference - always enabled now
-  const { clearAllDrawings } = useRealtimeSync(fabricRef, id, true);
+  // Update useCanvas hook with handleObjectAdded after it's been declared
+  useCanvas({
+    id,
+    activeTool,
+    activeColor,
+    inkThickness,
+    isSplitScreen,
+    onZoomChange: setZoom,
+    onObjectAdded: handleObjectAdded,
+  });
   
+  // Always enable real-time sync
+  useRealtimeSync(fabricRef, id, true);
+
   // Set this board as active
   const setAsActiveBoard = useCallback(() => {
     if (fabricRef.current) {
@@ -59,73 +64,28 @@ export const Whiteboard = ({
       window.__wbActiveBoard = canvasRef.current;
       window.__wbActiveBoardId = id;
       setActiveCanvas(fabricRef.current, id);
-      
-      // Set initialization as complete
-      if (!initComplete.current) {
-        initComplete.current = true;
-        console.log(`Board ${id} initialization complete`);
-      }
     }
   }, [id, canvasRef, fabricRef, setActiveCanvas]);
 
-  // Clear cache on mount
   useEffect(() => {
-    function clearChannelCache() {
-      // Clear all supabase channel cache on mount to ensure fresh connections
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('supabase-channel-')) {
-          localStorage.removeItem(key);
-        }
-      }
-      
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && key.startsWith('supabase-channel-')) {
-          sessionStorage.removeItem(key);
-        }
-      }
-    }
-    
-    // Clear cache immediately
-    clearChannelCache();
-  }, []);
-
-  // Run this effect only once after mounting
-  useEffect(() => {
-    mounted.current = true;
-    unloadingRef.current = false;
-    
     // Set this board as active as soon as it's mounted
     setAsActiveBoard();
     
-    // Clear cache to ensure fresh data on refresh
-    const channel = window.sessionStorage.getItem(`supabase-channel-whiteboard-sync-${id}`);
-    if (channel) {
-      window.sessionStorage.removeItem(`supabase-channel-whiteboard-sync-${id}`);
-      console.log(`Cleared channel cache for ${id}`);
-    }
-    
-    // Set up unloading detection to prevent memory leaks and infinite loops
-    window.addEventListener('beforeunload', () => {
-      unloadingRef.current = true;
-    });
-    
-    return () => {
-      // Mark that we're unloading to prevent new updates
-      unloadingRef.current = true;
-      mounted.current = false;
+    // Refresh render periodically but less frequently
+    const checkInterval = setInterval(() => {
+      const now = Date.now();
       
-      // Clean up any resources specific to this board
-      console.log(`Unmounting board ${id}`);
-      
-      // Clear the canvas reference to prevent memory leaks
-      if (window.__wbActiveBoardId === id) {
-        window.__wbActiveBoard = null;
-        window.__wbActiveBoardId = null;
+      // Only re-render every 10 seconds at most to reduce unnecessary updates
+      if (now - lastRender > 10000) { // 10 seconds
+        if (fabricRef.current && canvasRef.current) {
+          fabricRef.current.renderAll();
+          setLastRender(now);
+        }
       }
-    };
-  }, [setAsActiveBoard, id]);
+    }, 10000); // Check every 10 seconds
+    
+    return () => clearInterval(checkInterval);
+  }, [fabricRef, canvasRef, setAsActiveBoard, lastRender]);
   
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -155,22 +115,6 @@ export const Whiteboard = ({
       toast("Redo operation performed");
     } else {
       toast("Nothing to redo");
-    }
-  };
-  
-  const handleClearAll = () => {
-    if (fabricRef.current) {
-      fabricRef.current.clear();
-      fabricRef.current.backgroundColor = "#ffffff";
-      fabricRef.current.renderAll();
-      
-      // Also clear database if admin
-      if (id === "teacher1") {
-        clearAllDrawings();
-        toast("All drawings cleared from database");
-      } else {
-        toast("Canvas cleared");
-      }
     }
   };
 
@@ -203,14 +147,6 @@ export const Whiteboard = ({
         tabIndex={0}
         data-board-id={id}
       />
-      {id === "teacher1" && (
-        <button 
-          className="absolute top-16 right-2 bg-red-500 text-white px-4 py-2 rounded opacity-50 hover:opacity-100"
-          onClick={handleClearAll}
-        >
-          Clear All Data
-        </button>
-      )}
     </div>
   );
 };

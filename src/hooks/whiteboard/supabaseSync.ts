@@ -1,54 +1,100 @@
 
+import { supabase } from '@/integrations/supabase/client';
 import { WhiteboardId } from '@/types/canvas';
-import { SupabaseSyncManager } from './realtimeSync/supabaseSyncManager';
+import { WhiteboardObject } from './types';
 
-/**
- * Main class for Supabase synchronization, now acting as a facade for the refactored logic
- */
 export class SupabaseSync {
-  /**
-   * Clear database of all whiteboard drawings
-   */
-  static async clearAllWhiteboardData(): Promise<void> {
-    return SupabaseSyncManager.clearAllWhiteboardData();
-  }
-
-  /**
-   * Load existing content from Supabase
-   */
+  // Load existing content from Supabase
   static async loadExistingContent(boardId: WhiteboardId): Promise<Record<string, any> | null> {
-    return SupabaseSyncManager.loadExistingContent(boardId);
+    try {
+      console.log(`Loading existing content for board: ${boardId}`);
+      
+      // For board 2, check both teacher2 and student2 content
+      const query = (boardId === "teacher2" || boardId === "student2") 
+        ? supabase
+            .from('whiteboard_objects')
+            .select('object_data')
+            .in('board_id', ['teacher2', 'student2'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+        : supabase
+            .from('whiteboard_objects')
+            .select('object_data')
+            .eq('board_id', boardId)
+            .order('created_at', { ascending: false })
+            .limit(1);
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching existing content:', error);
+        return null;
+      }
+      
+      if (data && data.length > 0) {
+        console.log(`Found existing content for board ${boardId}`);
+        // Ensure we're handling objectData properly as a Record<string, any>
+        const objectData = data[0].object_data;
+        
+        // Type guard to ensure objectData is a valid Record<string, any>
+        if (objectData && typeof objectData === 'object' && !Array.isArray(objectData)) {
+          return objectData as Record<string, any>;
+        } else {
+          console.error('Received invalid object data format:', objectData);
+          return null;
+        }
+      }
+      
+      return null;
+    } catch (err) {
+      console.error('Failed to load existing content:', err);
+      return null;
+    }
   }
 
-  /**
-   * Helper method to get a stable channel name based on boardId
-   */
-  private static getChannelName(boardId: WhiteboardId): string {
-    return `whiteboard-sync-${boardId}`;
-  }
-
-  /**
-   * Subscribe to realtime updates with improved infinite loop protection
-   */
+  // Subscribe to realtime updates
   static subscribeToUpdates(
     boardId: WhiteboardId, 
     onUpdate: (data: Record<string, any>) => void, 
     onDeleteEvent: () => void
   ) {
-    return SupabaseSyncManager.subscribeToUpdates(boardId, onUpdate, onDeleteEvent);
-  }
-  
-  /**
-   * Helper method to clean up channel cache
-   */
-  static removeChannel(boardId: WhiteboardId) {
-    SupabaseSyncManager.removeChannel(boardId);
-  }
-  
-  /**
-   * Clear all cached channels - useful for cleanup
-   */
-  static removeAllChannels() {
-    SupabaseSyncManager.removeAllChannels();
+    // Set up realtime subscription for two-way sync with optimized event handling
+    const channel = supabase
+      .channel(`whiteboard-sync-${boardId}`)
+      .on(
+        'postgres_changes' as any,
+        {
+          event: '*',
+          schema: 'public',
+          table: 'whiteboard_objects',
+          filter: boardId === "teacher2" || boardId === "student2"
+            ? `board_id=in.(teacher2,student2)`
+            : `board_id=eq.${boardId}`
+        },
+        (payload: { new: WhiteboardObject; eventType: string }) => {
+          console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
+          
+          if (payload.eventType === 'DELETE') {
+            // For delete events, reload the latest state
+            onDeleteEvent();
+            return;
+          }
+          
+          if (payload.new && 'object_data' in payload.new) {
+            const objectData = payload.new.object_data;
+            
+            // Add type guard to ensure objectData is a valid Record<string, any>
+            if (objectData && typeof objectData === 'object' && !Array.isArray(objectData)) {
+              // Apply the update optimistically
+              onUpdate(objectData as Record<string, any>);
+            } else {
+              console.error('Received invalid object data format:', objectData);
+            }
+          }
+        }
+      )
+      .subscribe();
+      
+    return channel;
   }
 }
