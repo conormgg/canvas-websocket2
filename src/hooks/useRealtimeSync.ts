@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WhiteboardId } from '@/types/canvas';
-import { Canvas, FabricObject } from 'fabric';
+import { Canvas, FabricObject, util as fabricUtil } from 'fabric';
 
 // Define the table structure since we can't modify the auto-generated types
 interface WhiteboardObject {
@@ -11,6 +11,11 @@ interface WhiteboardObject {
   created_at: string;
   updated_at: string;
   id: string;
+}
+
+// Define a custom type to include the id property fabric.js doesn't expose in TypeScript
+interface ExtendedFabricObject extends FabricObject {
+  id?: string;
 }
 
 // Helper function to compare two canvas states
@@ -38,12 +43,13 @@ const applyIncrementalUpdate = (canvas: Canvas, newState: Record<string, any>): 
       const currentVPT = canvas.viewportTransform ? [...canvas.viewportTransform] : null;
       
       // We'll update objects incrementally without clearing the canvas
-      const currentObjectsMap = new Map();
+      const currentObjectsMap = new Map<string, ExtendedFabricObject>();
       
       // Index current objects by their IDs for quick lookup
-      canvas.getObjects().forEach(obj => {
-        if (obj.id) {
-          currentObjectsMap.set(obj.id, obj);
+      canvas.getObjects().forEach((obj) => {
+        const extendedObj = obj as ExtendedFabricObject;
+        if (extendedObj.id) {
+          currentObjectsMap.set(extendedObj.id, extendedObj);
         }
       });
       
@@ -59,23 +65,25 @@ const applyIncrementalUpdate = (canvas: Canvas, newState: Record<string, any>): 
           // Remove from map to track which ones were processed
           currentObjectsMap.delete(objId);
           
-          // Update the object properties instead of replacing it
-          // This prevents flickering by maintaining the object's presence
-          Object.keys(objData).forEach(key => {
-            if (key !== 'id') {
-              existingObj.set(key, objData[key]);
-            }
-          });
-          
-          // Mark as modified
-          existingObj.setCoords();
-          canvas.fire('object:modified', { target: existingObj });
+          if (existingObj) {
+            // Update the object properties instead of replacing it
+            // This prevents flickering by maintaining the object's presence
+            Object.keys(objData).forEach(key => {
+              if (key !== 'id') {
+                existingObj.set(key, objData[key]);
+              }
+            });
+            
+            // Mark as modified
+            existingObj.setCoords();
+            canvas.fire('object:modified', { target: existingObj });
+          }
         } else {
           // New object, need to add it
           // Use fabric's ability to create objects from serialized data
-          fabric.util.enlivenObjects([objData], (enlivenedObjects: FabricObject[]) => {
+          fabricUtil.enlivenObjects([objData], (enlivenedObjects: FabricObject[]) => {
             if (enlivenedObjects.length > 0) {
-              const newObj = enlivenedObjects[0];
+              const newObj = enlivenedObjects[0] as ExtendedFabricObject;
               if (!newObj.id && objId) {
                 // Ensure the ID is preserved
                 newObj.id = objId;
@@ -95,7 +103,7 @@ const applyIncrementalUpdate = (canvas: Canvas, newState: Record<string, any>): 
       }
       
       // Restore viewport transform if we had one
-      if (currentVPT) {
+      if (currentVPT && currentVPT.length === 6) {
         canvas.setViewportTransform(currentVPT);
       }
       
