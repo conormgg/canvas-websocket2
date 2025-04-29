@@ -70,11 +70,12 @@ export class SupabaseSync {
     }
     
     // Set up realtime subscription for two-way sync with optimized event handling
+    // Fixed: Using the correct API format for the current Supabase client version
     const channel = supabase
       .channel(channelKey)
       .on(
-        'postgres_changes',
-        {
+        'postgres_changes', 
+        { 
           event: '*',
           schema: 'public',
           table: 'whiteboard_objects',
@@ -82,7 +83,7 @@ export class SupabaseSync {
             ? `board_id=in.(teacher2,student2)`
             : `board_id=eq.${boardId}`
         },
-        (payload: { new: WhiteboardObject; eventType: string }) => {
+        (payload) => {
           console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
           
           if (payload.eventType === 'DELETE') {
