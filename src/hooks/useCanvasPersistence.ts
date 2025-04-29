@@ -42,6 +42,7 @@ export const useCanvasPersistence = (
     
     if (!isProcessingModification.current) {
       isProcessingModification.current = true;
+      // FIX: Remove the argument here, just call processNextModification without arguments
       processNextModification();
     }
   }, [processNextModification]);

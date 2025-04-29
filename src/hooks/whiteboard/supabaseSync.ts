@@ -88,61 +88,60 @@ export class SupabaseSync {
     // Create a channel for this board
     const channel = supabase.channel(`board-${boardId}`);
     
-    // Subscribe to INSERT events
-    channel
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'whiteboard_objects',
-          filter: `board_id=eq.${boardId}`
-        },
-        (payload: any) => {
-          console.log(`Received update for ${boardId}:`, payload);
-          
-          const objectData = payload.new.object_data;
-          
-          // Check if this is a duplicate update by comparing with cache
-          const cachedContent = this.contentCache.get(boardId);
-          if (cachedContent === JSON.stringify(objectData)) {
-            console.log(`Skipping duplicate update for ${boardId}`);
-            return;
-          }
-          
-          // Update cache
-          this.contentCache.set(boardId, JSON.stringify(objectData));
-          
-          // Track update source to prevent loops
-          const sourceId = `update-${boardId}-${Date.now()}`;
-          this.updateSources.set(sourceId, Date.now());
-          
-          // Clean up old sources (after 10 seconds)
-          setTimeout(() => {
-            this.updateSources.delete(sourceId);
-          }, 10000);
-          
-          // Apply update
-          onUpdate(objectData);
+    // Subscribe to INSERT events - updated for Supabase client v2
+    channel.on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'whiteboard_objects',
+        filter: `board_id=eq.${boardId}`
+      },
+      (payload: any) => {
+        console.log(`Received update for ${boardId}:`, payload);
+        
+        const objectData = payload.new.object_data;
+        
+        // Check if this is a duplicate update by comparing with cache
+        const cachedContent = this.contentCache.get(boardId);
+        if (cachedContent === JSON.stringify(objectData)) {
+          console.log(`Skipping duplicate update for ${boardId}`);
+          return;
         }
-      )
-      // Subscribe to DELETE events
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'whiteboard_objects',
-          filter: `board_id=eq.${boardId}`
-        },
-        () => {
-          console.log(`Received DELETE event for ${boardId}`);
-          // Clear cache
-          this.contentCache.delete(boardId);
-          // Reload content
-          onDelete();
-        }
-      );
+        
+        // Update cache
+        this.contentCache.set(boardId, JSON.stringify(objectData));
+        
+        // Track update source to prevent loops
+        const sourceId = `update-${boardId}-${Date.now()}`;
+        this.updateSources.set(sourceId, Date.now());
+        
+        // Clean up old sources (after 10 seconds)
+        setTimeout(() => {
+          this.updateSources.delete(sourceId);
+        }, 10000);
+        
+        // Apply update
+        onUpdate(objectData);
+      }
+    )
+    // Subscribe to DELETE events - updated for Supabase client v2
+    .on(
+      'postgres_changes',
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'whiteboard_objects',
+        filter: `board_id=eq.${boardId}`
+      },
+      () => {
+        console.log(`Received DELETE event for ${boardId}`);
+        // Clear cache
+        this.contentCache.delete(boardId);
+        // Reload content
+        onDelete();
+      }
+    );
     
     // Save the channel for future reference
     this.activeChannels.set(boardId, channel);
