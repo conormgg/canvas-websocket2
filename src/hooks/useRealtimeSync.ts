@@ -24,6 +24,94 @@ const areCanvasStatesEqual = (state1: any, state2: any): boolean => {
   return JSON.stringify(state1) === JSON.stringify(state2);
 };
 
+// Helper function to apply incremental updates to a canvas
+const applyIncrementalUpdate = (canvas: Canvas, newState: Record<string, any>): void => {
+  if (!newState || !newState.objects || !Array.isArray(newState.objects)) {
+    console.error('Invalid canvas state data for incremental update');
+    return;
+  }
+
+  try {
+    // Only clear if there are objects to replace them with
+    if (newState.objects.length > 0) {
+      // Store current viewport transform
+      const currentVPT = canvas.viewportTransform ? [...canvas.viewportTransform] : null;
+      
+      // We'll update objects incrementally without clearing the canvas
+      const currentObjectsMap = new Map();
+      
+      // Index current objects by their IDs for quick lookup
+      canvas.getObjects().forEach(obj => {
+        if (obj.id) {
+          currentObjectsMap.set(obj.id, obj);
+        }
+      });
+      
+      // Process each object in the new state
+      newState.objects.forEach((objData: any) => {
+        // If we have an ID field, we can use it to match objects
+        const objId = objData.id || null;
+        
+        if (objId && currentObjectsMap.has(objId)) {
+          // Object exists, update its properties
+          const existingObj = currentObjectsMap.get(objId);
+          
+          // Remove from map to track which ones were processed
+          currentObjectsMap.delete(objId);
+          
+          // Update the object properties instead of replacing it
+          // This prevents flickering by maintaining the object's presence
+          Object.keys(objData).forEach(key => {
+            if (key !== 'id') {
+              existingObj.set(key, objData[key]);
+            }
+          });
+          
+          // Mark as modified
+          existingObj.setCoords();
+          canvas.fire('object:modified', { target: existingObj });
+        } else {
+          // New object, need to add it
+          // Use fabric's ability to create objects from serialized data
+          fabric.util.enlivenObjects([objData], (enlivenedObjects: FabricObject[]) => {
+            if (enlivenedObjects.length > 0) {
+              const newObj = enlivenedObjects[0];
+              if (!newObj.id && objId) {
+                // Ensure the ID is preserved
+                newObj.id = objId;
+              }
+              canvas.add(newObj);
+            }
+          }, 'fabric');
+        }
+      });
+      
+      // Objects remaining in the map weren't in the new state, remove them
+      // Only if the new state has a complete list of objects
+      if (newState.hasOwnProperty('objects') && Array.isArray(newState.objects)) {
+        currentObjectsMap.forEach(obj => {
+          canvas.remove(obj);
+        });
+      }
+      
+      // Restore viewport transform if we had one
+      if (currentVPT) {
+        canvas.setViewportTransform(currentVPT);
+      }
+      
+      // Update background if it changed
+      if (newState.background && canvas.backgroundColor !== newState.background) {
+        canvas.backgroundColor = newState.background;
+      }
+      
+      // Render the changes without a full reload
+      canvas.renderAll();
+    }
+  } catch (err) {
+    console.error('Error applying incremental update:', err);
+  }
+};
+
 export const useRealtimeSync = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   boardId: WhiteboardId,
@@ -32,7 +120,7 @@ export const useRealtimeSync = (
   const lastLoadedContentRef = useRef<Record<string, any> | null>(null);
   const pendingUpdatesRef = useRef<boolean>(false);
   
-  // Apply updates optimistically
+  // Apply updates optimistically using incremental updates
   const applyCanvasUpdate = (canvas: Canvas, objectData: Record<string, any>) => {
     // Skip if we're already processing updates or if the content is the same
     if (pendingUpdatesRef.current || areCanvasStatesEqual(lastLoadedContentRef.current, objectData)) {
@@ -46,24 +134,32 @@ export const useRealtimeSync = (
     // Store the state we're loading
     lastLoadedContentRef.current = objectData;
     
-    // Apply the update without blocking
+    // Apply the update without blocking and without flickering
     setTimeout(() => {
       try {
-        canvas.loadFromJSON(objectData, () => {
-          // Make all objects interactive after loading
-          canvas.getObjects().forEach(obj => {
-            obj.set({
-              selectable: true,
-              evented: true,
-              hasControls: true,
-              hasBorders: true
-            });
-          });
-          canvas.renderAll();
-          console.log(`Canvas updated for board ${boardId}`);
-        });
+        // Use incremental update instead of full reload
+        applyIncrementalUpdate(canvas, objectData);
+        console.log(`Canvas updated incrementally for board ${boardId}`);
       } catch (err) {
         console.error('Failed to apply canvas update:', err);
+        // Fallback to full reload if incremental update fails
+        try {
+          canvas.loadFromJSON(objectData, () => {
+            // Make all objects interactive after loading
+            canvas.getObjects().forEach(obj => {
+              obj.set({
+                selectable: true,
+                evented: true,
+                hasControls: true,
+                hasBorders: true
+              });
+            });
+            canvas.renderAll();
+            console.log(`Canvas updated (fallback method) for board ${boardId}`);
+          });
+        } catch (fallbackErr) {
+          console.error('Fallback update also failed:', fallbackErr);
+        }
       } finally {
         // Clear the pending flag
         pendingUpdatesRef.current = false;
