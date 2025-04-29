@@ -26,10 +26,13 @@ export class SupabaseSyncManager {
    * Get the appropriate filter string for a board
    */
   private static getBoardFilter(boardId: WhiteboardId): string {
-    if (boardId === "teacher2" || boardId === "student2") {
-      return `board_id=in.(teacher2,student2)`;
-    } else if (boardId === "teacher1" || boardId === "student1") {
+    // For teacher1/student1 pair (key focus)
+    if (boardId === "teacher1" || boardId === "student1") {
       return `board_id=in.(teacher1,student1)`;
+    } 
+    // For other teacher/student pairs
+    else if (boardId === "teacher2" || boardId === "student2") {
+      return `board_id=in.(teacher2,student2)`;
     } else if (boardId === "teacher3" || boardId === "student3") {
       return `board_id=in.(teacher3,student3)`;
     } else if (boardId === "teacher4" || boardId === "student4") {
@@ -69,7 +72,7 @@ export class SupabaseSyncManager {
     // Create and configure the channel with TypeScript compliant approach
     const channel = ChannelManager.createChannel(boardId);
 
-    // Get the appropriate filter for this board
+    // Get the appropriate filter for this board - ensures we catch both teacher and student events
     const boardFilter = this.getBoardFilter(boardId);
     
     channel.on(

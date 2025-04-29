@@ -68,6 +68,29 @@ export const Whiteboard = ({
     }
   }, [id, canvasRef, fabricRef, setActiveCanvas]);
 
+  // Clear cache on mount
+  useEffect(() => {
+    function clearChannelCache() {
+      // Clear all supabase channel cache on mount to ensure fresh connections
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('supabase-channel-')) {
+          localStorage.removeItem(key);
+        }
+      }
+      
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('supabase-channel-')) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    }
+    
+    // Clear cache immediately
+    clearChannelCache();
+  }, []);
+
   // Run this effect only once after mounting
   useEffect(() => {
     mounted.current = true;

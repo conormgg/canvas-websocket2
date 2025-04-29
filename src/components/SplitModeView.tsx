@@ -1,6 +1,8 @@
 
 import { Whiteboard } from "./Whiteboard";
-import { SyncToggle } from "./SyncToggle";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const SplitModeView = () => {
   // Define only the first two pairs of teacher-student boards
@@ -8,6 +10,42 @@ export const SplitModeView = () => {
     { teacher: "teacher1", student: "student1" },
     { teacher: "teacher2", student: "student2" },
   ];
+
+  // Add clear cache button functionality
+  const handleClearCache = () => {
+    // Clear all supabase channel cache
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('supabase-channel-')) {
+        localStorage.removeItem(key);
+      }
+    }
+    
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith('supabase-channel-')) {
+        sessionStorage.removeItem(key);
+      }
+    }
+
+    // Close all active Supabase connections to force a reconnect
+    supabase.realtime.disconnect();
+    
+    toast.success("Cache cleared successfully. Refresh the page to reconnect.");
+  };
+
+  // Clear cache on mount to ensure fresh connections
+  useEffect(() => {
+    handleClearCache();
+    
+    // Show a toast to inform user
+    toast("Sync is enabled between teacher and student boards");
+    
+    return () => {
+      // Clean up Supabase connections when component unmounts
+      supabase.realtime.disconnect();
+    };
+  }, []);
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#E8EDF5] p-4 flex flex-col gap-4">
@@ -17,6 +55,12 @@ export const SplitModeView = () => {
             Real-time synchronization active between teacher and student boards
           </span>
         </div>
+        <button 
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          onClick={handleClearCache}
+        >
+          Clear Cache & Reconnect
+        </button>
       </div>
       
       <div className="flex flex-col gap-4 h-[calc(100vh-180px)]">

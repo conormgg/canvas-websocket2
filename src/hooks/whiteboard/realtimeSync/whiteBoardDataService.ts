@@ -37,18 +37,31 @@ export class WhiteboardDataService {
       
       // For board pairs, check both boards' content
       let query;
-      if (boardId === "teacher2" || boardId === "student2") {
+      
+      // Special case for teacher1/student1 that we want to ensure works correctly
+      if (boardId === "teacher1" || boardId === "student1") {
+        // For teacher1, prioritize teacher1 content
+        if (boardId === "teacher1") {
+          query = supabase
+            .from('whiteboard_objects')
+            .select('object_data, board_id')
+            .eq('board_id', 'teacher1')
+            .order('created_at', { ascending: false })
+            .limit(1);
+        } else {
+          // For student1, try to get student1 content first, then fall back to teacher1
+          query = supabase
+            .from('whiteboard_objects')
+            .select('object_data, board_id')
+            .in('board_id', ['student1', 'teacher1'])
+            .order('created_at', { ascending: false })
+            .limit(1);
+        }
+      } else if (boardId === "teacher2" || boardId === "student2") {
         query = supabase
           .from('whiteboard_objects')
           .select('object_data, board_id')
           .in('board_id', ['teacher2', 'student2'])
-          .order('created_at', { ascending: false })
-          .limit(1);
-      } else if (boardId === "teacher1" || boardId === "student1") {
-        query = supabase
-          .from('whiteboard_objects')
-          .select('object_data, board_id')
-          .in('board_id', ['teacher1', 'student1'])
           .order('created_at', { ascending: false })
           .limit(1);
       } else if (boardId === "teacher3" || boardId === "student3") {

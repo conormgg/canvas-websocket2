@@ -68,29 +68,25 @@ export class CanvasStateManager {
   }
 
   syncBoardState(canvas: Canvas, sourceId: WhiteboardId, targetId: WhiteboardId): void {
-    if ((sourceId === "teacher2" && targetId === "student2") || 
-        (sourceId === "student2" && targetId === "teacher2") || 
-        (sourceId === "teacher1" && targetId === "student1")) {
-      
-      console.log(`Syncing state from ${sourceId} to ${targetId}`);
-      
-      // Create a deep copy of the canvas data to avoid reference issues
-      const canvasData = JSON.parse(JSON.stringify(canvas.toJSON()));
-      
-      // Insert the state into the target board immediately
-      (supabase
-        .from('whiteboard_objects') as any)
-        .insert({
-          board_id: targetId,
-          object_data: canvasData
-        } as WhiteboardObject)
-        .then(({ error }) => {
-          if (error) {
-            console.error(`Error syncing from ${sourceId} to ${targetId}:`, error);
-          } else {
-            console.log(`Successfully synced state from ${sourceId} to ${targetId}`);
-          }
-        });
-    }
+    console.log(`Syncing state from ${sourceId} to ${targetId}`);
+    
+    // Create a deep copy of the canvas data to avoid reference issues
+    const canvasData = JSON.parse(JSON.stringify(canvas.toJSON()));
+    
+    // Insert the state into the target board immediately
+    (supabase
+      .from('whiteboard_objects') as any)
+      .insert({
+        board_id: targetId,
+        object_data: canvasData
+      } as WhiteboardObject)
+      .then(({ error }) => {
+        if (error) {
+          console.error(`Error syncing from ${sourceId} to ${targetId}:`, error);
+          toast.error(`Failed to sync from ${sourceId} to ${targetId}`);
+        } else {
+          console.log(`Successfully synced state from ${sourceId} to ${targetId}`);
+        }
+      });
   }
 }

@@ -1,4 +1,3 @@
-
 import { Canvas } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
 import { CanvasStateManager } from './canvasStateManager';
@@ -36,10 +35,10 @@ export class CanvasPersistenceUtils {
     console.log(`Canvas ${boardId} modified, queuing save`);
     this.debouncedSave(canvas, boardId);
     
-    // Always sync between teacher and student boards regardless of toggle status
-    // Match each teacher board to its corresponding student board
+    // Sync from teacher to student
     if (boardId === "teacher1") {
       console.log("Syncing teacher1 changes to student1");
+      // Force immediate sync without debounce for critical teacher->student path
       this.canvasStateManager.syncBoardState(canvas, boardId, "student1");
     } else if (boardId === "teacher2") {
       console.log("Syncing teacher2 changes to student2");
@@ -55,7 +54,8 @@ export class CanvasPersistenceUtils {
       this.canvasStateManager.syncBoardState(canvas, boardId, "student5");
     }
     
-    // Also sync in the reverse direction for complete bidirectional sync
+    // We'll keep the reverse sync direction for completeness, but the primary focus
+    // is on teacher1->student1 sync working correctly
     else if (boardId === "student1") {
       console.log("Syncing student1 changes to teacher1");
       this.canvasStateManager.syncBoardState(canvas, boardId, "teacher1");

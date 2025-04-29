@@ -27,7 +27,32 @@ export const useRealtimeSync = (
       const newUrl = `${window.location.pathname}${urlParams.toString() ? `?${urlParams.toString()}` : ''}`;
       window.history.replaceState({}, '', newUrl);
     }
+    
+    // Clear any cached channel data to ensure fresh connections
+    clearAllChannelCache();
+    
+    return () => {
+      clearAllChannelCache();
+    };
   }, []);
+  
+  // Clear all channel cache to ensure fresh connections on every mount
+  const clearAllChannelCache = () => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('supabase-channel-')) {
+        localStorage.removeItem(key);
+      }
+    }
+    
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith('supabase-channel-')) {
+        sessionStorage.removeItem(key);
+      }
+    }
+    console.log('Cleared all channel cache');
+  };
   
   // Use useEffect cleanup to properly remove listeners
   useEffect(() => {
