@@ -1,15 +1,61 @@
-
 import { Canvas, FabricObject } from 'fabric';
-import { useCallback } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { useDrawingThrottle } from './useDrawingThrottle';
-import { useCanvasStateComparison } from './useCanvasStateComparison';
+
+// Extract the state comparison logic into a non-hook function
+const compareCanvasStates = (() => {
+  let lastSavedState: string | null = null;
+  
+  return {
+    hasStateChanged: (canvas: Canvas): boolean => {
+      try {
+        // Use type assertion to fix TypeScript error while preserving functionality
+        const currentState = JSON.stringify((canvas.toJSON as any)(['id']));
+        
+        // If state is unchanged, return false to skip save
+        if (currentState === lastSavedState) {
+          return false;
+        }
+        
+        // Update the saved state and return true to indicate change
+        lastSavedState = currentState;
+        return true;
+      } catch (err) {
+        console.error('Error comparing canvas states:', err);
+        // Default to saving if we can't compare
+        return true;
+      }
+    },
+    setInitialState: (canvas: Canvas) => {
+      try {
+        // Use type assertion to fix TypeScript error while preserving functionality
+        lastSavedState = JSON.stringify((canvas.toJSON as any)(['id']));
+      } catch (err) {
+        console.error('Error capturing initial canvas state:', err);
+      }
+    },
+    forceStateUpdate: () => {
+      // Modify the saved state to force next comparison to detect a change
+      if (lastSavedState) {
+        try {
+          const state = JSON.parse(lastSavedState);
+          state.timestamp = Date.now(); // Add or update timestamp
+          lastSavedState = JSON.stringify(state);
+        } catch (err) {
+          console.error('Error forcing state update:', err);
+          lastSavedState = null;
+        }
+      }
+    },
+    getLastSavedState: () => lastSavedState
+  };
+})();
 
 export interface CanvasEventOptions {
   onStateChange: (canvas: Canvas) => void;
 }
 
 export const useCanvasEventHandlers = ({ onStateChange }: CanvasEventOptions) => {
-  const { hasStateChanged } = useCanvasStateComparison();
   const { 
     handleDrawingStart, 
     handleDrawingEnd, 
@@ -18,19 +64,20 @@ export const useCanvasEventHandlers = ({ onStateChange }: CanvasEventOptions) =>
     cleanupTimeouts
   } = useDrawingThrottle({ minUpdateInterval: 500 });
   
+  // Use the non-hook state comparison function
   const handleCanvasChanged = useCallback((canvas: Canvas) => {
-    if (hasStateChanged(canvas)) {
+    if (compareCanvasStates.hasStateChanged(canvas)) {
       onStateChange(canvas);
     }
-  }, [hasStateChanged, onStateChange]);
+  }, [onStateChange]);
   
   const handlePathCreated = useCallback((canvas: Canvas) => {
     console.log(`Path created on canvas, queuing save`);
     // Only save when drawing is finished, not during every path update
-    if (hasStateChanged(canvas)) {
+    if (compareCanvasStates.hasStateChanged(canvas)) {
       handleCanvasChanged(canvas);
     }
-  }, [hasStateChanged, handleCanvasChanged]);
+  }, [handleCanvasChanged]);
   
   const handleMouseDown = useCallback((canvas: Canvas) => {
     if (canvas.isDrawingMode) {
@@ -41,28 +88,28 @@ export const useCanvasEventHandlers = ({ onStateChange }: CanvasEventOptions) =>
   const handleMouseUp = useCallback((canvas: Canvas) => {
     if (canvas.isDrawingMode) {
       handleDrawingEnd();
-      if (hasStateChanged(canvas)) {
+      if (compareCanvasStates.hasStateChanged(canvas)) {
         handleCanvasChanged(canvas);
       }
     }
-  }, [handleDrawingEnd, hasStateChanged, handleCanvasChanged]);
+  }, [handleDrawingEnd, handleCanvasChanged]);
   
   const handleDrawingEvents = useCallback((canvas: Canvas) => {
     if (shouldUpdateWhileDrawing()) {
       scheduleUpdateAfterDrawing(() => {
-        if (hasStateChanged(canvas)) {
+        if (compareCanvasStates.hasStateChanged(canvas)) {
           handleCanvasChanged(canvas);
         }
       });
     }
-  }, [shouldUpdateWhileDrawing, scheduleUpdateAfterDrawing, hasStateChanged, handleCanvasChanged]);
+  }, [shouldUpdateWhileDrawing, scheduleUpdateAfterDrawing, handleCanvasChanged]);
   
   const handleObjectRemoved = useCallback((canvas: Canvas) => {
     console.log(`Object removed from canvas, queuing save`);
-    if (hasStateChanged(canvas)) {
+    if (compareCanvasStates.hasStateChanged(canvas)) {
       handleCanvasChanged(canvas);
     }
-  }, [hasStateChanged, handleCanvasChanged]);
+  }, [handleCanvasChanged]);
   
   const handleObjectAddedToCanvas = useCallback((e: any) => {
     if (e.target) {
@@ -75,6 +122,11 @@ export const useCanvasEventHandlers = ({ onStateChange }: CanvasEventOptions) =>
     }
   }, []);
   
+  // Initialize the state comparison on first render
+  useCallback((canvas: Canvas) => {
+    compareCanvasStates.setInitialState(canvas);
+  }, []);
+  
   return {
     handleCanvasChanged,
     handlePathCreated,
@@ -83,6 +135,9 @@ export const useCanvasEventHandlers = ({ onStateChange }: CanvasEventOptions) =>
     handleDrawingEvents,
     handleObjectRemoved,
     handleObjectAddedToCanvas,
-    cleanupTimeouts
+    cleanupTimeouts,
+    initializeStateComparison: (canvas: Canvas) => {
+      compareCanvasStates.setInitialState(canvas);
+    }
   };
 };
