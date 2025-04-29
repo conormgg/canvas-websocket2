@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WhiteboardId } from '@/types/canvas';
@@ -81,15 +80,17 @@ const applyIncrementalUpdate = (canvas: Canvas, newState: Record<string, any>): 
         } else {
           // New object, need to add it
           // Use fabric's ability to create objects from serialized data
-          // Fix: Update the enlivenObjects call to match the expected parameters
-          fabricUtil.enlivenObjects([objData], (enlivenedObjects: FabricObject[]) => {
-            if (enlivenedObjects.length > 0) {
-              const newObj = enlivenedObjects[0] as ExtendedFabricObject;
-              if (!newObj.id && objId) {
-                // Ensure the ID is preserved
-                newObj.id = objId;
+          // Fix: Updated the enlivenObjects call to use the proper options format for Fabric.js v6
+          fabricUtil.enlivenObjects([objData], {
+            onComplete: (enlivenedObjects: FabricObject[]) => {
+              if (enlivenedObjects.length > 0) {
+                const newObj = enlivenedObjects[0] as ExtendedFabricObject;
+                if (!newObj.id && objId) {
+                  // Ensure the ID is preserved
+                  newObj.id = objId;
+                }
+                canvas.add(newObj);
               }
-              canvas.add(newObj);
             }
           });
         }
