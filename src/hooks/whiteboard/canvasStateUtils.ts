@@ -65,7 +65,7 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
         } else {
           // New object, need to add it
           // Use fabric's ability to create objects from serialized data
-          // Fix for Fabric.js v6: Use the correct format for enlivenObjects
+          // Using Promise-based API for Fabric.js v6
           fabricUtil.enlivenObjects([objData])
             .then((enlivenedObjects: FabricObject[]) => {
               if (enlivenedObjects.length > 0) {

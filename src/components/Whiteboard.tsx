@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useCanvas } from "@/hooks/useCanvas";
 import { WhiteboardId } from "@/types/canvas";
 import { useClipboardContext } from "@/context/ClipboardContext";
@@ -22,7 +22,10 @@ export const Whiteboard = ({
   const [inkThickness, setInkThickness] = useState<number>(2);
   const [zoom, setZoom] = useState<number>(1);
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
-  const [lastRender, setLastRender] = useState<number>(Date.now());
+  const initComplete = useRef<boolean>(false);
+  
+  // Track when the component is mounted
+  const mounted = useRef<boolean>(false);
 
   const { setActiveCanvas } = useClipboardContext();
 
@@ -43,20 +46,10 @@ export const Whiteboard = ({
   const { handleObjectAdded, handleObjectModified } = useCanvasPersistence(fabricRef, id, isTeacherView);
   const { undo, redo } = useCanvasHistory(fabricRef);
   
-  // Update useCanvas hook with handleObjectAdded after it's been declared
-  useCanvas({
-    id,
-    activeTool,
-    activeColor,
-    inkThickness,
-    isSplitScreen,
-    onZoomChange: setZoom,
-    onObjectAdded: handleObjectAdded,
-  });
+  // Enable real-time sync with proper dependency on the canvas reference
+  const syncEnabled = useRef<boolean>(true);
+  useRealtimeSync(fabricRef, id, syncEnabled.current);
   
-  // Always enable real-time sync
-  useRealtimeSync(fabricRef, id, true);
-
   // Set this board as active
   const setAsActiveBoard = useCallback(() => {
     if (fabricRef.current) {
@@ -64,28 +57,28 @@ export const Whiteboard = ({
       window.__wbActiveBoard = canvasRef.current;
       window.__wbActiveBoardId = id;
       setActiveCanvas(fabricRef.current, id);
+      
+      // Set initialization as complete
+      if (!initComplete.current) {
+        initComplete.current = true;
+        console.log(`Board ${id} initialization complete`);
+      }
     }
   }, [id, canvasRef, fabricRef, setActiveCanvas]);
 
+  // Run this effect only once after mounting
   useEffect(() => {
+    mounted.current = true;
+    
     // Set this board as active as soon as it's mounted
     setAsActiveBoard();
     
-    // Refresh render periodically but less frequently
-    const checkInterval = setInterval(() => {
-      const now = Date.now();
-      
-      // Only re-render every 10 seconds at most to reduce unnecessary updates
-      if (now - lastRender > 10000) { // 10 seconds
-        if (fabricRef.current && canvasRef.current) {
-          fabricRef.current.renderAll();
-          setLastRender(now);
-        }
-      }
-    }, 10000); // Check every 10 seconds
-    
-    return () => clearInterval(checkInterval);
-  }, [fabricRef, canvasRef, setAsActiveBoard, lastRender]);
+    return () => {
+      mounted.current = false;
+      // Clean up any resources specific to this board
+      console.log(`Unmounting board ${id}`);
+    };
+  }, [setAsActiveBoard, id]);
   
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
