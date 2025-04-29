@@ -6,11 +6,24 @@ import { WhiteboardObject } from './types';
 export class SupabaseSync {
   // Cache to prevent duplicate channel creation
   private static channelCache = new Map<string, any>();
+  // Track last received update to prevent loops
+  private static lastReceivedUpdate = new Map<string, string>();
+  // Lock to prevent concurrent operations
+  private static operationLock = new Map<string, boolean>();
 
   // Load existing content from Supabase
   static async loadExistingContent(boardId: WhiteboardId): Promise<Record<string, any> | null> {
     try {
       console.log(`Loading existing content for board: ${boardId}`);
+      
+      // Check if we're already processing an operation for this board
+      if (this.operationLock.get(boardId)) {
+        console.log(`Operation in progress for ${boardId}, skipping load`);
+        return null;
+      }
+      
+      // Set lock
+      this.operationLock.set(boardId, true);
       
       // For board 2, check both teacher2 and student2 content
       const query = (boardId === "teacher2" || boardId === "student2") 
@@ -41,16 +54,24 @@ export class SupabaseSync {
         
         // Type guard to ensure objectData is a valid Record<string, any>
         if (objectData && typeof objectData === 'object' && !Array.isArray(objectData)) {
+          // Store the hash of this data to prevent loops
+          const contentHash = JSON.stringify(objectData);
+          this.lastReceivedUpdate.set(boardId, contentHash);
+          
+          this.operationLock.set(boardId, false);
           return objectData as Record<string, any>;
         } else {
           console.error('Received invalid object data format:', objectData);
+          this.operationLock.set(boardId, false);
           return null;
         }
       }
       
+      this.operationLock.set(boardId, false);
       return null;
     } catch (err) {
       console.error('Failed to load existing content:', err);
+      this.operationLock.set(boardId, false);
       return null;
     }
   }
@@ -95,6 +116,18 @@ export class SupabaseSync {
           if (payload.new && 'object_data' in payload.new) {
             const objectData = payload.new.object_data;
             
+            // Prevent update loops by checking if we've already processed this exact update
+            const contentHash = JSON.stringify(objectData);
+            const lastHash = this.lastReceivedUpdate.get(boardId);
+            
+            if (contentHash === lastHash) {
+              console.log(`Skipping duplicate update for ${boardId}`);
+              return;
+            }
+            
+            // Store this update hash to prevent processing it again
+            this.lastReceivedUpdate.set(boardId, contentHash);
+            
             // Add type guard to ensure objectData is a valid Record<string, any>
             if (objectData && typeof objectData === 'object' && !Array.isArray(objectData)) {
               // Apply the update optimistically
@@ -123,5 +156,23 @@ export class SupabaseSync {
       supabase.removeChannel(channel);
       this.channelCache.delete(channelKey);
     }
+  }
+  
+  // Clear all cached data for troubleshooting
+  static clearCache(): void {
+    console.log("Clearing SupabaseSync cache");
+    
+    // Remove all channels first
+    this.channelCache.forEach((channel, key) => {
+      console.log(`Removing channel: ${key}`);
+      supabase.removeChannel(channel);
+    });
+    
+    // Clear all caches
+    this.channelCache.clear();
+    this.lastReceivedUpdate.clear();
+    this.operationLock.clear();
+    
+    console.log("SupabaseSync cache cleared");
   }
 }

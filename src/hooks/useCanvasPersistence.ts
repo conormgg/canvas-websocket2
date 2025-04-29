@@ -14,6 +14,7 @@ export const useCanvasPersistence = (
   const persistenceUtilsRef = useRef<CanvasPersistenceUtils>(new CanvasPersistenceUtils());
   const isProcessingModification = useRef<boolean>(false);
   const modificationQueue = useRef<Array<() => void>>([]);
+  const lastSavedState = useRef<string | null>(null);
   
   // Process the next modification in queue
   const processNextModification = useCallback(() => {
@@ -45,15 +46,42 @@ export const useCanvasPersistence = (
     }
   }, [processNextModification]);
 
+  // Check if the state is actually different before saving
+  const hasStateChanged = useCallback((canvas: Canvas): boolean => {
+    try {
+      const currentState = JSON.stringify(canvas.toJSON(['id']));
+      if (currentState === lastSavedState.current) {
+        return false;
+      }
+      lastSavedState.current = currentState;
+      return true;
+    } catch (err) {
+      console.error('Error comparing canvas states:', err);
+      return true; // Default to saving if we can't compare
+    }
+  }, []);
+
   const handleObjectModified = useCallback((canvas: Canvas) => {
+    // Skip if no actual change happened
+    if (!hasStateChanged(canvas)) {
+      console.log(`Skipping save - no change detected on ${id}`);
+      return;
+    }
+    
     queueModification(() => {
       persistenceUtilsRef.current.handleSyncedModification(canvas, id);
     });
-  }, [id, queueModification]);
+  }, [id, queueModification, hasStateChanged]);
 
   const handleObjectAdded = useCallback((object: FabricObject) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
+    
+    // Skip if no actual change happened
+    if (!hasStateChanged(canvas)) {
+      console.log(`Skipping save after add - no change detected on ${id}`);
+      return;
+    }
     
     queueModification(() => {
       // Make sure the added object is selectable
@@ -66,11 +94,18 @@ export const useCanvasPersistence = (
       
       persistenceUtilsRef.current.handleSyncedModification(canvas, id);
     });
-  }, [id, fabricRef, queueModification]);
+  }, [id, fabricRef, queueModification, hasStateChanged]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
+    
+    // Initial state snapshot
+    try {
+      lastSavedState.current = JSON.stringify(canvas.toJSON(['id']));
+    } catch (err) {
+      console.error('Error capturing initial canvas state:', err);
+    }
     
     // Use a single handler for all canvas events to reduce event handler overhead
     const handleCanvasChanged = () => {
@@ -81,7 +116,8 @@ export const useCanvasPersistence = (
     let isDrawing = false;
     let pendingDrawUpdate = false;
     let lastUpdateTime = 0;
-    const MIN_UPDATE_INTERVAL = 300; // ms
+    let updateTimeout: number | null = null;
+    const MIN_UPDATE_INTERVAL = 500; // Increase to 500ms to reduce frequency
     
     const handleDrawingEvents = () => {
       if (isDrawing && !pendingDrawUpdate) {
@@ -95,10 +131,18 @@ export const useCanvasPersistence = (
         pendingDrawUpdate = true;
         lastUpdateTime = now;
         
+        // Clear existing timeout
+        if (updateTimeout !== null) {
+          clearTimeout(updateTimeout);
+        }
+        
         // Wait until the user pauses drawing before saving
-        setTimeout(() => {
-          handleCanvasChanged();
+        updateTimeout = window.setTimeout(() => {
+          if (hasStateChanged(canvas)) {
+            handleCanvasChanged();
+          }
           pendingDrawUpdate = false;
+          updateTimeout = null;
         }, MIN_UPDATE_INTERVAL);
       }
     };
@@ -106,7 +150,9 @@ export const useCanvasPersistence = (
     const handlePathCreated = () => {
       console.log(`Path created on canvas ${id}, queuing save`);
       // Only save when drawing is finished, not during every path update
-      handleCanvasChanged();
+      if (hasStateChanged(canvas)) {
+        handleCanvasChanged();
+      }
     };
 
     const handleMouseDown = () => {
@@ -118,13 +164,17 @@ export const useCanvasPersistence = (
     const handleMouseUp = () => {
       if (canvas.isDrawingMode && isDrawing) {
         isDrawing = false;
-        handleCanvasChanged();
+        if (hasStateChanged(canvas)) {
+          handleCanvasChanged();
+        }
       }
     };
 
     const handleObjectRemoved = () => {
       console.log(`Object removed from canvas ${id}, queuing save`);
-      handleCanvasChanged();
+      if (hasStateChanged(canvas)) {
+        handleCanvasChanged();
+      }
     };
     
     const handleObjectAddedToCanvas = (e: any) => {
@@ -154,8 +204,13 @@ export const useCanvasPersistence = (
       canvas.off('object:removed', handleObjectRemoved);
       canvas.off('object:added', handleObjectAddedToCanvas);
       persistenceUtilsRef.current.clearTimeout();
+      
+      // Clear any pending timeouts
+      if (updateTimeout !== null) {
+        clearTimeout(updateTimeout);
+      }
     };
-  }, [id, handleObjectModified, fabricRef]);
+  }, [id, handleObjectModified, fabricRef, hasStateChanged]);
 
   return { handleObjectAdded, handleObjectModified };
 };

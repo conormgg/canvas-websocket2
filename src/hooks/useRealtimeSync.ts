@@ -27,15 +27,25 @@ export const useRealtimeSync = (
         return;
       }
       
-      if (canvas) {
-        try {
-          isProcessingUpdate.current = true;
-          canvasUpdateManager.current.applyCanvasUpdate(canvas, objectData);
-        } finally {
-          // Always reset the processing flag even if an error occurs
-          isProcessingUpdate.current = false;
+      // Apply a short timeout to prevent rapid simultaneous updates
+      setTimeout(() => {
+        if (canvas) {
+          try {
+            isProcessingUpdate.current = true;
+            
+            // Pass source information to track update origin and prevent loops
+            canvasUpdateManager.current.applyCanvasUpdate(canvas, objectData, `realtime-${boardId}`);
+            
+            // Reset processing flag after a short delay
+            setTimeout(() => {
+              isProcessingUpdate.current = false;
+            }, 150); // Delay to ensure any triggered events complete
+          } catch (err) {
+            console.error(`Error applying update to ${boardId}:`, err);
+            isProcessingUpdate.current = false;
+          }
         }
-      }
+      }, 50);
     };
     
     // Load existing content from Supabase
@@ -49,12 +59,16 @@ export const useRealtimeSync = (
         isProcessingUpdate.current = true;
         const objectData = await SupabaseSync.loadExistingContent(boardId);
         if (objectData) {
-          canvasUpdateManager.current.applyCanvasUpdate(canvas, objectData);
+          // Mark as an initial load to prevent re-syncing
+          canvasUpdateManager.current.applyCanvasUpdate(canvas, objectData, `initial-load-${boardId}`);
         }
       } catch (err) {
         console.error(`Error loading content for ${boardId}:`, err);
       } finally {
-        isProcessingUpdate.current = false;
+        // Reset with delay to prevent rapid retriggering
+        setTimeout(() => {
+          isProcessingUpdate.current = false;
+        }, 150);
       }
     };
     
