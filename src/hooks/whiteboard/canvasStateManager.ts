@@ -1,4 +1,3 @@
-
 import { Canvas } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,11 +67,11 @@ export class CanvasStateManager {
   }
 
   syncBoardState(canvas: Canvas, sourceId: WhiteboardId, targetId: WhiteboardId): void {
-    // Handle all possible sync directions (both teacher-to-student and student-to-teacher)
-    if ((sourceId === "teacher2" && targetId === "student2") || 
-        (sourceId === "student2" && targetId === "teacher2") ||
-        (sourceId === "teacher1" && targetId === "student1") ||
-        (sourceId === "student1" && targetId === "teacher1")) {
+    if (sourceId === "teacher2" && targetId === "student2") {
+      this.saveCanvasState(canvas, targetId);
+    } else if (sourceId === "student2" && targetId === "teacher2") {
+      this.saveCanvasState(canvas, targetId);
+    } else if (sourceId === "teacher1" && targetId === "student1") {
       this.saveCanvasState(canvas, targetId);
     }
   }
@@ -81,24 +80,16 @@ export class CanvasStateManager {
     try {
       console.log(`Clearing whiteboard data for ${boardId}`);
       
-      // Determine which boards to clear based on the boardId
-      let query;
-      if (boardId === "teacher2" || boardId === "student2") {
-        query = supabase
+      // For board 2, delete both teacher2 and student2 content
+      const query = (boardId === "teacher2" || boardId === "student2") 
+        ? supabase
             .from('whiteboard_objects')
             .delete()
-            .in('board_id', ['teacher2', 'student2']);
-      } else if (boardId === "teacher1" || boardId === "student1") {
-        query = supabase
-            .from('whiteboard_objects')
-            .delete()
-            .in('board_id', ['teacher1', 'student1']);
-      } else {
-        query = supabase
+            .in('board_id', ['teacher2', 'student2'])
+        : supabase
             .from('whiteboard_objects')
             .delete()
             .eq('board_id', boardId);
-      }
       
       const { error } = await query;
       
