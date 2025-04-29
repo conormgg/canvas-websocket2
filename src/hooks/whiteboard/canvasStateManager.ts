@@ -7,10 +7,6 @@ import { WhiteboardObject } from './persistenceTypes';
 
 export class CanvasStateManager {
   private lastSavedState: string | null = null;
-  private isSaving: boolean = false;
-  private pendingSaves: Map<WhiteboardId, boolean> = new Map();
-  private saveRetryCount: Map<WhiteboardId, number> = new Map();
-  private readonly MAX_RETRIES = 3;
 
   constructor() {
     this.lastSavedState = null;
@@ -27,15 +23,6 @@ export class CanvasStateManager {
   async saveCanvasState(canvas: Canvas, boardId: WhiteboardId): Promise<boolean> {
     if (!canvas) return false;
     
-    // If we're already saving this board, mark it as pending and return
-    if (this.pendingSaves.get(boardId)) {
-      console.log(`Save already in progress for ${boardId}, marking as pending`);
-      this.pendingSaves.set(boardId, true);
-      return false;
-    }
-    
-    this.pendingSaves.set(boardId, true);
-    
     try {
       // Ensure all objects are selectable and interactive before saving
       canvas.getObjects().forEach(obj => {
@@ -47,23 +34,20 @@ export class CanvasStateManager {
         });
       });
       
-      // Using the Fabric.js v6 compatible way to get JSON with type assertion
-      const canvasData = (canvas.toJSON as any)();
+      const canvasData = canvas.toJSON();
       const canvasDataString = JSON.stringify(canvasData);
       
       // Skip saving if the state hasn't changed
-      if (canvasDataString === this.lastSavedState && boardId === this.lastSavedBoardId) {
+      if (canvasDataString === this.lastSavedState) {
         console.log(`Canvas state unchanged for ${boardId}, skipping save`);
-        this.pendingSaves.set(boardId, false);
         return false;
       }
       
       console.log(`Saving canvas state for ${boardId}`);
       this.lastSavedState = canvasDataString;
-      this.lastSavedBoardId = boardId;
       
-      const { error } = await supabase
-        .from('whiteboard_objects')
+      const { error } = await (supabase
+        .from('whiteboard_objects') as any)
         .insert({
           board_id: boardId,
           object_data: canvasData
@@ -71,42 +55,19 @@ export class CanvasStateManager {
         
       if (error) {
         console.error('Error saving canvas state:', error);
-        
-        // Increment retry count for this board
-        const retryCount = (this.saveRetryCount.get(boardId) || 0) + 1;
-        this.saveRetryCount.set(boardId, retryCount);
-        
-        if (retryCount <= this.MAX_RETRIES) {
-          console.log(`Retrying save for ${boardId} (attempt ${retryCount}/${this.MAX_RETRIES})`);
-          this.pendingSaves.set(boardId, false);
-          // Retry with exponential backoff
-          setTimeout(() => this.saveCanvasState(canvas, boardId), 500 * Math.pow(2, retryCount - 1));
-        } else {
-          toast.error('Failed to save whiteboard state');
-          this.saveRetryCount.set(boardId, 0);
-          this.pendingSaves.set(boardId, false);
-        }
+        toast.error('Failed to save whiteboard state');
         return false;
       } else {
         console.log(`Canvas state saved for ${boardId}`);
-        this.saveRetryCount.set(boardId, 0);
-        this.pendingSaves.set(boardId, false);
         return true;
       }
     } catch (err) {
       console.error('Failed to save canvas state:', err);
-      this.pendingSaves.set(boardId, false);
       return false;
     }
   }
 
   syncBoardState(canvas: Canvas, sourceId: WhiteboardId, targetId: WhiteboardId): void {
-    // Prevent recursive syncing
-    if (this.isCurrentlySyncing(sourceId, targetId)) {
-      console.log(`Preventing recursive sync from ${sourceId} to ${targetId}`);
-      return;
-    }
-    
     if (sourceId === "teacher2" && targetId === "student2") {
       this.saveCanvasState(canvas, targetId);
     } else if (sourceId === "student2" && targetId === "teacher2") {
@@ -114,23 +75,5 @@ export class CanvasStateManager {
     } else if (sourceId === "teacher1" && targetId === "student1") {
       this.saveCanvasState(canvas, targetId);
     }
-  }
-  
-  private lastSyncTime: number = 0;
-  private lastSyncPair: string = '';
-  private lastSavedBoardId: WhiteboardId | null = null;
-  private SYNC_COOLDOWN = 500; // ms
-  
-  private isCurrentlySyncing(sourceId: WhiteboardId, targetId: WhiteboardId): boolean {
-    const now = Date.now();
-    const syncPair = `${sourceId}-${targetId}`;
-    
-    if (syncPair === this.lastSyncPair && (now - this.lastSyncTime < this.SYNC_COOLDOWN)) {
-      return true;
-    }
-    
-    this.lastSyncTime = now;
-    this.lastSyncPair = syncPair;
-    return false;
   }
 }

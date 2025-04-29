@@ -2,126 +2,92 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { Canvas, FabricObject } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
+import { CanvasPersistenceUtils } from './whiteboard/canvasPersistenceUtils';
 import { ObjectModificationHandlers } from './whiteboard/persistenceTypes';
-import { useModificationQueue } from './whiteboard/useModificationQueue';
-import { createDrawingThrottle } from './whiteboard/useDrawingThrottle';
-import { useCanvasPersistenceManager } from './whiteboard/useCanvasPersistenceManager';
 
-/**
- * Hook for handling canvas object modifications and persistence
- */
+// Optimize by only sending the differences, but for now we'll just implement better debouncing
 export const useCanvasPersistence = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   id: WhiteboardId,
   isTeacherView: boolean
 ): ObjectModificationHandlers => {
-  const { queueModification } = useModificationQueue();
-  const { saveCanvasState } = useCanvasPersistenceManager(id, isTeacherView);
-  
-  // Queue a modification to save canvas state
+  const persistenceUtilsRef = useRef<CanvasPersistenceUtils>(new CanvasPersistenceUtils());
+
   const handleObjectModified = useCallback((canvas: Canvas) => {
-    queueModification(() => {
-      saveCanvasState(canvas);
-    });
-  }, [id, queueModification, saveCanvasState]);
+    persistenceUtilsRef.current.handleSyncedModification(canvas, id);
+  }, [id]);
 
   const handleObjectAdded = useCallback((object: FabricObject) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    queueModification(() => {
-      // Make sure the added object is selectable
-      object.set({
-        selectable: true,
-        evented: true,
-        hasControls: true,
-        hasBorders: true
-      });
-      
-      saveCanvasState(canvas);
+    // Make sure the added object is selectable
+    object.set({
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      hasBorders: true
     });
-  }, [id, fabricRef, queueModification, saveCanvasState]);
+    
+    persistenceUtilsRef.current.handleSyncedModification(canvas, id);
+  }, [id, fabricRef]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    // Create event handlers - using the non-hook implementation
-    const drawingThrottle = createDrawingThrottle();
-    
-    // Track the previous state to detect changes
-    let previousState = "";
-    
-    // Initialize state comparison
-    const initializeStateComparison = () => {
-      try {
-        if (canvas) {
-          previousState = JSON.stringify((canvas.toJSON as any)());
-        }
-      } catch (err) {
-        console.error("Error initializing canvas state:", err);
-      }
-    };
-    
-    // Check if the canvas state has changed
-    const hasStateChanged = () => {
-      try {
-        if (!canvas) return false;
-        
-        const currentState = JSON.stringify((canvas.toJSON as any)());
-        const hasChanged = currentState !== previousState;
-        
-        if (hasChanged) {
-          previousState = currentState;
-        }
-        
-        return hasChanged;
-      } catch (err) {
-        console.error("Error comparing canvas states:", err);
-        return true; // Assume changed on error to be safe
-      }
-    };
-    
-    // Handle canvas changes
+    // Use a single handler for all canvas events to reduce event handler overhead
     const handleCanvasChanged = () => {
-      if (hasStateChanged()) {
-        handleObjectModified(canvas);
+      handleObjectModified(canvas);
+    };
+
+    // Throttle events that might fire very rapidly
+    let isDrawing = false;
+    let pendingDrawUpdate = false;
+    
+    const handleDrawingEvents = () => {
+      if (isDrawing && !pendingDrawUpdate) {
+        pendingDrawUpdate = true;
+        // Wait until the user pauses drawing before saving
+        setTimeout(() => {
+          handleCanvasChanged();
+          pendingDrawUpdate = false;
+        }, 300);
       }
     };
-    
-    // Initialize state comparison
-    initializeStateComparison();
-    
-    // Handle path creation
+
     const handlePathCreated = () => {
-      if (drawingThrottle.shouldUpdateWhileDrawing()) {
-        handleObjectModified(canvas);
-        drawingThrottle.scheduleUpdateAfterDrawing(() => {
-          handleObjectModified(canvas);
-        });
+      console.log(`Path created on canvas ${id}, queuing save`);
+      // Only save when drawing is finished, not during every path update
+      handleCanvasChanged();
+    };
+
+    const handleMouseDown = () => {
+      if (canvas.isDrawingMode) {
+        isDrawing = true;
       }
     };
-    
-    // Handle mouse events
-    const handleMouseDown = () => {
-      drawingThrottle.handleDrawingStart();
-    };
-    
+
     const handleMouseUp = () => {
-      drawingThrottle.handleDrawingEnd();
-      // Always save changes on mouse up
-      handleCanvasChanged();
+      if (canvas.isDrawingMode && isDrawing) {
+        isDrawing = false;
+        handleCanvasChanged();
+      }
     };
-    
-    // Handle object removals
+
     const handleObjectRemoved = () => {
+      console.log(`Object removed from canvas ${id}, queuing save`);
       handleCanvasChanged();
     };
     
-    // Handle object additions
     const handleObjectAddedToCanvas = (e: any) => {
       if (e.target) {
-        handleObjectAdded(e.target);
+        e.target.set({
+          selectable: true,
+          evented: true,
+          hasControls: true,
+          hasBorders: true
+        });
       }
     };
     
@@ -134,15 +100,15 @@ export const useCanvasPersistence = (
     canvas.on('object:added', handleObjectAddedToCanvas);
     
     return () => {
-      canvas.off('object:modified');
-      canvas.off('path:created');
-      canvas.off('mouse:down');
-      canvas.off('mouse:up');
-      canvas.off('object:removed');
-      canvas.off('object:added');
-      drawingThrottle.cleanupTimeouts();
+      canvas.off('object:modified', handleCanvasChanged);
+      canvas.off('path:created', handlePathCreated);
+      canvas.off('mouse:down', handleMouseDown);
+      canvas.off('mouse:up', handleMouseUp);
+      canvas.off('object:removed', handleObjectRemoved);
+      canvas.off('object:added', handleObjectAddedToCanvas);
+      persistenceUtilsRef.current.clearTimeout();
     };
-  }, [id, handleObjectModified, handleObjectAdded, fabricRef]);
+  }, [id, handleObjectModified, fabricRef]);
 
   return { handleObjectAdded, handleObjectModified };
 };
