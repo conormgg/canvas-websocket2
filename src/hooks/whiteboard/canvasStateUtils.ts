@@ -2,14 +2,10 @@
 import { CanvasStateComparisonProps, IncrementalUpdateProps, ExtendedFabricObject } from './types';
 import { FabricObject, util as fabricUtil, Canvas } from 'fabric';
 
-// Helper function to compare two canvas states
+// Helper function to compare two canvas states more efficiently
 export const areCanvasStatesEqual = ({ state1, state2 }: CanvasStateComparisonProps): boolean => {
   if (!state1 || !state2) return false;
-  // Compare objects array length as a quick check
-  if (state1.objects?.length !== state2.objects?.length) return false;
   
-  // For a deeper but efficient comparison, compare essential properties
-  // but not the entire object which could be large
   try {
     const objects1 = state1.objects || [];
     const objects2 = state2.objects || [];
@@ -17,15 +13,39 @@ export const areCanvasStatesEqual = ({ state1, state2 }: CanvasStateComparisonPr
     // Different number of objects means they're not equal
     if (objects1.length !== objects2.length) return false;
     
-    // Create a map of object IDs for quick lookup
-    const objectMap = new Map();
+    // No objects means equal (if both arrays exist and have length 0)
+    if (objects1.length === 0 && objects2.length === 0) return true;
+
+    // For a quick check, just compare the object counts by type
+    const typeCount1: Record<string, number> = {};
+    const typeCount2: Record<string, number> = {};
+    
     objects1.forEach((obj: any) => {
-      if (obj.id) objectMap.set(obj.id, obj);
+      if (!obj) return;
+      const type = obj.type || 'unknown';
+      typeCount1[type] = (typeCount1[type] || 0) + 1;
+    });
+    
+    objects2.forEach((obj: any) => {
+      if (!obj) return;
+      const type = obj.type || 'unknown';
+      typeCount2[type] = (typeCount2[type] || 0) + 1;
+    });
+    
+    // Check if the count of each type matches
+    for (const type in typeCount1) {
+      if (typeCount1[type] !== typeCount2[type]) return false;
+    }
+    
+    // Create a map of object IDs for deeper comparison
+    const objectMap = new Map<string, any>();
+    objects1.forEach((obj: any) => {
+      if (obj?.id) objectMap.set(obj.id, obj);
     });
     
     // Check if all objects in state2 match objects in state1
     for (const obj of objects2) {
-      if (!obj.id || !objectMap.has(obj.id)) return false;
+      if (!obj?.id || !objectMap.has(obj.id)) return false;
     }
     
     return true;
@@ -36,7 +56,7 @@ export const areCanvasStatesEqual = ({ state1, state2 }: CanvasStateComparisonPr
   }
 };
 
-// Helper function to apply incremental updates to a canvas
+// Helper function to apply incremental updates to a canvas safely
 export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdateProps): void => {
   if (!newState || !newState.objects || !Array.isArray(newState.objects)) {
     console.error('Invalid canvas state data for incremental update');
@@ -61,7 +81,9 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
       });
       
       // Process each object in the new state
-      newState.objects.forEach((objData: any) => {
+      const promises: Promise<void>[] = [];
+      
+      for (const objData of newState.objects) {
         // If we have an ID field, we can use it to match objects
         const objId = objData.id || null;
         
@@ -74,7 +96,6 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
           
           if (existingObj) {
             // Update the object properties instead of replacing it
-            // This prevents flickering by maintaining the object's presence
             Object.keys(objData).forEach(key => {
               if (key !== 'id') {
                 existingObj.set(key, objData[key]);
@@ -84,10 +105,10 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
             // Mark as modified
             existingObj.setCoords();
           }
-        } else {
+        } else if (objId) {
           // New object, need to add it
           // Use Fabric.js v6 Promise API for enliven
-          fabricUtil.enlivenObjects([objData])
+          const promise = fabricUtil.enlivenObjects([objData])
             .then((enlivenedObjects: FabricObject[]) => {
               if (enlivenedObjects.length > 0) {
                 const newObj = enlivenedObjects[0] as ExtendedFabricObject;
@@ -101,30 +122,31 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
             .catch(err => {
               console.error('Error enliving object:', err);
             });
+          
+          promises.push(promise);
         }
-      });
+      }
       
-      // Objects remaining in the map weren't in the new state, remove them
-      // Only if the new state has a complete list of objects
-      if (newState.hasOwnProperty('objects') && Array.isArray(newState.objects)) {
+      // Wait for all new objects to be added
+      Promise.all(promises).then(() => {
+        // Objects remaining in the map weren't in the new state, remove them
         currentObjectsMap.forEach(obj => {
           canvas.remove(obj);
         });
-      }
-      
-      // Fix: Ensure the currentVPT array has exactly 6 elements before using it
-      if (currentVPT && currentVPT.length === 6) {
-        // TypeScript requires an explicit type assertion here
-        canvas.setViewportTransform(currentVPT as [number, number, number, number, number, number]);
-      }
-      
-      // Update background if it changed
-      if (newState.background && canvas.backgroundColor !== newState.background) {
-        canvas.backgroundColor = newState.background;
-      }
-      
-      // Render the changes without a full reload
-      canvas.renderAll();
+        
+        // Fix: Ensure the currentVPT array has exactly 6 elements before using it
+        if (currentVPT && currentVPT.length === 6) {
+          canvas.setViewportTransform(currentVPT as [number, number, number, number, number, number]);
+        }
+        
+        // Update background if it changed
+        if (newState.background && canvas.backgroundColor !== newState.background) {
+          canvas.backgroundColor = newState.background;
+        }
+        
+        // Render the changes without a full reload
+        canvas.renderAll();
+      });
     }
   } catch (err) {
     console.error('Error applying incremental update:', err);

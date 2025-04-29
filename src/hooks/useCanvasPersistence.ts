@@ -5,7 +5,6 @@ import { WhiteboardId } from '@/types/canvas';
 import { CanvasPersistenceUtils } from './whiteboard/canvasPersistenceUtils';
 import { ObjectModificationHandlers } from './whiteboard/persistenceTypes';
 
-// Optimize by only sending the differences, but for now we'll just implement better debouncing
 export const useCanvasPersistence = (
   fabricRef: React.MutableRefObject<Canvas | null>,
   id: WhiteboardId,
@@ -13,20 +12,44 @@ export const useCanvasPersistence = (
 ): ObjectModificationHandlers => {
   const persistenceUtilsRef = useRef<CanvasPersistenceUtils>(new CanvasPersistenceUtils());
   const lastUpdateTimeRef = useRef<number>(0);
-  const MIN_UPDATE_INTERVAL = 300; // Minimum time between updates in ms
+  const updateQueueRef = useRef<boolean>(false);
+  const MIN_UPDATE_INTERVAL = 500; // Minimum time between updates in ms
+  const mountedRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      persistenceUtilsRef.current.clearTimeout();
+    };
+  }, []);
 
   const handleObjectModified = useCallback((canvas: Canvas) => {
+    if (!mountedRef.current) return;
+    
     // Rate limit updates to prevent update storms
     const now = Date.now();
     if (now - lastUpdateTimeRef.current < MIN_UPDATE_INTERVAL) {
-      return; // Skip this update if it's too soon
+      if (!updateQueueRef.current) {
+        // Schedule a save for later if we're throttling
+        updateQueueRef.current = true;
+        setTimeout(() => {
+          if (mountedRef.current && fabricRef.current) {
+            persistenceUtilsRef.current.handleSyncedModification(fabricRef.current, id);
+            updateQueueRef.current = false;
+          }
+        }, MIN_UPDATE_INTERVAL);
+      }
+      return;
     }
-    lastUpdateTimeRef.current = now;
     
+    lastUpdateTimeRef.current = now;
     persistenceUtilsRef.current.handleSyncedModification(canvas, id);
-  }, [id]);
+  }, [id, fabricRef]);
 
   const handleObjectAdded = useCallback((object: FabricObject) => {
+    if (!mountedRef.current) return;
+    
     const canvas = fabricRef.current;
     if (!canvas) return;
     
@@ -41,19 +64,30 @@ export const useCanvasPersistence = (
     // Rate limit updates
     const now = Date.now();
     if (now - lastUpdateTimeRef.current < MIN_UPDATE_INTERVAL) {
-      return; // Skip this update if it's too soon
+      if (!updateQueueRef.current) {
+        // Schedule a save for later if we're throttling
+        updateQueueRef.current = true;
+        setTimeout(() => {
+          if (mountedRef.current && fabricRef.current) {
+            persistenceUtilsRef.current.handleSyncedModification(fabricRef.current, id);
+            updateQueueRef.current = false;
+          }
+        }, MIN_UPDATE_INTERVAL);
+      }
+      return;
     }
-    lastUpdateTimeRef.current = now;
     
+    lastUpdateTimeRef.current = now;
     persistenceUtilsRef.current.handleSyncedModification(canvas, id);
   }, [id, fabricRef]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
-    if (!canvas) return;
+    if (!canvas || !mountedRef.current) return;
     
     // Use a single handler for all canvas events to reduce event handler overhead
     const handleCanvasChanged = () => {
+      if (!mountedRef.current) return;
       handleObjectModified(canvas);
     };
 
@@ -62,29 +96,39 @@ export const useCanvasPersistence = (
     let pendingDrawUpdate = false;
     
     const handleDrawingEvents = () => {
+      if (!mountedRef.current) return;
+      
       if (isDrawing && !pendingDrawUpdate) {
         pendingDrawUpdate = true;
         // Wait until the user pauses drawing before saving
         setTimeout(() => {
-          handleCanvasChanged();
-          pendingDrawUpdate = false;
+          if (mountedRef.current) {
+            handleCanvasChanged();
+            pendingDrawUpdate = false;
+          }
         }, MIN_UPDATE_INTERVAL);
       }
     };
 
     const handlePathCreated = () => {
+      if (!mountedRef.current) return;
+      
       console.log(`Path created on canvas ${id}, queuing save`);
       // Only save when drawing is finished, not during every path update
       handleCanvasChanged();
     };
 
     const handleMouseDown = () => {
+      if (!mountedRef.current) return;
+      
       if (canvas.isDrawingMode) {
         isDrawing = true;
       }
     };
 
     const handleMouseUp = () => {
+      if (!mountedRef.current) return;
+      
       if (canvas.isDrawingMode && isDrawing) {
         isDrawing = false;
         handleCanvasChanged();
@@ -92,11 +136,15 @@ export const useCanvasPersistence = (
     };
 
     const handleObjectRemoved = () => {
+      if (!mountedRef.current) return;
+      
       console.log(`Object removed from canvas ${id}, queuing save`);
       handleCanvasChanged();
     };
     
     const handleObjectAddedToCanvas = (e: any) => {
+      if (!mountedRef.current) return;
+      
       if (e.target) {
         e.target.set({
           selectable: true,

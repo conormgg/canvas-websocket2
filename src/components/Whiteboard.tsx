@@ -49,7 +49,7 @@ export const Whiteboard = ({
   const { undo, redo } = useCanvasHistory(fabricRef);
   
   // Enable real-time sync with proper dependency on the canvas reference
-  useRealtimeSync(fabricRef, id, syncEnabled.current && !unloadingRef.current);
+  const { clearAllDrawings } = useRealtimeSync(fabricRef, id, syncEnabled.current && !unloadingRef.current);
   
   // Set this board as active
   const setAsActiveBoard = useCallback(() => {
@@ -74,6 +74,12 @@ export const Whiteboard = ({
     
     // Set this board as active as soon as it's mounted
     setAsActiveBoard();
+    
+    // Set up unloading detection to prevent memory leaks and infinite loops
+    window.addEventListener('beforeunload', () => {
+      unloadingRef.current = true;
+      syncEnabled.current = false;
+    });
     
     return () => {
       // Mark that we're unloading to prevent new updates
@@ -124,6 +130,22 @@ export const Whiteboard = ({
       toast("Nothing to redo");
     }
   };
+  
+  const handleClearAll = () => {
+    if (fabricRef.current) {
+      fabricRef.current.clear();
+      fabricRef.current.backgroundColor = "#ffffff";
+      fabricRef.current.renderAll();
+      
+      // Also clear database if admin
+      if (id === "teacher1") {
+        clearAllDrawings();
+        toast("All drawings cleared from database");
+      } else {
+        toast("Canvas cleared");
+      }
+    }
+  };
 
   return (
     <div
@@ -154,6 +176,14 @@ export const Whiteboard = ({
         tabIndex={0}
         data-board-id={id}
       />
+      {id === "teacher1" && (
+        <button 
+          className="absolute top-16 right-2 bg-red-500 text-white px-4 py-2 rounded opacity-50 hover:opacity-100"
+          onClick={handleClearAll}
+        >
+          Clear All Data
+        </button>
+      )}
     </div>
   );
 };

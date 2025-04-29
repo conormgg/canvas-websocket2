@@ -1,4 +1,3 @@
-
 import { Canvas } from 'fabric';
 import { areCanvasStatesEqual, applyIncrementalUpdate } from './canvasStateUtils';
 
@@ -9,42 +8,70 @@ export class CanvasUpdateManager {
   private processingInterval: number | null = null;
   private updateIds: Set<string> = new Set(); // Track already processed updates
   private lastUpdateTimestamp: number = 0;
+  private updateCounter: number = 0;
+  private MAX_UPDATES_PER_MINUTE: number = 120; // Limit updates to prevent infinite loops
 
   constructor() {
     // Initialize a background processing interval
     this.processingInterval = window.setInterval(() => this.processQueue(), 500);
+    this.resetUpdateCounter();
+  }
+
+  // Reset the update counter every minute to prevent permanent throttling
+  private resetUpdateCounter(): void {
+    setInterval(() => {
+      this.updateCounter = 0;
+    }, 60000); // Reset counter every minute
   }
 
   // Generate a unique hash for an update to prevent duplicates
   private generateContentHash(objectData: Record<string, any>): string {
-    // Extract only essential data for comparing updates
-    const essentialData = {
-      objects: objectData.objects?.map((obj: any) => ({
-        id: obj.id,
-        type: obj.type,
-        path: obj.path, // For path objects
-        points: obj.points // For polyline/polygon objects
-      }))
-    };
-    return JSON.stringify(essentialData);
+    if (!objectData || !objectData.objects) return '';
+    
+    try {
+      // Extract only essential data for comparing updates
+      const essentialData = {
+        objects: objectData.objects?.map((obj: any) => ({
+          id: obj.id || '',
+          type: obj.type || '',
+          path: obj.path ? JSON.stringify(obj.path).substring(0, 50) : '', // For path objects, limit length
+          points: obj.points ? JSON.stringify(obj.points).substring(0, 50) : '' // For polyline/polygon objects
+        }))
+      };
+      return JSON.stringify(essentialData);
+    } catch (err) {
+      console.error('Error generating content hash:', err);
+      return Date.now().toString(); // Fallback to timestamp if hash generation fails
+    }
   }
 
   // Apply updates optimistically using incremental updates
   applyCanvasUpdate(canvas: Canvas, objectData: Record<string, any>): void {
-    if (!objectData) {
+    if (!objectData || !objectData.objects) {
       console.warn('Received empty update data, skipping');
+      return;
+    }
+
+    // Rate limiting - prevent too many updates (potential infinite loop protection)
+    this.updateCounter++;
+    if (this.updateCounter > this.MAX_UPDATES_PER_MINUTE) {
+      console.warn('Update rate limit exceeded, possible infinite loop detected');
       return;
     }
 
     // Generate a content hash to identify this update
     const contentHash = this.generateContentHash(objectData);
+    if (!contentHash) {
+      console.warn('Could not generate content hash, skipping update');
+      return;
+    }
     
     // Add rate limiting - don't process updates too quickly
     const now = Date.now();
-    if (now - this.lastUpdateTimestamp < 100) {
-      console.log('Update received too quickly, throttling');
-      // Only queue if it's not already in the queue
-      if (!this.updateQueue.some(update => this.generateContentHash(update) === contentHash)) {
+    if (now - this.lastUpdateTimestamp < 200) {
+      // Only queue if it's not already in the queue and not already processed
+      if (!this.updateIds.has(contentHash) && 
+          !this.updateQueue.some(update => this.generateContentHash(update) === contentHash)) {
         this.updateQueue.push(objectData);
       }
       return;
@@ -59,7 +86,10 @@ export class CanvasUpdateManager {
     }
 
     // Skip if the content is the same (simple check)
-    if (areCanvasStatesEqual({state1: this.lastLoadedContent, state2: objectData})) {
+    if (this.lastLoadedContent && areCanvasStatesEqual({
+      state1: this.lastLoadedContent, 
+      state2: objectData
+    })) {
       console.log('Skipping redundant update (same state)');
       return;
     }
@@ -71,10 +101,10 @@ export class CanvasUpdateManager {
     this.updateIds.add(contentHash);
     
     // Limit size of tracking set to prevent memory leaks
-    if (this.updateIds.size > 100) {
+    if (this.updateIds.size > 50) {
       // Convert to array, remove oldest entries, and convert back to Set
       const idArray = Array.from(this.updateIds);
-      this.updateIds = new Set(idArray.slice(-50));
+      this.updateIds = new Set(idArray.slice(-30));
     }
     
     // If we're processing an update, queue this one
@@ -90,8 +120,8 @@ export class CanvasUpdateManager {
     // Mark that we're processing an update
     this.isPendingUpdate = true;
     
-    // Apply the update without blocking and without flickering
     try {
+      // Apply the update in the next animation frame for smoother rendering
       requestAnimationFrame(() => {
         try {
           // Use incremental update instead of full reload
@@ -126,7 +156,7 @@ export class CanvasUpdateManager {
             const nextUpdate = this.updateQueue.shift();
             if (nextUpdate) {
               // Wait a bit before processing the next update to prevent too rapid updates
-              setTimeout(() => this.applyCanvasUpdate(canvas, nextUpdate), 100);
+              setTimeout(() => this.applyCanvasUpdate(canvas, nextUpdate), 200);
             }
           }
         }
@@ -144,10 +174,10 @@ export class CanvasUpdateManager {
     }
     
     // Limit queue size to prevent memory issues
-    if (this.updateQueue.length > 10) {
-      console.log(`Pruning update queue from ${this.updateQueue.length} to 5 items`);
+    if (this.updateQueue.length > 5) {
+      console.log(`Pruning update queue from ${this.updateQueue.length} to 3 items`);
       // Keep only the most recent updates
-      this.updateQueue = this.updateQueue.slice(-5);
+      this.updateQueue = this.updateQueue.slice(-3);
     }
   }
   
@@ -159,6 +189,7 @@ export class CanvasUpdateManager {
     this.updateQueue = [];
     this.updateIds.clear();
     this.isPendingUpdate = false;
+    this.lastLoadedContent = null;
   }
   
   getLastLoadedContent(): Record<string, any> | null {
