@@ -1,178 +1,164 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { WhiteboardId } from '@/types/canvas';
-import { WhiteboardObject } from './types';
 
 export class SupabaseSync {
-  // Cache to prevent duplicate channel creation
-  private static channelCache = new Map<string, any>();
-  // Track last received update to prevent loops
-  private static lastReceivedUpdate = new Map<string, string>();
-  // Lock to prevent concurrent operations
-  private static operationLock = new Map<string, boolean>();
+  // Track which boards have active channels to prevent multiple subscriptions
+  private static activeChannels: Map<WhiteboardId, any> = new Map();
+  
+  // Cache the last loaded content to avoid redundant processing
+  private static contentCache: Map<WhiteboardId, any> = new Map();
+  
+  // Track update sources to prevent loops
+  private static updateSources: Map<string, number> = new Map();
 
-  // Load existing content from Supabase
-  static async loadExistingContent(boardId: WhiteboardId): Promise<Record<string, any> | null> {
+  /**
+   * Clear all active channels and cached content
+   */
+  static clearCache(): void {
+    // Close and remove all active channels
+    this.activeChannels.forEach((channel, boardId) => {
+      console.log(`Clearing channel for ${boardId}`);
+      try {
+        supabase.removeChannel(channel);
+      } catch (err) {
+        console.error(`Error removing channel for ${boardId}:`, err);
+      }
+    });
+    
+    // Clear maps
+    this.activeChannels.clear();
+    this.contentCache.clear();
+    this.updateSources.clear();
+    
+    console.log('All channels and caches cleared');
+  }
+
+  /**
+   * Load existing content for a given board
+   */
+  static async loadExistingContent(boardId: WhiteboardId): Promise<any> {
+    console.log(`Loading existing content for ${boardId}`);
+    
     try {
-      console.log(`Loading existing content for board: ${boardId}`);
+      const { data, error } = await supabase
+        .from('whiteboard_objects')
+        .select('object_data')
+        .eq('board_id', boardId)
+        .order('created_at', { ascending: false })
+        .limit(1);
       
-      // Check if we're already processing an operation for this board
-      if (this.operationLock.get(boardId)) {
-        console.log(`Operation in progress for ${boardId}, skipping load`);
-        return null;
-      }
-      
-      // Set lock
-      this.operationLock.set(boardId, true);
-      
-      // For board 2, check both teacher2 and student2 content
-      const query = (boardId === "teacher2" || boardId === "student2") 
-        ? supabase
-            .from('whiteboard_objects')
-            .select('object_data')
-            .in('board_id', ['teacher2', 'student2'])
-            .order('created_at', { ascending: false })
-            .limit(1)
-        : supabase
-            .from('whiteboard_objects')
-            .select('object_data')
-            .eq('board_id', boardId)
-            .order('created_at', { ascending: false })
-            .limit(1);
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching existing content:', error);
-        return null;
-      }
+      if (error) throw error;
       
       if (data && data.length > 0) {
-        console.log(`Found existing content for board ${boardId}`);
-        // Ensure we're handling objectData properly as a Record<string, any>
         const objectData = data[0].object_data;
         
-        // Type guard to ensure objectData is a valid Record<string, any>
-        if (objectData && typeof objectData === 'object' && !Array.isArray(objectData)) {
-          // Store the hash of this data to prevent loops
-          const contentHash = JSON.stringify(objectData);
-          this.lastReceivedUpdate.set(boardId, contentHash);
-          
-          this.operationLock.set(boardId, false);
-          return objectData as Record<string, any>;
-        } else {
-          console.error('Received invalid object data format:', objectData);
-          this.operationLock.set(boardId, false);
-          return null;
-        }
+        // Cache the content to avoid redundant processing
+        this.contentCache.set(boardId, JSON.stringify(objectData));
+        
+        console.log(`Loaded content for ${boardId}`);
+        return objectData;
       }
       
-      this.operationLock.set(boardId, false);
+      console.log(`No existing content found for ${boardId}`);
       return null;
     } catch (err) {
-      console.error('Failed to load existing content:', err);
-      this.operationLock.set(boardId, false);
+      console.error(`Error loading content for ${boardId}:`, err);
       return null;
-    }
-  }
-
-  // Subscribe to realtime updates with protection against duplicate/infinite updates
-  static subscribeToUpdates(
-    boardId: WhiteboardId, 
-    onUpdate: (data: Record<string, any>) => void, 
-    onDeleteEvent: () => void
-  ) {
-    // Check if a channel for this board already exists to prevent duplicate subscriptions
-    const channelKey = `whiteboard-sync-${boardId}`;
-    const existingChannel = this.channelCache.get(channelKey);
-    if (existingChannel) {
-      console.log(`Using existing channel for board ${boardId}`);
-      return existingChannel;
-    }
-    
-    // Set up realtime subscription for two-way sync with optimized event handling
-    // Fixed: Using the correct API format for the current Supabase client version
-    const channel = supabase
-      .channel(channelKey)
-      .on(
-        'postgres_changes', 
-        { 
-          event: '*',
-          schema: 'public',
-          table: 'whiteboard_objects',
-          filter: boardId === "teacher2" || boardId === "student2"
-            ? `board_id=in.(teacher2,student2)`
-            : `board_id=eq.${boardId}`
-        },
-        (payload) => {
-          console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
-          
-          if (payload.eventType === 'DELETE') {
-            // For delete events, reload the latest state
-            onDeleteEvent();
-            return;
-          }
-          
-          if (payload.new && 'object_data' in payload.new) {
-            const objectData = payload.new.object_data;
-            
-            // Prevent update loops by checking if we've already processed this exact update
-            const contentHash = JSON.stringify(objectData);
-            const lastHash = this.lastReceivedUpdate.get(boardId);
-            
-            if (contentHash === lastHash) {
-              console.log(`Skipping duplicate update for ${boardId}`);
-              return;
-            }
-            
-            // Store this update hash to prevent processing it again
-            this.lastReceivedUpdate.set(boardId, contentHash);
-            
-            // Add type guard to ensure objectData is a valid Record<string, any>
-            if (objectData && typeof objectData === 'object' && !Array.isArray(objectData)) {
-              // Apply the update optimistically
-              onUpdate(objectData as Record<string, any>);
-            } else {
-              console.error('Received invalid object data format:', objectData);
-            }
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log(`Channel ${channelKey} status:`, status);
-      });
-      
-    // Cache the channel for future reference
-    this.channelCache.set(channelKey, channel);
-    return channel;
-  }
-
-  // Clean up channel and remove from cache
-  static cleanupChannel(boardId: WhiteboardId): void {
-    const channelKey = `whiteboard-sync-${boardId}`;
-    const channel = this.channelCache.get(channelKey);
-    if (channel) {
-      console.log(`Cleaning up channel for board ${boardId}`);
-      supabase.removeChannel(channel);
-      this.channelCache.delete(channelKey);
     }
   }
   
-  // Clear all cached data for troubleshooting
-  static clearCache(): void {
-    console.log("Clearing SupabaseSync cache");
+  /**
+   * Subscribe to updates for a given board
+   */
+  static subscribeToUpdates(
+    boardId: WhiteboardId,
+    onUpdate: (objectData: any) => void,
+    onDelete: () => void
+  ): any {
+    // If a channel already exists for this board, remove it first
+    if (this.activeChannels.has(boardId)) {
+      console.log(`Removing existing channel for ${boardId}`);
+      supabase.removeChannel(this.activeChannels.get(boardId));
+      this.activeChannels.delete(boardId);
+    }
     
-    // Remove all channels first
-    this.channelCache.forEach((channel, key) => {
-      console.log(`Removing channel: ${key}`);
-      supabase.removeChannel(channel);
+    console.log(`Subscribing to updates for ${boardId}`);
+    
+    // Create a channel for this board
+    const channel = supabase.channel(`board-${boardId}`);
+    
+    // Subscribe to INSERT events
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'whiteboard_objects',
+          filter: `board_id=eq.${boardId}`
+        },
+        (payload: any) => {
+          console.log(`Received update for ${boardId}:`, payload);
+          
+          const objectData = payload.new.object_data;
+          
+          // Check if this is a duplicate update by comparing with cache
+          const cachedContent = this.contentCache.get(boardId);
+          if (cachedContent === JSON.stringify(objectData)) {
+            console.log(`Skipping duplicate update for ${boardId}`);
+            return;
+          }
+          
+          // Update cache
+          this.contentCache.set(boardId, JSON.stringify(objectData));
+          
+          // Track update source to prevent loops
+          const sourceId = `update-${boardId}-${Date.now()}`;
+          this.updateSources.set(sourceId, Date.now());
+          
+          // Clean up old sources (after 10 seconds)
+          setTimeout(() => {
+            this.updateSources.delete(sourceId);
+          }, 10000);
+          
+          // Apply update
+          onUpdate(objectData);
+        }
+      )
+      // Subscribe to DELETE events
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'whiteboard_objects',
+          filter: `board_id=eq.${boardId}`
+        },
+        () => {
+          console.log(`Received DELETE event for ${boardId}`);
+          // Clear cache
+          this.contentCache.delete(boardId);
+          // Reload content
+          onDelete();
+        }
+      );
+    
+    // Save the channel for future reference
+    this.activeChannels.set(boardId, channel);
+    
+    // Subscribe to the channel
+    channel.subscribe((status) => {
+      console.log(`Subscription status for ${boardId}: ${status}`);
     });
     
-    // Clear all caches
-    this.channelCache.clear();
-    this.lastReceivedUpdate.clear();
-    this.operationLock.clear();
-    
-    console.log("SupabaseSync cache cleared");
+    return channel;
+  }
+  
+  /**
+   * Check if an update is from a specific source
+   */
+  static isUpdateFromSource(source: string): boolean {
+    return this.updateSources.has(source);
   }
 }
