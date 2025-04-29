@@ -47,8 +47,8 @@ export class CanvasStateManager {
         });
       });
       
-      // Using the Fabric.js v6 compatible way to get JSON
-      const canvasData = canvas.toJSON();
+      // Using the Fabric.js v6 compatible way to get JSON with type assertion
+      const canvasData = (canvas.toJSON as any)();
       const canvasDataString = JSON.stringify(canvasData);
       
       // Skip saving if the state hasn't changed

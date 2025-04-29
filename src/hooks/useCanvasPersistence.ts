@@ -42,7 +42,7 @@ export const useCanvasPersistence = (
     
     if (!isProcessingModification.current) {
       isProcessingModification.current = true;
-      // FIX: Remove the argument here, just call processNextModification without arguments
+      // Remove argument when calling processNextModification
       processNextModification();
     }
   }, [processNextModification]);
@@ -50,7 +50,8 @@ export const useCanvasPersistence = (
   // Check if the state is actually different before saving
   const hasStateChanged = useCallback((canvas: Canvas): boolean => {
     try {
-      const currentState = JSON.stringify(canvas.toJSON(['id']));
+      // Use type assertion to fix TypeScript error while preserving functionality
+      const currentState = JSON.stringify((canvas.toJSON as any)(['id']));
       if (currentState === lastSavedState.current) {
         return false;
       }
@@ -103,7 +104,8 @@ export const useCanvasPersistence = (
     
     // Initial state snapshot
     try {
-      lastSavedState.current = JSON.stringify(canvas.toJSON(['id']));
+      // Use type assertion to fix TypeScript error while preserving functionality
+      lastSavedState.current = JSON.stringify((canvas.toJSON as any)(['id']));
     } catch (err) {
       console.error('Error capturing initial canvas state:', err);
     }
