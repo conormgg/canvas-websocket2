@@ -58,11 +58,14 @@ export class SupabaseSync {
     onUpdate: (data: Record<string, any>) => void, 
     onDeleteEvent: () => void
   ) {
+    // Track the last received update timestamp to prevent duplicate processing
+    let lastUpdateTimestamp = Date.now();
+    
     // Set up realtime subscription for two-way sync with optimized event handling
     const channel = supabase
       .channel(`whiteboard-sync-${boardId}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
@@ -71,7 +74,16 @@ export class SupabaseSync {
             ? `board_id=in.(teacher2,student2)`
             : `board_id=eq.${boardId}`
         },
-        (payload: { new: WhiteboardObject; eventType: string }) => {
+        (payload: { new: WhiteboardObject; eventType: string; old?: WhiteboardObject }) => {
+          const currentTimestamp = Date.now();
+          
+          // Ignore updates that are too close in time (likely duplicates)
+          if (currentTimestamp - lastUpdateTimestamp < 100) {
+            console.log(`Ignoring potential duplicate update received within 100ms for ${boardId}`);
+            return;
+          }
+          
+          lastUpdateTimestamp = currentTimestamp;
           console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
           
           if (payload.eventType === 'DELETE') {
@@ -93,7 +105,9 @@ export class SupabaseSync {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Supabase channel status for ${boardId}: ${status}`);
+      });
       
     return channel;
   }

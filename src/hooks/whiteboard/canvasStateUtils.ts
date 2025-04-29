@@ -32,15 +32,17 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
       // Index current objects by their IDs for quick lookup
       canvas.getObjects().forEach((obj) => {
         const extendedObj = obj as ExtendedFabricObject;
-        if (extendedObj.id) {
-          currentObjectsMap.set(extendedObj.id, extendedObj);
+        // Use object's ID or generate a unique ID based on object properties
+        const objId = extendedObj.id || generateObjectId(extendedObj);
+        if (objId) {
+          currentObjectsMap.set(objId, extendedObj);
         }
       });
       
       // Process each object in the new state
       newState.objects.forEach((objData: any) => {
         // If we have an ID field, we can use it to match objects
-        const objId = objData.id || null;
+        const objId = objData.id || generateObjectId(objData);
         
         if (objId && currentObjectsMap.has(objId)) {
           // Object exists, update its properties
@@ -54,7 +56,12 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
             // This prevents flickering by maintaining the object's presence
             Object.keys(objData).forEach(key => {
               if (key !== 'id') {
-                existingObj.set(key, objData[key]);
+                try {
+                  existingObj.set(key, objData[key]);
+                } catch (err) {
+                  // Some properties might fail to set, ignore those
+                  console.warn(`Failed to set property ${key}:`, err);
+                }
               }
             });
             
@@ -108,4 +115,19 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
   } catch (err) {
     console.error('Error applying incremental update:', err);
   }
+};
+
+// Helper function to generate a consistent ID for an object based on its properties
+const generateObjectId = (obj: any): string => {
+  if (obj.id) return obj.id;
+  
+  // Use a combination of type, position, and content to identify objects
+  const type = obj.type || 'unknown';
+  const left = obj.left || 0;
+  const top = obj.top || 0;
+  const width = obj.width || 0;
+  const height = obj.height || 0;
+  const path = obj.path ? JSON.stringify(obj.path).slice(0, 20) : '';
+  
+  return `${type}-${left.toFixed(0)}-${top.toFixed(0)}-${width.toFixed(0)}-${height.toFixed(0)}-${path}`;
 };

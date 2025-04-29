@@ -14,7 +14,7 @@ export const useRealtimeSync = (
   const canvasUpdateManager = useRef<CanvasUpdateManager>(new CanvasUpdateManager());
   
   useEffect(() => {
-    if (!fabricRef.current) return;
+    if (!fabricRef.current || !isEnabled) return;
 
     const canvas = fabricRef.current;
     
@@ -45,5 +45,5 @@ export const useRealtimeSync = (
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fabricRef, boardId]);
+  }, [fabricRef, boardId, isEnabled]);
 };
