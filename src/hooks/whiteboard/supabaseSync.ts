@@ -9,20 +9,30 @@ export class SupabaseSync {
     try {
       console.log(`Loading existing content for board: ${boardId}`);
       
-      // For board 2, check both teacher2 and student2 content
-      const query = (boardId === "teacher2" || boardId === "student2") 
-        ? supabase
+      // Handle both pairs for two-way sync
+      let query;
+      if (boardId === "teacher2" || boardId === "student2") {
+        query = supabase
             .from('whiteboard_objects')
             .select('object_data')
             .in('board_id', ['teacher2', 'student2'])
             .order('created_at', { ascending: false })
-            .limit(1)
-        : supabase
+            .limit(1);
+      } else if (boardId === "teacher1" || boardId === "student1") {
+        query = supabase
+            .from('whiteboard_objects')
+            .select('object_data')
+            .in('board_id', ['teacher1', 'student1'])
+            .order('created_at', { ascending: false })
+            .limit(1);
+      } else {
+        query = supabase
             .from('whiteboard_objects')
             .select('object_data')
             .eq('board_id', boardId)
             .order('created_at', { ascending: false })
             .limit(1);
+      }
       
       const { data, error } = await query;
       
@@ -61,6 +71,16 @@ export class SupabaseSync {
     // Track the last received update timestamp to prevent duplicate processing
     let lastUpdateTimestamp = Date.now();
     
+    // Configure the correct filter based on board ID for two-way sync
+    let filter;
+    if (boardId === "teacher2" || boardId === "student2") {
+      filter = `board_id=in.(teacher2,student2)`;
+    } else if (boardId === "teacher1" || boardId === "student1") {
+      filter = `board_id=in.(teacher1,student1)`;
+    } else {
+      filter = `board_id=eq.${boardId}`;
+    }
+    
     // Set up realtime subscription for two-way sync with optimized event handling
     const channel = supabase
       .channel(`whiteboard-sync-${boardId}`)
@@ -70,9 +90,7 @@ export class SupabaseSync {
           event: '*',
           schema: 'public',
           table: 'whiteboard_objects',
-          filter: boardId === "teacher2" || boardId === "student2"
-            ? `board_id=in.(teacher2,student2)`
-            : `board_id=eq.${boardId}`
+          filter: filter
         },
         (payload) => {
           const currentTimestamp = Date.now();

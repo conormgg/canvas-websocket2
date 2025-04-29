@@ -130,12 +130,14 @@ export const SyncProvider = ({ children }: { children: ReactNode }) => {
       'teacher2': { targetId: 'student2', enabled: isSync2Enabled },
       'teacher3': { targetId: 'student3', enabled: isSync3Enabled },
       'teacher4': { targetId: 'student4', enabled: isSync4Enabled },
-      'teacher5': { targetId: 'student5', enabled: isSync5Enabled }
+      'teacher5': { targetId: 'student5', enabled: isSync5Enabled },
+      'student1': { targetId: 'teacher1', enabled: isSyncEnabled },
+      'student2': { targetId: 'teacher2', enabled: isSync2Enabled },
     };
     
     const syncConfig = syncPairs[sourceId as keyof typeof syncPairs];
     if (!syncConfig || !syncConfig.enabled) {
-      console.log(`Object from ${sourceId} not synced - either not a teacher board or sync disabled`);
+      console.log(`Object from ${sourceId} not synced - either not a valid board or sync disabled`);
       return;
     }
 
