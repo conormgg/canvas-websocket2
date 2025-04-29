@@ -66,7 +66,8 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
           // New object, need to add it
           // Use fabric's ability to create objects from serialized data
           fabricUtil.enlivenObjects([objData], {
-            callback: (enlivenedObjects: FabricObject[]) => {
+            // Fix for Fabric.js v6: Use onComplete instead of callback
+            onComplete: (enlivenedObjects: FabricObject[]) => {
               if (enlivenedObjects.length > 0) {
                 const newObj = enlivenedObjects[0] as ExtendedFabricObject;
                 if (!newObj.id && objId) {
