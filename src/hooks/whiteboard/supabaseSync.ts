@@ -111,11 +111,11 @@ export class SupabaseSync {
     
     console.log(`Creating new subscription channel ${channelName} for board ${boardId}`);
     
-    // Fixed: Correct usage of Supabase channel API for subscribing to postgres changes
+    // Fixed: TypeScript compliant usage of Supabase channel API
     const channel = supabase
       .channel(channelName)
       .on(
-        'postgres_changes', // This is correct, but the TypeScript error indicates it expects specific options
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
@@ -124,7 +124,7 @@ export class SupabaseSync {
             ? `board_id=in.(teacher2,student2)`
             : `board_id=eq.${boardId}`
         },
-        (payload: { new: WhiteboardObject; eventType: string }) => {
+        (payload) => {
           // Implement rate limiting to prevent infinite loops
           const now = Date.now();
           const lastUpdateTime = this.lastInsertTimestamps.get(boardId) || 0;
