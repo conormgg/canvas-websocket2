@@ -23,6 +23,7 @@ export const Whiteboard = ({
   const [zoom, setZoom] = useState<number>(1);
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
   const initComplete = useRef<boolean>(false);
+  const syncEnabled = useRef<boolean>(true);
   
   // Track when the component is mounted
   const mounted = useRef<boolean>(false);
@@ -47,7 +48,6 @@ export const Whiteboard = ({
   const { undo, redo } = useCanvasHistory(fabricRef);
   
   // Enable real-time sync with proper dependency on the canvas reference
-  const syncEnabled = useRef<boolean>(true);
   useRealtimeSync(fabricRef, id, syncEnabled.current);
   
   // Set this board as active
@@ -75,8 +75,18 @@ export const Whiteboard = ({
     
     return () => {
       mounted.current = false;
+      
       // Clean up any resources specific to this board
       console.log(`Unmounting board ${id}`);
+      
+      // Close the sync connection
+      syncEnabled.current = false;
+      
+      // Clear the canvas reference to prevent memory leaks
+      if (window.__wbActiveBoardId === id) {
+        window.__wbActiveBoard = null;
+        window.__wbActiveBoardId = null;
+      }
     };
   }, [setAsActiveBoard, id]);
   

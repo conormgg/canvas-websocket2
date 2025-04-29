@@ -4,6 +4,8 @@ import { WhiteboardId } from '@/types/canvas';
 import { WhiteboardObject } from './types';
 
 export class SupabaseSync {
+  private static channelCache = new Map<string, any>();
+
   // Load existing content from Supabase
   static async loadExistingContent(boardId: WhiteboardId): Promise<Record<string, any> | null> {
     try {
@@ -58,9 +60,18 @@ export class SupabaseSync {
     onUpdate: (data: Record<string, any>) => void, 
     onDeleteEvent: () => void
   ) {
+    // Check if we already have a channel for this board
+    const existingChannel = this.channelCache.get(boardId);
+    if (existingChannel) {
+      console.log(`Using existing channel for board ${boardId}`);
+      return existingChannel;
+    }
+    
+    console.log(`Creating new subscription channel for board ${boardId}`);
+    
     // Set up realtime subscription for two-way sync with optimized event handling
     const channel = supabase
-      .channel(`whiteboard-sync-${boardId}`)
+      .channel(`whiteboard-sync-${boardId}-${Date.now()}`) // Add timestamp to make channel name unique
       .on(
         'postgres_changes' as any,
         {
@@ -94,7 +105,20 @@ export class SupabaseSync {
         }
       )
       .subscribe();
+    
+    // Cache the channel for future use
+    this.channelCache.set(boardId, channel);
       
     return channel;
+  }
+  
+  // Helper method to clean up channel cache
+  static removeChannel(boardId: WhiteboardId) {
+    const channel = this.channelCache.get(boardId);
+    if (channel) {
+      supabase.removeChannel(channel);
+      this.channelCache.delete(boardId);
+      console.log(`Removed channel for board ${boardId}`);
+    }
   }
 }
