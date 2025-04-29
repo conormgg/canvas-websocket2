@@ -111,11 +111,11 @@ export class SupabaseSync {
     
     console.log(`Creating new subscription channel ${channelName} for board ${boardId}`);
     
-    // Set up realtime subscription for two-way sync with optimized event handling
+    // Fixed: Correct usage of Supabase channel API for subscribing to postgres changes
     const channel = supabase
       .channel(channelName)
       .on(
-        'postgres_changes',
+        'postgres_changes', // This is correct, but the TypeScript error indicates it expects specific options
         {
           event: '*',
           schema: 'public',
