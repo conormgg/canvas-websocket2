@@ -81,6 +81,7 @@ const applyIncrementalUpdate = (canvas: Canvas, newState: Record<string, any>): 
         } else {
           // New object, need to add it
           // Use fabric's ability to create objects from serialized data
+          // Fix: Update the enlivenObjects call to match the expected parameters
           fabricUtil.enlivenObjects([objData], (enlivenedObjects: FabricObject[]) => {
             if (enlivenedObjects.length > 0) {
               const newObj = enlivenedObjects[0] as ExtendedFabricObject;
@@ -90,7 +91,7 @@ const applyIncrementalUpdate = (canvas: Canvas, newState: Record<string, any>): 
               }
               canvas.add(newObj);
             }
-          }, 'fabric');
+          });
         }
       });
       
@@ -102,9 +103,10 @@ const applyIncrementalUpdate = (canvas: Canvas, newState: Record<string, any>): 
         });
       }
       
-      // Restore viewport transform if we had one
+      // Fix: Ensure the currentVPT array has exactly 6 elements before using it
       if (currentVPT && currentVPT.length === 6) {
-        canvas.setViewportTransform(currentVPT);
+        // TypeScript requires an explicit type assertion here
+        canvas.setViewportTransform(currentVPT as [number, number, number, number, number, number]);
       }
       
       // Update background if it changed
