@@ -65,9 +65,9 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
         } else {
           // New object, need to add it
           // Use fabric's ability to create objects from serialized data
-          // Fix for Fabric.js v6: Use the correct EnlivenObjectOptions format
-          fabricUtil.enlivenObjects([objData], {
-            callback: (enlivenedObjects: FabricObject[]) => {
+          // Fix for Fabric.js v6: Use the correct format for enlivenObjects
+          fabricUtil.enlivenObjects([objData])
+            .then((enlivenedObjects: FabricObject[]) => {
               if (enlivenedObjects.length > 0) {
                 const newObj = enlivenedObjects[0] as ExtendedFabricObject;
                 if (!newObj.id && objId) {
@@ -76,8 +76,10 @@ export const applyIncrementalUpdate = ({ canvas, newState }: IncrementalUpdatePr
                 }
                 canvas.add(newObj);
               }
-            }
-          });
+            })
+            .catch(err => {
+              console.error('Error enliving object:', err);
+            });
         }
       });
       
