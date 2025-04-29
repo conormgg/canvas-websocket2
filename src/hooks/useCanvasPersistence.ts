@@ -12,25 +12,61 @@ export const useCanvasPersistence = (
   isTeacherView: boolean
 ): ObjectModificationHandlers => {
   const persistenceUtilsRef = useRef<CanvasPersistenceUtils>(new CanvasPersistenceUtils());
+  const isProcessingModification = useRef<boolean>(false);
+  const modificationQueue = useRef<Array<() => void>>([]);
+  
+  // Process the next modification in queue
+  const processNextModification = useCallback(() => {
+    if (modificationQueue.current.length === 0) {
+      isProcessingModification.current = false;
+      return;
+    }
+    
+    const nextModification = modificationQueue.current.shift();
+    if (nextModification) {
+      try {
+        nextModification();
+      } finally {
+        // Schedule next processing with a small delay to prevent UI freeze
+        setTimeout(processNextModification, 10);
+      }
+    } else {
+      isProcessingModification.current = false;
+    }
+  }, []);
+
+  // Queue a modification and process if not already processing
+  const queueModification = useCallback((modification: () => void) => {
+    modificationQueue.current.push(modification);
+    
+    if (!isProcessingModification.current) {
+      isProcessingModification.current = true;
+      processNextModification();
+    }
+  }, [processNextModification]);
 
   const handleObjectModified = useCallback((canvas: Canvas) => {
-    persistenceUtilsRef.current.handleSyncedModification(canvas, id);
-  }, [id]);
+    queueModification(() => {
+      persistenceUtilsRef.current.handleSyncedModification(canvas, id);
+    });
+  }, [id, queueModification]);
 
   const handleObjectAdded = useCallback((object: FabricObject) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    // Make sure the added object is selectable
-    object.set({
-      selectable: true,
-      evented: true,
-      hasControls: true,
-      hasBorders: true
+    queueModification(() => {
+      // Make sure the added object is selectable
+      object.set({
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true
+      });
+      
+      persistenceUtilsRef.current.handleSyncedModification(canvas, id);
     });
-    
-    persistenceUtilsRef.current.handleSyncedModification(canvas, id);
-  }, [id, fabricRef]);
+  }, [id, fabricRef, queueModification]);
 
   useEffect(() => {
     const canvas = fabricRef.current;
@@ -44,15 +80,26 @@ export const useCanvasPersistence = (
     // Throttle events that might fire very rapidly
     let isDrawing = false;
     let pendingDrawUpdate = false;
+    let lastUpdateTime = 0;
+    const MIN_UPDATE_INTERVAL = 300; // ms
     
     const handleDrawingEvents = () => {
       if (isDrawing && !pendingDrawUpdate) {
+        const now = Date.now();
+        
+        // Skip updates coming too quickly
+        if (now - lastUpdateTime < MIN_UPDATE_INTERVAL) {
+          return;
+        }
+        
         pendingDrawUpdate = true;
+        lastUpdateTime = now;
+        
         // Wait until the user pauses drawing before saving
         setTimeout(() => {
           handleCanvasChanged();
           pendingDrawUpdate = false;
-        }, 300);
+        }, MIN_UPDATE_INTERVAL);
       }
     };
 

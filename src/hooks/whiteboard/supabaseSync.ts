@@ -4,6 +4,9 @@ import { WhiteboardId } from '@/types/canvas';
 import { WhiteboardObject } from './types';
 
 export class SupabaseSync {
+  // Cache to prevent duplicate channel creation
+  private static channelCache = new Map<string, any>();
+
   // Load existing content from Supabase
   static async loadExistingContent(boardId: WhiteboardId): Promise<Record<string, any> | null> {
     try {
@@ -52,17 +55,25 @@ export class SupabaseSync {
     }
   }
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime updates with protection against duplicate/infinite updates
   static subscribeToUpdates(
     boardId: WhiteboardId, 
     onUpdate: (data: Record<string, any>) => void, 
     onDeleteEvent: () => void
   ) {
+    // Check if a channel for this board already exists to prevent duplicate subscriptions
+    const channelKey = `whiteboard-sync-${boardId}`;
+    const existingChannel = this.channelCache.get(channelKey);
+    if (existingChannel) {
+      console.log(`Using existing channel for board ${boardId}`);
+      return existingChannel;
+    }
+    
     // Set up realtime subscription for two-way sync with optimized event handling
     const channel = supabase
-      .channel(`whiteboard-sync-${boardId}`)
+      .channel(channelKey)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
@@ -93,8 +104,23 @@ export class SupabaseSync {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Channel ${channelKey} status:`, status);
+      });
       
+    // Cache the channel for future reference
+    this.channelCache.set(channelKey, channel);
     return channel;
+  }
+
+  // Clean up channel and remove from cache
+  static cleanupChannel(boardId: WhiteboardId): void {
+    const channelKey = `whiteboard-sync-${boardId}`;
+    const channel = this.channelCache.get(channelKey);
+    if (channel) {
+      console.log(`Cleaning up channel for board ${boardId}`);
+      supabase.removeChannel(channel);
+      this.channelCache.delete(channelKey);
+    }
   }
 }
