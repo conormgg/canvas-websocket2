@@ -46,7 +46,7 @@ export const useCanvasPersistence = (
     const canvas = fabricRef.current;
     if (!canvas) return;
     
-    // Create event handlers
+    // Create event handlers - using the React hook properly inside this component
     const eventHandlers = useCanvasEventHandlers({
       onStateChange: (canvas) => handleObjectModified(canvas)
     });

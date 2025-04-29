@@ -1,73 +1,73 @@
 
-import { useRef, useCallback } from 'react';
-
+// Convert useDrawingThrottle from a hook to a non-hook module
 export interface DrawingThrottleOptions {
   minUpdateInterval?: number;
 }
 
-export const useDrawingThrottle = (options: DrawingThrottleOptions = {}) => {
+// Create a factory function instead of a hook
+export const createDrawingThrottle = (options: DrawingThrottleOptions = {}) => {
   const { minUpdateInterval = 500 } = options;
   
-  const isDrawing = useRef<boolean>(false);
-  const pendingDrawUpdate = useRef<boolean>(false);
-  const lastUpdateTime = useRef<number>(0);
-  const updateTimeout = useRef<number | null>(null);
+  let isDrawing = false;
+  let pendingDrawUpdate = false;
+  let lastUpdateTime = 0;
+  let updateTimeout: number | null = null;
   
-  const handleDrawingStart = useCallback(() => {
-    isDrawing.current = true;
-  }, []);
+  const handleDrawingStart = () => {
+    isDrawing = true;
+  };
   
-  const handleDrawingEnd = useCallback(() => {
-    isDrawing.current = false;
+  const handleDrawingEnd = () => {
+    isDrawing = false;
     
     // Clear any pending timeout
-    if (updateTimeout.current !== null) {
-      clearTimeout(updateTimeout.current);
-      updateTimeout.current = null;
+    if (updateTimeout !== null) {
+      clearTimeout(updateTimeout);
+      updateTimeout = null;
     }
     
-    pendingDrawUpdate.current = false;
-  }, []);
+    pendingDrawUpdate = false;
+  };
   
-  const shouldUpdateWhileDrawing = useCallback(() => {
-    if (!isDrawing.current || pendingDrawUpdate.current) return false;
+  const shouldUpdateWhileDrawing = () => {
+    if (!isDrawing || pendingDrawUpdate) return false;
     
     const now = Date.now();
     
     // Skip updates coming too quickly
-    if (now - lastUpdateTime.current < minUpdateInterval) {
+    if (now - lastUpdateTime < minUpdateInterval) {
       return false;
     }
     
-    pendingDrawUpdate.current = true;
-    lastUpdateTime.current = now;
+    pendingDrawUpdate = true;
+    lastUpdateTime = now;
     
     // Clear existing timeout
-    if (updateTimeout.current !== null) {
-      clearTimeout(updateTimeout.current);
+    if (updateTimeout !== null) {
+      clearTimeout(updateTimeout);
     }
     
     return true;
-  }, [minUpdateInterval]);
+  };
   
-  const scheduleUpdateAfterDrawing = useCallback((callback: () => void) => {
+  const scheduleUpdateAfterDrawing = (callback: () => void) => {
     // Wait until the user pauses drawing before saving
-    updateTimeout.current = window.setTimeout(() => {
+    updateTimeout = window.setTimeout(() => {
       callback();
-      pendingDrawUpdate.current = false;
-      updateTimeout.current = null;
+      pendingDrawUpdate = false;
+      updateTimeout = null;
     }, minUpdateInterval);
-  }, [minUpdateInterval]);
+  };
   
-  const cleanupTimeouts = useCallback(() => {
-    if (updateTimeout.current !== null) {
-      clearTimeout(updateTimeout.current);
-      updateTimeout.current = null;
+  const cleanupTimeouts = () => {
+    if (updateTimeout !== null) {
+      clearTimeout(updateTimeout);
+      updateTimeout = null;
     }
-  }, []);
+  };
   
   return {
-    isDrawing: () => isDrawing.current,
+    isDrawing: () => isDrawing,
     handleDrawingStart,
     handleDrawingEnd,
     shouldUpdateWhileDrawing,

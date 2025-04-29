@@ -1,6 +1,7 @@
+
 import { Canvas, FabricObject } from 'fabric';
 import { useCallback, useState, useRef } from 'react';
-import { useDrawingThrottle } from './useDrawingThrottle';
+import { createDrawingThrottle } from './useDrawingThrottle';
 
 // Extract the state comparison logic into a non-hook function
 const compareCanvasStates = (() => {
@@ -56,13 +57,11 @@ export interface CanvasEventOptions {
 }
 
 export const useCanvasEventHandlers = ({ onStateChange }: CanvasEventOptions) => {
-  const { 
-    handleDrawingStart, 
-    handleDrawingEnd, 
-    shouldUpdateWhileDrawing, 
-    scheduleUpdateAfterDrawing,
-    cleanupTimeouts
-  } = useDrawingThrottle({ minUpdateInterval: 500 });
+  const [isDrawingState, setIsDrawingState] = useState<boolean>(false);
+  
+  // Create the drawing throttle instance once (not a hook anymore)
+  const drawingThrottleRef = useRef(createDrawingThrottle({ minUpdateInterval: 500 }));
+  const drawingThrottle = drawingThrottleRef.current;
   
   // Use the non-hook state comparison function
   const handleCanvasChanged = useCallback((canvas: Canvas) => {
@@ -81,28 +80,30 @@ export const useCanvasEventHandlers = ({ onStateChange }: CanvasEventOptions) =>
   
   const handleMouseDown = useCallback((canvas: Canvas) => {
     if (canvas.isDrawingMode) {
-      handleDrawingStart();
+      drawingThrottle.handleDrawingStart();
+      setIsDrawingState(true);
     }
-  }, [handleDrawingStart]);
+  }, [drawingThrottle]);
   
   const handleMouseUp = useCallback((canvas: Canvas) => {
     if (canvas.isDrawingMode) {
-      handleDrawingEnd();
+      drawingThrottle.handleDrawingEnd();
+      setIsDrawingState(false);
       if (compareCanvasStates.hasStateChanged(canvas)) {
         handleCanvasChanged(canvas);
       }
     }
-  }, [handleDrawingEnd, handleCanvasChanged]);
+  }, [drawingThrottle, handleCanvasChanged]);
   
   const handleDrawingEvents = useCallback((canvas: Canvas) => {
-    if (shouldUpdateWhileDrawing()) {
-      scheduleUpdateAfterDrawing(() => {
+    if (drawingThrottle.shouldUpdateWhileDrawing()) {
+      drawingThrottle.scheduleUpdateAfterDrawing(() => {
         if (compareCanvasStates.hasStateChanged(canvas)) {
           handleCanvasChanged(canvas);
         }
       });
     }
-  }, [shouldUpdateWhileDrawing, scheduleUpdateAfterDrawing, handleCanvasChanged]);
+  }, [drawingThrottle, handleCanvasChanged]);
   
   const handleObjectRemoved = useCallback((canvas: Canvas) => {
     console.log(`Object removed from canvas, queuing save`);
@@ -123,7 +124,7 @@ export const useCanvasEventHandlers = ({ onStateChange }: CanvasEventOptions) =>
   }, []);
   
   // Initialize the state comparison on first render
-  useCallback((canvas: Canvas) => {
+  const initializeStateComparison = useCallback((canvas: Canvas) => {
     compareCanvasStates.setInitialState(canvas);
   }, []);
   
@@ -135,9 +136,8 @@ export const useCanvasEventHandlers = ({ onStateChange }: CanvasEventOptions) =>
     handleDrawingEvents,
     handleObjectRemoved,
     handleObjectAddedToCanvas,
-    cleanupTimeouts,
-    initializeStateComparison: (canvas: Canvas) => {
-      compareCanvasStates.setInitialState(canvas);
-    }
+    cleanupTimeouts: drawingThrottle.cleanupTimeouts,
+    initializeStateComparison,
+    isDrawing: isDrawingState
   };
 };

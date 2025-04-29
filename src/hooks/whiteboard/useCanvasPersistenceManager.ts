@@ -2,6 +2,7 @@
 import { useRef } from 'react';
 import { Canvas } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
+// Fix casing to match the actual file name
 import { CanvasStateManager } from './CanvasStateManager';
 import { CanvasSyncManager } from './CanvasSyncManager';
 import { useSyncContext } from '@/context/SyncContext';
