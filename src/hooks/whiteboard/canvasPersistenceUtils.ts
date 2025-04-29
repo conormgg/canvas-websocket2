@@ -1,7 +1,7 @@
 
 import { Canvas } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
-import { CanvasStateManager } from './canvasStateManager';
+import { CanvasStateManager } from './CanvasStateManager';
 
 export class CanvasPersistenceUtils {
   private saveTimeoutRef: number | null = null;

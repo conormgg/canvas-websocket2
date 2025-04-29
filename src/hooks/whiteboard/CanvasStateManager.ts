@@ -122,9 +122,13 @@ export class CanvasStateManager {
         // Just trigger another save attempt if we have a canvas reference
         if (window.__wbActiveBoardId === boardId && window.__wbActiveBoard) {
           const canvas = window.__wbActiveBoard;
-          const fabricCanvas = canvas.__canvas;
-          if (fabricCanvas) {
-            this.saveCanvasState(fabricCanvas, boardId);
+          
+          // Safely check if the canvas element exists and has a Fabric.js canvas associated with it
+          if (canvas && canvas instanceof HTMLCanvasElement && (canvas as any).__fabric) {
+            const fabricCanvas = (canvas as any).__fabric;
+            if (fabricCanvas) {
+              this.saveCanvasState(fabricCanvas, boardId);
+            }
           }
         }
       }, 500 * Math.pow(2, retryCount - 1));
