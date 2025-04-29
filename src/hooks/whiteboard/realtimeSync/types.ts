@@ -36,3 +36,24 @@ export interface IncrementalUpdateProps {
   canvas: Canvas;
   newState: Record<string, any>;
 }
+
+// New types for the refactored components
+export interface ContentHashOptions {
+  includePathDetails: boolean;
+  maxHashLength: number;
+}
+
+export interface QueueManagerOptions {
+  maxQueueSize: number;
+  processingDelay: number;
+}
+
+export interface RateLimiterOptions {
+  maxUpdatesPerMinute: number;
+  throttleIntervalMs: number;
+}
+
+export interface DuplicateTrackerOptions {
+  maxTrackedIds: number;
+  duplicateTimeWindowMs: number;
+}
