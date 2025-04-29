@@ -64,14 +64,17 @@ export class SupabaseSync {
     // Set up realtime subscription for two-way sync with optimized event handling
     const channel = supabase
       .channel(`whiteboard-sync-${boardId}`)
-      .on('postgres_changes', {
+      .on(
+        'postgres_changes',
+        {
           event: '*',
           schema: 'public',
           table: 'whiteboard_objects',
           filter: boardId === "teacher2" || boardId === "student2"
             ? `board_id=in.(teacher2,student2)`
             : `board_id=eq.${boardId}`
-        }, (payload) => {
+        },
+        (payload) => {
           const currentTimestamp = Date.now();
           
           // Ignore updates that are too close in time (likely duplicates)
@@ -100,7 +103,8 @@ export class SupabaseSync {
               console.error('Received invalid object data format:', objectData);
             }
           }
-        })
+        }
+      )
       .subscribe((status) => {
         console.log(`Supabase channel status for ${boardId}: ${status}`);
       });

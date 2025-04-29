@@ -1,4 +1,3 @@
-
 import { Canvas } from 'fabric';
 import { WhiteboardId } from '@/types/canvas';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,6 +73,39 @@ export class CanvasStateManager {
       this.saveCanvasState(canvas, targetId);
     } else if (sourceId === "teacher1" && targetId === "student1") {
       this.saveCanvasState(canvas, targetId);
+    }
+  }
+
+  async clearCanvasData(boardId: WhiteboardId): Promise<boolean> {
+    try {
+      console.log(`Clearing whiteboard data for ${boardId}`);
+      
+      // For board 2, delete both teacher2 and student2 content
+      const query = (boardId === "teacher2" || boardId === "student2") 
+        ? supabase
+            .from('whiteboard_objects')
+            .delete()
+            .in('board_id', ['teacher2', 'student2'])
+        : supabase
+            .from('whiteboard_objects')
+            .delete()
+            .eq('board_id', boardId);
+      
+      const { error } = await query;
+      
+      if (error) {
+        console.error('Error clearing canvas data:', error);
+        toast.error('Failed to clear whiteboard data');
+        return false;
+      } else {
+        console.log(`Canvas data cleared successfully for ${boardId}`);
+        toast.success('Whiteboard data cleared successfully');
+        return true;
+      }
+    } catch (err) {
+      console.error('Failed to clear canvas data:', err);
+      toast.error('Failed to clear whiteboard data');
+      return false;
     }
   }
 }

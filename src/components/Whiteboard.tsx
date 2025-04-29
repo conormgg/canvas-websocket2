@@ -10,6 +10,9 @@ import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useCanvasPersistence } from "@/hooks/useCanvasPersistence";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { toast } from "sonner";
+import { Button } from "./ui/button";
+import { Trash2 } from "lucide-react";
+import { CanvasStateManager } from "@/hooks/whiteboard/canvasStateManager";
 
 export const Whiteboard = ({ 
   id, 
@@ -23,6 +26,7 @@ export const Whiteboard = ({
   const [zoom, setZoom] = useState<number>(1);
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
   const [lastRender, setLastRender] = useState<number>(Date.now());
+  const canvasStateManager = useCallback(() => new CanvasStateManager(), [])();
 
   const { setActiveCanvas } = useClipboardContext();
 
@@ -118,6 +122,19 @@ export const Whiteboard = ({
     }
   };
 
+  const handleClearCanvas = async () => {
+    if (window.confirm(`Are you sure you want to clear the whiteboard data for ${id}?`)) {
+      // Clear canvas data from Supabase
+      const success = await canvasStateManager.clearCanvasData(id);
+      
+      if (success && fabricRef.current) {
+        // Clear canvas locally
+        fabricRef.current.clear();
+        toast.success(`Whiteboard ${id} cleared successfully`);
+      }
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -129,18 +146,29 @@ export const Whiteboard = ({
       onContextMenu={handleContextMenu}
       onClick={handleCanvasClick}
     >
-      <Toolbar
-        activeTool={activeTool}
-        activeColor={activeColor}
-        onToolChange={setActiveTool}
-        onColorChange={setActiveColor}
-        inkThickness={inkThickness}
-        onInkThicknessChange={setInkThickness}
-        isSplitScreen={isSplitScreen}
-        boardId={id}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-      />
+      <div className="w-full flex justify-between items-center">
+        <Toolbar
+          activeTool={activeTool}
+          activeColor={activeColor}
+          onToolChange={setActiveTool}
+          onColorChange={setActiveColor}
+          inkThickness={inkThickness}
+          onInkThicknessChange={setInkThickness}
+          isSplitScreen={isSplitScreen}
+          boardId={id}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+        />
+        <Button 
+          variant="destructive" 
+          size="sm" 
+          onClick={handleClearCanvas} 
+          className="mr-2"
+          title="Clear whiteboard data"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
       <canvas 
         ref={canvasRef} 
         className="w-full h-full z-0" 
