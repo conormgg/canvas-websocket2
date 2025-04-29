@@ -40,21 +40,42 @@ export class WhiteboardDataService {
       if (boardId === "teacher2" || boardId === "student2") {
         query = supabase
           .from('whiteboard_objects')
-          .select('object_data')
+          .select('object_data, board_id')
           .in('board_id', ['teacher2', 'student2'])
           .order('created_at', { ascending: false })
           .limit(1);
       } else if (boardId === "teacher1" || boardId === "student1") {
         query = supabase
           .from('whiteboard_objects')
-          .select('object_data')
+          .select('object_data, board_id')
           .in('board_id', ['teacher1', 'student1'])
+          .order('created_at', { ascending: false })
+          .limit(1);
+      } else if (boardId === "teacher3" || boardId === "student3") {
+        query = supabase
+          .from('whiteboard_objects')
+          .select('object_data, board_id')
+          .in('board_id', ['teacher3', 'student3'])
+          .order('created_at', { ascending: false })
+          .limit(1);
+      } else if (boardId === "teacher4" || boardId === "student4") {
+        query = supabase
+          .from('whiteboard_objects')
+          .select('object_data, board_id')
+          .in('board_id', ['teacher4', 'student4'])
+          .order('created_at', { ascending: false })
+          .limit(1);
+      } else if (boardId === "teacher5" || boardId === "student5") {
+        query = supabase
+          .from('whiteboard_objects')
+          .select('object_data, board_id')
+          .in('board_id', ['teacher5', 'student5'])
           .order('created_at', { ascending: false })
           .limit(1);
       } else {
         query = supabase
           .from('whiteboard_objects')
-          .select('object_data')
+          .select('object_data, board_id')
           .eq('board_id', boardId)
           .order('created_at', { ascending: false })
           .limit(1);
@@ -68,7 +89,7 @@ export class WhiteboardDataService {
       }
       
       if (data && data.length > 0) {
-        console.log(`Found existing content for board ${boardId}`);
+        console.log(`Found existing content for board ${boardId} (data from board: ${data[0].board_id})`);
         const objectData = data[0].object_data;
         
         // Type guard to ensure objectData is a valid Record<string, any>
@@ -78,6 +99,8 @@ export class WhiteboardDataService {
           console.error('Received invalid object data format:', objectData);
           return null;
         }
+      } else {
+        console.log(`No content found for board ${boardId}`);
       }
       
       return null;

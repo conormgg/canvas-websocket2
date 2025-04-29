@@ -23,6 +23,25 @@ export class SupabaseSyncManager {
   }
 
   /**
+   * Get the appropriate filter string for a board
+   */
+  private static getBoardFilter(boardId: WhiteboardId): string {
+    if (boardId === "teacher2" || boardId === "student2") {
+      return `board_id=in.(teacher2,student2)`;
+    } else if (boardId === "teacher1" || boardId === "student1") {
+      return `board_id=in.(teacher1,student1)`;
+    } else if (boardId === "teacher3" || boardId === "student3") {
+      return `board_id=in.(teacher3,student3)`;
+    } else if (boardId === "teacher4" || boardId === "student4") {
+      return `board_id=in.(teacher4,student4)`;
+    } else if (boardId === "teacher5" || boardId === "student5") {
+      return `board_id=in.(teacher5,student5)`;
+    } else {
+      return `board_id=eq.${boardId}`;
+    }
+  }
+
+  /**
    * Subscribe to realtime updates with improved infinite loop protection
    */
   static subscribeToUpdates(
@@ -49,17 +68,17 @@ export class SupabaseSyncManager {
     
     // Create and configure the channel with TypeScript compliant approach
     const channel = ChannelManager.createChannel(boardId);
+
+    // Get the appropriate filter for this board
+    const boardFilter = this.getBoardFilter(boardId);
+    
     channel.on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: 'whiteboard_objects',
-        filter: boardId === "teacher2" || boardId === "student2"
-          ? `board_id=in.(teacher2,student2)`
-          : boardId === "teacher1" || boardId === "student1"
-          ? `board_id=in.(teacher1,student1)`
-          : `board_id=eq.${boardId}`
+        filter: boardFilter
       },
       (payload: any) => {
         // Calculate a hash based on the payload to detect duplicates
@@ -67,18 +86,28 @@ export class SupabaseSyncManager {
         
         // Check if this is a duplicate update
         if (UpdateTracker.isDuplicate(boardId, payloadHash)) {
+          console.log(`Skipping duplicate update for ${boardId}`);
           return;
         }
         
         // Check if we should throttle this update due to high frequency
         if (UpdateTracker.shouldThrottle(boardId)) {
+          console.log(`Throttling update for ${boardId} due to high frequency`);
           return;
         }
         
-        console.log(`Received realtime ${payload.eventType} for board ${boardId}`);
+        console.log(`Received realtime ${payload.eventType} for board ${boardId}, new board_id: ${payload.new?.board_id}`);
         
         if (payload.new && 'object_data' in payload.new) {
           const objectData = payload.new.object_data;
+          
+          // Only process if the update is for the current board or its pair
+          if (!payload.new.board_id) {
+            console.error(`Missing board_id in payload for ${boardId}`);
+            return;
+          }
+
+          console.log(`Processing update for board ${boardId} from ${payload.new.board_id}`);
           
           // Type guard to ensure objectData is a valid Record<string, any>
           if (objectData && typeof objectData === 'object' && !Array.isArray(objectData)) {

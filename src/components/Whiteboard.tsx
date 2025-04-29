@@ -10,7 +10,6 @@ import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useCanvasPersistence } from "@/hooks/useCanvasPersistence";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { toast } from "sonner";
-import { useSyncContext } from "@/context/SyncContext";
 
 export const Whiteboard = ({ 
   id, 
@@ -24,14 +23,13 @@ export const Whiteboard = ({
   const [zoom, setZoom] = useState<number>(1);
   const [isMaximized, setIsMaximized] = useState(initialIsMaximized);
   const initComplete = useRef<boolean>(false);
-  const syncEnabled = useRef<boolean>(true);
+  const syncEnabled = useRef<boolean>(true); // Always true now
   const unloadingRef = useRef<boolean>(false);
   
   // Track when the component is mounted
   const mounted = useRef<boolean>(false);
 
   const { setActiveCanvas } = useClipboardContext();
-  const { isSyncEnabled } = useSyncContext();
 
   const isTeacherView = window.location.pathname.includes('/teacher') || 
                        window.location.pathname === '/' ||
@@ -48,14 +46,11 @@ export const Whiteboard = ({
   
   const isStudent = id.startsWith('student');
 
-  // For teacher1 board, we should enable sync based on the sync context
-  const shouldEnableSync = id === "teacher1" ? isSyncEnabled : true;
-
   const { handleObjectAdded, handleObjectModified } = useCanvasPersistence(fabricRef, id, isTeacherView);
   const { undo, redo } = useCanvasHistory(fabricRef);
   
-  // Enable real-time sync with proper dependency on the canvas reference
-  const { clearAllDrawings } = useRealtimeSync(fabricRef, id, syncEnabled.current && !unloadingRef.current);
+  // Enable real-time sync with proper dependency on the canvas reference - always enabled now
+  const { clearAllDrawings } = useRealtimeSync(fabricRef, id, true);
   
   // Set this board as active
   const setAsActiveBoard = useCallback(() => {
@@ -82,18 +77,15 @@ export const Whiteboard = ({
     setAsActiveBoard();
     
     // Clear cache to ensure fresh data on refresh
-    if (id === "teacher1" || id === "student1") {
-      const channel = window.sessionStorage.getItem(`supabase-channel-whiteboard-sync-${id}`);
-      if (channel) {
-        window.sessionStorage.removeItem(`supabase-channel-whiteboard-sync-${id}`);
-        console.log(`Cleared channel cache for ${id}`);
-      }
+    const channel = window.sessionStorage.getItem(`supabase-channel-whiteboard-sync-${id}`);
+    if (channel) {
+      window.sessionStorage.removeItem(`supabase-channel-whiteboard-sync-${id}`);
+      console.log(`Cleared channel cache for ${id}`);
     }
     
     // Set up unloading detection to prevent memory leaks and infinite loops
     window.addEventListener('beforeunload', () => {
       unloadingRef.current = true;
-      syncEnabled.current = false;
     });
     
     return () => {
@@ -103,9 +95,6 @@ export const Whiteboard = ({
       
       // Clean up any resources specific to this board
       console.log(`Unmounting board ${id}`);
-      
-      // Close the sync connection
-      syncEnabled.current = false;
       
       // Clear the canvas reference to prevent memory leaks
       if (window.__wbActiveBoardId === id) {

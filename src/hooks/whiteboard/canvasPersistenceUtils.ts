@@ -36,7 +36,7 @@ export class CanvasPersistenceUtils {
     console.log(`Canvas ${boardId} modified, queuing save`);
     this.debouncedSave(canvas, boardId);
     
-    // Handle two-way sync for specific boards
+    // Always sync between teacher and student boards regardless of toggle status
     if (boardId === "teacher2") {
       this.canvasStateManager.syncBoardState(canvas, boardId, "student2");
     } else if (boardId === "student2") {
@@ -44,6 +44,12 @@ export class CanvasPersistenceUtils {
     } else if (boardId === "teacher1") {
       console.log("Syncing teacher1 changes to student1");
       this.canvasStateManager.syncBoardState(canvas, boardId, "student1");
+    } else if (boardId === "teacher3") {
+      this.canvasStateManager.syncBoardState(canvas, boardId, "student3");
+    } else if (boardId === "teacher4") {
+      this.canvasStateManager.syncBoardState(canvas, boardId, "student4");
+    } else if (boardId === "teacher5") {
+      this.canvasStateManager.syncBoardState(canvas, boardId, "student5");
     }
   }
 }

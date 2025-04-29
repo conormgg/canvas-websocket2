@@ -56,7 +56,7 @@ export const useRealtimeSync = (
   }, [boardId]);
   
   useEffect(() => {
-    if (!fabricRef.current || !isEnabled || cleanupRef.current || !mountedRef.current) return;
+    if (!fabricRef.current || cleanupRef.current || !mountedRef.current) return;
 
     const canvas = fabricRef.current;
     
@@ -96,8 +96,10 @@ export const useRealtimeSync = (
       };
     })();
     
+    // Load content immediately on mount
     loadContentDebounced();
 
+    // Create subscription with a slight delay to avoid race conditions
     const subscribeTimer = setTimeout(() => {
       if (!cleanupRef.current && mountedRef.current) {
         console.log(`Creating subscription for ${boardId}`);
@@ -131,7 +133,7 @@ export const useRealtimeSync = (
       
       isInitialLoad.current = true;
     };
-  }, [fabricRef, boardId, isEnabled]);
+  }, [fabricRef, boardId]);
   
   return {
     clearAllDrawings: SupabaseSync.clearAllWhiteboardData
