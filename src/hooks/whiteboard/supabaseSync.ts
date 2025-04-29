@@ -64,8 +64,7 @@ export class SupabaseSync {
     // Set up realtime subscription for two-way sync with optimized event handling
     const channel = supabase
       .channel(`whiteboard-sync-${boardId}`)
-      .on(
-        'postgres_changes',
+      .on('postgres_changes', 
         {
           event: '*',
           schema: 'public',
